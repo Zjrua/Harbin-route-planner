@@ -1,0 +1,79 @@
+# 项目配置
+project:
+  name: "harbin-route-planner"
+  description: "基于Transformer的哈尔滨文旅线路优化"
+
+# 数据配置
+data:
+  city: "哈尔滨"
+  center_lat: 45.80
+  center_lng: 126.53
+  poi_source: "amap"  # 高德地图
+  min_rating: 3.5
+  max_pois: 150
+  seasons:
+    winter: [11, 12, 1, 2]  # 冰雪季
+    summer: [6, 7, 8]
+
+# 模型配置
+model:
+  d_model: 128
+  n_heads: 8
+  n_encoder_layers: 4
+  n_decoder_layers: 4
+  d_ff: 512
+  dropout: 0.1
+  max_route_len: 20
+
+# Engram 记忆模块
+engram:
+  enabled: true
+  memory_size: 500
+  top_k: 5
+  gate_type: "learned"  # learned / fixed
+
+# MHC 双曲流形约束
+mhc:
+  enabled: true
+  curvature: -1.0
+  dim: 64
+  regularization_weight: 0.05
+
+# 损失函数权重
+loss:
+  ce_weight: 1.0
+  distance_weight: 0.5
+  mhc_weight: 0.05
+
+# 优化器配置
+optimizer:
+  name: "muon"  # muon / adam / adamw
+  lr_attn: 3.0e-4
+  lr_ffn: 1.0e-3
+  weight_decay: 1.0e-4
+  grad_clip: 1.0
+
+# 训练配置
+training:
+  batch_size: 32
+  epochs: 200
+  patience: 10
+  teacher_forcing_ratio: 0.5
+  beam_size: 5
+  seed: 42
+
+# 评价指标权重
+metrics:
+  distance_weight: 0.30
+  time_weight: 0.25
+  satisfaction_weight: 0.25
+  diversity_weight: 0.20
+
+# 实验配置
+experiment:
+  train_ratio: 0.8
+  val_ratio: 0.1
+  test_ratio: 0.1
+  num_workers: 4
+  save_dir: "checkpoints/"
+  log_dir: "logs/"
