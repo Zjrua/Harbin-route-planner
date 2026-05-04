@@ -149,34 +149,32 @@ class RouteTransformer(nn.Module):
         max_len = self.config["model"]["max_route_len"]
         device = encoder_output.device
 
-        # 初始化：以 SOS token (0) 开始
-        sos_emb = self.poi_embedding(torch.zeros(batch_size, 1, dtype=torch.long, device=device))
-
         # 每个 batch 独立做 beam search
         best_routes = []
         for b in range(batch_size):
-            enc_out = encoder_output[b:b+1].expand(beam_size, -1, -1)
-            # beams: (score, route_indices)
-            beams = [(0.0, [0])]
+            enc_single = encoder_output[b:b+1]  # [1, n_pois, d_model]
+
+            # Engram 检索（只做一次，所有 beam 共享）
+            engram_memory = None
+            if self.use_engram:
+                query = enc_single.mean(dim=1)  # [1, d_model]
+                retrieved, _ = self.engram.retrieve(query)
+                engram_memory = retrieved  # [1, d_model]
+
+            beams = [(0.0, [0])]  # (累计 log_prob, 路线索引列表)
+
             for step in range(max_len - 1):
                 candidates = []
                 for score, route in beams:
-                    route_tensor = torch.tensor([route], dtype=torch.long, device=device)
-                    target_emb = self.poi_embedding(route_tensor)
+                    route_t = torch.tensor([route], dtype=torch.long, device=device)
+                    target_emb = self.poi_embedding(route_t)  # [1, seq_len, d_model]
                     seq_len = target_emb.size(1)
                     causal_mask = torch.triu(
                         torch.ones(seq_len, seq_len, device=device), diagonal=1
                     ).bool()
 
-                    # Engram 检索
-                    engram_memory = None
-                    if self.use_engram:
-                        query = enc_out[:1].mean(dim=1)
-                        retrieved, _ = self.engram.retrieve(query)
-                        engram_memory = retrieved.expand(beam_size, -1, -1)
-
-                    dec_out = self.decode(engram_memory, enc_out, target_emb, causal_mask)
-                    logits = self.output_proj(dec_out)[:, -1, :]
+                    dec_out = self.decode(engram_memory, enc_single, target_emb, causal_mask)
+                    logits = self.output_proj(dec_out)[:, -1, :]  # [1, n_pois]
                     log_probs = torch.log_softmax(logits, dim=-1)
                     topk_probs, topk_idx = log_probs[0].topk(beam_size)
 
@@ -184,7 +182,6 @@ class RouteTransformer(nn.Module):
                         new_score = score + topk_probs[i].item()
                         candidates.append((new_score, route + [topk_idx[i].item()]))
 
-                # 保留 top beam_size 个候选
                 candidates.sort(key=lambda x: x[0], reverse=True)
                 beams = candidates[:beam_size]
 

@@ -10,7 +10,7 @@ data:
   center_lng: 126.53
   poi_source: "amap"  # 高德地图
   min_rating: 3.5
-  max_pois: 150
+  max_pois: 500
   seasons:
     winter: [11, 12, 1, 2]  # 冰雪季
     summer: [6, 7, 8]
@@ -44,14 +44,14 @@ mhc:
 # 损失函数权重
 loss:
   ce_weight: 1.0
-  distance_weight: 0.5
+  distance_weight: 0.01
   mhc_weight: 0.05
 
 # 优化器配置
 optimizer:
   name: "adamw"  # muon / adam / adamw
-  lr_attn: 3.0e-4
-  lr_ffn: 1.0e-3
+  lr_attn: 1.0e-4
+  lr_ffn: 3.0e-4
   weight_decay: 1.0e-4
   grad_clip: 1.0
 

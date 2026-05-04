@@ -50,12 +50,11 @@ class HarbinRouteDataset(Dataset):
         self.adjacency = np.load(data_path / "adjacency.npy")
         self.distances = np.load(data_path / "distance_matrix.npy")
 
-        # 加载距离方差（可选，用于概率采样）
+        # 加载距离方差（优先使用预处理计算的 std，否则用 noise_scale 估算）
         std_path = data_path / "distance_std.npy"
         if std_path.exists():
             self.distances_std = np.load(std_path)
         elif self.use_probabilistic_edges:
-            # 无显式方差时，用均值的 noise_scale 比例作为标准差
             self.distances_std = self.distances * self.noise_scale
 
         routes_data = np.load(data_path / "routes.npy", allow_pickle=True)

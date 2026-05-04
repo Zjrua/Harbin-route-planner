@@ -32,7 +32,7 @@ class RouteLoss(nn.Module):
 
     def distance_loss(self, pred_route: torch.Tensor,
                       distances: torch.Tensor) -> torch.Tensor:
-        """路线总距离惩罚：沿路线累加相邻 POI 距离."""
+        """路线总距离惩罚：沿路线累加相邻 POI 距离，归一化到 [0, 1]."""
         batch_size, route_len = pred_route.shape
         n_pois = distances.size(-1)
         total_dist = torch.zeros(batch_size, device=pred_route.device)
@@ -40,7 +40,9 @@ class RouteLoss(nn.Module):
             src = pred_route[:, t].clamp(0, n_pois - 1)
             dst = pred_route[:, t + 1].clamp(0, n_pois - 1)
             total_dist = total_dist + distances[torch.arange(batch_size, device=pred_route.device), src, dst]
-        return total_dist.mean()
+        # 归一化：除以最大距离 * 路线长度，避免远郊景点导致 loss 爆炸
+        max_dist = distances.max() + 1e-8
+        return (total_dist / (max_dist * route_len)).mean()
 
     def mhc_regularization(self, embeddings: torch.Tensor) -> torch.Tensor:
         """MHC 正则化：惩罚偏离庞加莱球的嵌入."""
