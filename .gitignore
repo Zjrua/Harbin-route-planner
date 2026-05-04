@@ -6,6 +6,7 @@ data/processed/
 # Model artifacts
 checkpoints/
 logs/
+output/
 
 # Python
 __pycache__/
@@ -39,3 +40,5 @@ Thumbs.db
 # Misc
 *.log
 wandb/
+.claude/
+uv.lock
