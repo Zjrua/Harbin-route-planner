@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 2026年全国大学生统计建模大赛参赛作品。基于Transformer架构构建哈尔滨文旅线路优化模型，核心创新点为融合DeepSeek论文中的三项技术：Engram内容寻址记忆、MHC双曲流形约束（庞加莱球模型）、Muon矩阵正交化优化器。
 
-**当前状态：骨架代码阶段。** 所有模型模块的核心方法均使用 `raise NotImplementedError` 占位，需逐步填充实现。测试文件中的用例也是空壳（pass/TODO）。
+**当前状态：骨架代码阶段。** 所有模型模块的核心方法均使用 `raise NotImplementedError` 占位，需逐步填充实现。测试文件中的用例也是空壳（pass/TODO）。少数已实现：`POIEmbedding.forward`、`create_dataloaders()`、`train.py` 中的 `load_config()`。
 
 ## Commands
 
@@ -57,18 +57,26 @@ HarbinRouteDataset → DataLoader (train/val/test)
 
 ### 模型架构 (src/models/)
 
-`RouteTransformer` (transformer.py) 是顶层模型，`__init__` 已实现，forward/generate 待填充：
+`RouteTransformer` (transformer.py) 是顶层模型，`__init__` 已实现，forward/generate 待填充。默认 d_model=128, n_heads=8, 4层encoder/decoder, d_ff=512, max_route_len=20。
 
-1. **POIEmbedding** (embeddings.py) — POI ID + 类别 + 评分嵌入 + 正弦位置编码
+1. **POIEmbedding** (embeddings.py) — **已实现。** POI ID + 类别 + 评分嵌入 + 正弦位置编码
 2. **PoincareEmbedding** (mhc.py) — 庞加莱球模型双曲嵌入，expmap/logmap映射，测地距离公式，曲率取绝对值使用（默认 c=1.0 from curvature=-1.0）
-3. **GraphAwareEncoder** (encoder.py) — 邻接矩阵注入Self-Attention作为偏置
-4. **EngramDecoder** (decoder.py) — Masked Decoder + Cross-Attention + 可选Engram Attention
+3. **GraphAwareEncoder** (encoder.py) — 邻接矩阵注入Self-Attention作为偏置，FFN: Linear→GELU→Dropout→Linear→Dropout
+4. **EngramDecoder** (decoder.py) — Masked Decoder + Cross-Attention + 可选Engram Attention，每层4个LayerNorm
 5. **EngramMemory** (engram.py) — register_buffer存储memory_keys/values/scores/mask，余弦相似度top-k检索，可学习门控融合，季节权重参数（冬/夏）
-6. **RouteLoss** (losses.py) — CE + 距离惩罚 + MHC正则项的加权组合
+6. **RouteLoss** (losses.py) — CE(1.0) + 距离惩罚(0.5) + MHC正则项(0.05)的加权组合
 
 ### 优化器 (src/optim/)
 
-**MuonOptimizer** — 继承 `torch.optim.Optimizer`，Newton-Schulze迭代(5步)近似正交化梯度。三组参数：attention_params(lr_attn=3e-4)、ffn_params(lr_ffn=1e-3)、other_params(均值)。仅对≥2D参数做正交化。
+**MuonOptimizer** — 继承 `torch.optim.Optimizer`，Newton-Schulze迭代(5步)近似正交化梯度。三组参数：attention_params(lr_attn=3e-4)、ffn_params(lr_ffn=1e-3)、other_params(均值)。仅对≥2D参数做正交化。momentum=0.95, Nesterov=True, weight_decay=1e-4。
+
+### 训练策略 (src/train.py)
+
+- Teacher Forcing + Scheduled Sampling（ratio从0.5线性衰减）
+- Early Stopping（patience=10, 监控val_loss）
+- TensorBoard记录loss和指标
+- 最佳模型保存至 `checkpoints/best_model.pt`
+- batch_size=32, epochs=200, 数据划分 0.8/0.1/0.1
 
 ### 配置体系
 
@@ -91,5 +99,6 @@ folium交互式地图（路线绘制）+ matplotlib静态图表（训练曲线�
 - 季节分为冬季(11-2月冰雪季)和夏季(6-8月)，影响Engram检索权重
 - MHC曲率为负值（默认-1.0），内部 `c = abs(curvature)` 使用
 - 坐标系：哈尔滨中心点 (45.80, 126.53)，max_pois=150
+- 推理使用Beam Search（beam_size可配置）
 - Linter: ruff, line-length=100, target Python 3.10+
 - 测试框架: pytest, testpaths=["tests"]

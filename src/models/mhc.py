@@ -39,69 +39,58 @@ class PoincareEmbedding(nn.Module):
         )
 
     def expmap(self, v: torch.Tensor, x: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """指数映射：从切空间映射到庞加莱球.
-
-        将欧氏切空间中的向量 v 映射到庞加莱球上 x 处的切空间结果。
-
-        Args:
-            v: 切空间向量, shape [..., dim]
-            x: 流形上的基点, shape [..., dim]，默认为原点
-
-        Returns:
-            流形上的点, shape [..., dim]
-        """
-        raise NotImplementedError("需实现庞加莱球指数映射公式")
+        """指数映射：从切空间映射到庞加莱球."""
+        if x is None:
+            # 原点处的指数映射：exp_0(v) = tanh(sqrt(c) * ||v||) * v / (sqrt(c) * ||v||)
+            v_norm = torch.clamp(v.norm(dim=-1, keepdim=True), min=1e-10)
+            return torch.tanh(torch.sqrt(torch.tensor(self.c, device=v.device)) * v_norm) * v / (
+                torch.sqrt(torch.tensor(self.c, device=v.device)) * v_norm
+            )
+        # 非原点处的指数映射
+        c = self.c
+        v_norm_sq = (v * v).sum(dim=-1, keepdim=True).clamp(min=1e-10)
+        lambda_x = 2.0 / (1.0 - c * (x * x).sum(dim=-1, keepdim=True)).clamp(min=1e-10)
+        inner = (x * v).sum(dim=-1, keepdim=True)
+        sqrt_c = torch.sqrt(torch.tensor(c, device=v.device))
+        direction = v / v_norm_sq.sqrt().clamp(min=1e-10) * torch.tanh(
+            sqrt_c * lambda_x * v_norm_sq.sqrt() / 2.0
+        )
+        return self.project(
+            x + direction * (2.0 / (lambda_x.clamp(min=1e-10)))
+            * (1.0 / (1.0 + c * inner / lambda_x.clamp(min=1e-10)).clamp(min=1e-10))
+        )
 
     def logmap(self, y: torch.Tensor, x: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """对数映射：从庞加莱球映射到切空间.
-
-        将流形上的点 y 映射到 x 处的切空间向量。
-
-        Args:
-            y: 流形上的点, shape [..., dim]
-            x: 流形上的基点, shape [..., dim]，默认为原点
-
-        Returns:
-            切空间向量, shape [..., dim]
-        """
-        raise NotImplementedError("需实现庞加莱球对数映射公式")
+        """对数映射：从庞加莱球映射到切空间."""
+        if x is None:
+            # 原点处的对数映射：log_0(y) = arctanh(sqrt(c) * ||y||) * y / (sqrt(c) * ||y||)
+            y_norm = torch.clamp(y.norm(dim=-1, keepdim=True), min=1e-10)
+            sqrt_c = torch.sqrt(torch.tensor(self.c, device=y.device))
+            return torch.atanh(torch.clamp(sqrt_c * y_norm, max=1.0 - 1e-7)) * y / (sqrt_c * y_norm)
+        # 非原点处的对数映射
+        diff = y - x
+        diff_norm = torch.clamp(diff.norm(dim=-1, keepdim=True), min=1e-10)
+        return diff / diff_norm * self.geodesic_distance(x, y).unsqueeze(-1)
 
     def geodesic_distance(self, u: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
-        """计算两点间的测地距离.
-
-        庞加莱球模型中两点的测地距离公式：
-        d(u,v) = (1/sqrt(c)) * arcosh(1 + 2c * ||u-v||^2 / ((1-c||u||^2)(1-c||v||^2)))
-
-        Args:
-            u: 第一个点, shape [..., dim]
-            v: 第二个点, shape [..., dim]
-
-        Returns:
-            测地距离, shape [...]
-        """
-        raise NotImplementedError("需实现测地距离公式")
+        """计算两点间的测地距离."""
+        c = self.c
+        diff_sq = ((u - v) ** 2).sum(dim=-1)
+        u_sq = (u ** 2).sum(dim=-1)
+        v_sq = (v ** 2).sum(dim=-1)
+        denom = (1 - c * u_sq) * (1 - c * v_sq)
+        inner = 1.0 + 2.0 * c * diff_sq / denom.clamp(min=1e-10)
+        return torch.acosh(inner.clamp(min=1.0 + 1e-7)) / torch.sqrt(torch.tensor(c, device=u.device))
 
     def project(self, x: torch.Tensor) -> torch.Tensor:
-        """投影到庞加莱球内.
-
-        确保所有嵌入点严格在庞加莱球内：||x|| < 1/sqrt(c)。
-        对超出边界的点进行径向投影。
-
-        Args:
-            x: 待投影的向量, shape [..., dim]
-
-        Returns:
-            投影后的向量, shape [..., dim]
-        """
-        raise NotImplementedError("需实现：clamp 到庞加莱球内")
+        """投影到庞加莱球内，确保 ||x|| < 1/sqrt(c)."""
+        max_norm = 1.0 / torch.sqrt(torch.tensor(self.c, device=x.device)) - 1e-5
+        x_norm = x.norm(dim=-1, keepdim=True)
+        scale = torch.where(x_norm > max_norm, max_norm / x_norm.clamp(min=1e-10), torch.ones_like(x_norm))
+        return x * scale
 
     def forward(self, indices: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """前向传播：获取 POI 的双曲嵌入.
-
-        Args:
-            indices: POI 索引, shape [...]，为 None 时返回全部嵌入
-
-        Returns:
-            双曲嵌入, shape [..., dim]，已投影到庞加莱球内
-        """
-        raise NotImplementedError("需实现：索引查找 + 投影")
+        """前向传播：获取 POI 的双曲嵌入，已投影到庞加莱球内."""
+        if indices is None:
+            return self.project(self.embedding)
+        return self.project(self.embedding[indices])

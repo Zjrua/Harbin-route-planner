@@ -55,14 +55,41 @@ class EngramDecoder(nn.Module):
                 encoder_output: torch.Tensor,
                 target: Optional[torch.Tensor] = None,
                 causal_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """
-        Args:
-            engram_memory: Engram 检索结果, shape [batch, top_k, d_model]
-            encoder_output: 编码器输出, shape [batch, n_pois, d_model]
-            target: 目标路线序列, shape [batch, route_len, d_model]
-            causal_mask: 因果掩码, shape [route_len, route_len]
+        """Masked Self-Attn -> Cross-Attn -> Engram-Attn -> FFN."""
+        if target is not None:
+            x = self.target_embedding(target) + self.pos_encoding[:, :target.size(1)]
+        else:
+            x = self.pos_encoding[:, :encoder_output.size(1)].expand(encoder_output.size(0), -1, -1)
 
-        Returns:
-            decoder_output: [batch, route_len, d_model]
-        """
-        raise NotImplementedError("需实现：Masked Self-Attn -> Cross-Attn -> Engram-Attn -> FFN")
+        for layer in self.layers:
+            # 1. Masked Self-Attention
+            residual = x
+            x = layer["norm1"](x)
+            x, _ = layer["self_attn"](
+                x, x, x, attn_mask=causal_mask, need_weights=False,
+            )
+            x = residual + x
+
+            # 2. Cross-Attention
+            residual = x
+            x = layer["norm2"](x)
+            x, _ = layer["cross_attn"](
+                x, encoder_output, encoder_output, need_weights=False,
+            )
+            x = residual + x
+
+            # 3. Engram Attention（可选）
+            if self.use_engram and layer["engram_attn"] is not None and engram_memory is not None:
+                residual = x
+                x = layer["norm3"](x)
+                x, _ = layer["engram_attn"](
+                    x, engram_memory, engram_memory, need_weights=False,
+                )
+                x = residual + x
+
+            # 4. FFN
+            residual = x
+            x = layer["norm4"](x)
+            x = residual + layer["ffn"](x)
+
+        return self.norm(x)

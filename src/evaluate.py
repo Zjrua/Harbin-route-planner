@@ -22,7 +22,10 @@ def route_distance(route: List[int], dist_matrix: np.ndarray) -> float:
     Returns:
         路线总距离 (km)
     """
-    raise NotImplementedError("需实现：沿路线累加相邻 POI 间距离")
+    total = 0.0
+    for i in range(len(route) - 1):
+        total += dist_matrix[route[i], route[i + 1]]
+    return total
 
 
 def route_time(route: List[int], time_matrix: np.ndarray) -> float:
@@ -35,7 +38,10 @@ def route_time(route: List[int], time_matrix: np.ndarray) -> float:
     Returns:
         路线总时间 (分钟)
     """
-    raise NotImplementedError("需实现：沿路线累加通行时间")
+    total = 0.0
+    for i in range(len(route) - 1):
+        total += time_matrix[route[i], route[i + 1]]
+    return total
 
 
 def satisfaction_score(route: List[int], ratings: np.ndarray) -> float:
@@ -48,7 +54,7 @@ def satisfaction_score(route: List[int], ratings: np.ndarray) -> float:
     Returns:
         路线平均满意度评分
     """
-    raise NotImplementedError("需实现：取路线中 POI 评分的加权平均")
+    return float(np.mean([ratings[i] for i in route]))
 
 
 def diversity_score(route: List[int], categories: np.ndarray) -> float:
@@ -63,7 +69,20 @@ def diversity_score(route: List[int], categories: np.ndarray) -> float:
     Returns:
         多样性得分（基于类别熵或 unique 比例）
     """
-    raise NotImplementedError("需实现：计算路线中类别的多样性指标")
+    route_cats = [categories[i] for i in route]
+    unique = len(set(route_cats))
+    total = len(route_cats)
+    # 基于 unique 比例 + 熵的多样性度量
+    if total == 0:
+        return 0.0
+    ratio = unique / total
+    # 熵部分
+    counts = {}
+    for c in route_cats:
+        counts[c] = counts.get(c, 0) + 1
+    probs = [v / total for v in counts.values()]
+    entropy = -sum(p * np.log(p + 1e-10) for p in probs)
+    return float(ratio * 0.5 + (entropy / np.log(len(probs) + 1)) * 0.5) if len(probs) > 1 else float(ratio)
 
 
 def composite_score(metrics: Dict[str, float], weights: Dict[str, float]) -> float:
@@ -78,7 +97,14 @@ def composite_score(metrics: Dict[str, float], weights: Dict[str, float]) -> flo
     Returns:
         综合得分
     """
-    raise NotImplementedError("需实现：归一化 + 加权求和")
+    # 各指标归一化到 [0, 1]（距离和时间越小越好，取反）
+    normalized = {
+        "distance": 1.0 - min(metrics.get("distance", 0) / max(metrics.get("max_distance", 1), 1e-10), 1.0),
+        "time": 1.0 - min(metrics.get("time", 0) / max(metrics.get("max_time", 1), 1e-10), 1.0),
+        "satisfaction": min(metrics.get("satisfaction", 0) / 5.0, 1.0),
+        "diversity": min(metrics.get("diversity", 0), 1.0),
+    }
+    return sum(weights.get(k, 0) * v for k, v in normalized.items())
 
 
 def evaluate_routes(routes: List[List[int]], dist_matrix: np.ndarray,
@@ -97,4 +123,17 @@ def evaluate_routes(routes: List[List[int]], dist_matrix: np.ndarray,
     Returns:
         平均指标字典
     """
-    raise NotImplementedError("需实现：遍历路线计算各指标，返回平均值")
+    all_metrics = {"distance": [], "time": [], "satisfaction": [], "diversity": []}
+    for route in routes:
+        if len(route) < 2:
+            continue
+        all_metrics["distance"].append(route_distance(route, dist_matrix))
+        all_metrics["time"].append(route_time(route, time_matrix))
+        all_metrics["satisfaction"].append(satisfaction_score(route, ratings))
+        all_metrics["diversity"].append(diversity_score(route, categories))
+
+    avg = {k: float(np.mean(v)) if v else 0.0 for k, v in all_metrics.items()}
+    avg["max_distance"] = float(np.max(all_metrics["distance"])) if all_metrics["distance"] else 1.0
+    avg["max_time"] = float(np.max(all_metrics["time"])) if all_metrics["time"] else 1.0
+    avg["composite"] = composite_score(avg, weights)
+    return avg

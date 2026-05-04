@@ -14,6 +14,8 @@ data:
   seasons:
     winter: [11, 12, 1, 2]  # 冰雪季
     summer: [6, 7, 8]
+  use_probabilistic_edges: false  # 训练时对距离/耗时加随机噪声
+  distance_noise_scale: 0.1      # 噪声标准差 = mean * scale
 
 # 模型配置
 model:
@@ -47,7 +49,7 @@ loss:
 
 # 优化器配置
 optimizer:
-  name: "muon"  # muon / adam / adamw
+  name: "adamw"  # muon / adam / adamw
   lr_attn: 3.0e-4
   lr_ffn: 1.0e-3
   weight_decay: 1.0e-4

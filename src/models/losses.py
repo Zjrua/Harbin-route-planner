@@ -26,57 +26,38 @@ class RouteLoss(nn.Module):
         self.mhc_weight = mhc_weight
 
     def route_cross_entropy(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        """路线交叉熵损失.
-
-        Args:
-            pred: 预测 logits, shape [batch, route_len, n_pois]
-            target: 目标 POI 索引, shape [batch, route_len]
-
-        Returns:
-            标量损失值
-        """
-        raise NotImplementedError("需实现：reshape 后调用 F.cross_entropy")
+        """路线交叉熵损失，忽略 padding (index=0)."""
+        batch_size, route_len, n_pois = pred.shape
+        return F.cross_entropy(pred.reshape(-1, n_pois), target.reshape(-1), ignore_index=0)
 
     def distance_loss(self, pred_route: torch.Tensor,
                       distances: torch.Tensor) -> torch.Tensor:
-        """路线总距离惩罚.
-
-        鼓励模型生成距离较短的路线，避免不走回头路。
-
-        Args:
-            pred_route: 预测的路线 POI 索引, shape [batch, route_len]
-            distances: POI 间距离矩阵, shape [batch, n_pois, n_pois]
-
-        Returns:
-            标量损失值（归一化后的路线总距离）
-        """
-        raise NotImplementedError("需实现：沿路线累加相邻 POI 距离")
+        """路线总距离惩罚：沿路线累加相邻 POI 距离."""
+        batch_size, route_len = pred_route.shape
+        n_pois = distances.size(-1)
+        total_dist = torch.zeros(batch_size, device=pred_route.device)
+        for t in range(route_len - 1):
+            src = pred_route[:, t].clamp(0, n_pois - 1)
+            dst = pred_route[:, t + 1].clamp(0, n_pois - 1)
+            total_dist = total_dist + distances[torch.arange(batch_size, device=pred_route.device), src, dst]
+        return total_dist.mean()
 
     def mhc_regularization(self, embeddings: torch.Tensor) -> torch.Tensor:
-        """MHC 双曲空间正则化损失.
-
-        惩罚偏离庞加莱球的嵌入，保持双曲流形约束。
-
-        Args:
-            embeddings: POI 嵌入, shape [n_pois, dim]
-
-        Returns:
-            标量正则化损失
-        """
-        raise NotImplementedError("需实现：惩罚 ||x|| >= 1/sqrt(c) 的嵌入")
+        """MHC 正则化：惩罚偏离庞加莱球的嵌入."""
+        norms_sq = (embeddings ** 2).sum(dim=-1)
+        return norms_sq.mean()
 
     def forward(self, pred: torch.Tensor, target: torch.Tensor,
                 distances: torch.Tensor,
                 embeddings: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """加权总损失.
+        """加权总损失."""
+        loss = self.ce_weight * self.route_cross_entropy(pred, target)
 
-        Args:
-            pred: 预测 logits, shape [batch, route_len, n_pois]
-            target: 目标 POI 索引, shape [batch, route_len]
-            distances: POI 距离矩阵, shape [batch, n_pois, n_pois]
-            embeddings: MHC 嵌入（可选）, shape [n_pois, dim]
+        # 获取预测路线（greedy）
+        pred_route = pred.argmax(dim=-1)
+        loss = loss + self.distance_weight * self.distance_loss(pred_route, distances)
 
-        Returns:
-            总损失标量
-        """
-        raise NotImplementedError("需实现：加权求和三个损失分量")
+        if embeddings is not None:
+            loss = loss + self.mhc_weight * self.mhc_regularization(embeddings)
+
+        return loss

@@ -88,58 +88,112 @@ class RouteTransformer(nn.Module):
 
     def encode(self, poi_features: torch.Tensor,
                adjacency: torch.Tensor) -> torch.Tensor:
-        """Graph-aware 编码.
-
-        Args:
-            poi_features: POI 特征矩阵, shape [batch, n_pois, d_model]
-            adjacency: 路网邻接矩阵, shape [batch, n_pois, n_pois]
-
-        Returns:
-            encoder_output: 编码器输出, shape [batch, n_pois, d_model]
-        """
-        raise NotImplementedError("需实现：调用 self.encoder(poi_features, adjacency)")
+        """Graph-aware 编码."""
+        return self.encoder(poi_features, adjacency)
 
     def decode(self, memory: torch.Tensor,
                encoder_output: torch.Tensor,
                target: Optional[torch.Tensor] = None,
                mask: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """带 Engram 记忆增强的自回归解码.
-
-        Args:
-            memory: Engram 检索结果（若启用）, shape [batch, top_k, d_model]
-            encoder_output: 编码器输出, shape [batch, n_pois, d_model]
-            target: 目标路线序列（训练时）, shape [batch, route_len]
-            mask: 因果掩码, shape [route_len, route_len]
-
-        Returns:
-            logits: POI 预测分布, shape [batch, route_len, n_pois]
-        """
-        raise NotImplementedError("需实现：调用 self.decoder(memory, encoder_output, target, mask)")
+        """带 Engram 记忆增强的自回归解码."""
+        return self.decoder(memory, encoder_output, target, mask)
 
     def forward(self, batch: dict) -> dict:
-        """完整前向传播（训练模式）.
+        """完整前向传播（训练模式）."""
+        poi_features = batch["poi_features"]
+        adjacency = batch["adjacency"]
+        route_seq = batch["route_sequence"]
 
-        Args:
-            batch: 包含以下键的字典:
-                - poi_features: [batch, n_pois, feature_dim]
-                - adjacency: [batch, n_pois, n_pois]
-                - route_sequence: [batch, route_len]
-                - scores: [batch]（用于 Engram 构建）
+        # 1. 编码
+        encoder_output = self.encode(poi_features, adjacency)
 
-        Returns:
-            包含 logits, embeddings（MHC）, engram_memory 的字典
-        """
-        raise NotImplementedError("需实现：encode -> decode -> output_proj 的完整流程")
+        # 2. 构建 Engram 记忆（可选）
+        engram_memory = None
+        if self.use_engram:
+            scores = batch.get("scores", None)
+            if scores is not None:
+                self.engram.build_memory(encoder_output.detach(), scores)
+            # 使用编码器输出的均值作为查询检索记忆
+            query = encoder_output.mean(dim=1)
+            retrieved, _ = self.engram.retrieve(query)
+            engram_memory = retrieved
+
+        # 3. 目标路线嵌入
+        max_route_len = self.config["model"]["max_route_len"]
+        target_emb = self.poi_embedding(route_seq[:, :-1] if route_seq.size(1) > 1 else route_seq)
+
+        # 4. 构建因果掩码
+        seq_len = target_emb.size(1)
+        causal_mask = torch.triu(
+            torch.ones(seq_len, seq_len, device=target_emb.device), diagonal=1
+        ).bool()
+
+        # 5. 解码
+        decoder_output = self.decode(engram_memory, encoder_output, target_emb, causal_mask)
+
+        # 6. 输出投影
+        logits = self.output_proj(decoder_output)
+
+        result = {"logits": logits}
+
+        # 7. MHC 嵌入（可选）
+        if self.use_mhc:
+            result["embeddings"] = self.mhc_embedding()
+
+        return result
 
     def generate(self, encoder_output: torch.Tensor,
                  beam_size: int = 5) -> torch.Tensor:
-        """Beam Search 推理生成路线.
+        """Beam Search 推理生成路线."""
+        batch_size = encoder_output.size(0)
+        max_len = self.config["model"]["max_route_len"]
+        device = encoder_output.device
 
-        Args:
-            encoder_output: 编码器输出, shape [batch, n_pois, d_model]
-            beam_size: Beam 宽度
+        # 初始化：以 SOS token (0) 开始
+        sos_emb = self.poi_embedding(torch.zeros(batch_size, 1, dtype=torch.long, device=device))
 
-        Returns:
-            best_routes: 最优路线, shape [batch, route_len]
-        """
-        raise NotImplementedError("需实现：Beam Search 解码逻辑")
+        # 每个 batch 独立做 beam search
+        best_routes = []
+        for b in range(batch_size):
+            enc_out = encoder_output[b:b+1].expand(beam_size, -1, -1)
+            # beams: (score, route_indices)
+            beams = [(0.0, [0])]
+            for step in range(max_len - 1):
+                candidates = []
+                for score, route in beams:
+                    route_tensor = torch.tensor([route], dtype=torch.long, device=device)
+                    target_emb = self.poi_embedding(route_tensor)
+                    seq_len = target_emb.size(1)
+                    causal_mask = torch.triu(
+                        torch.ones(seq_len, seq_len, device=device), diagonal=1
+                    ).bool()
+
+                    # Engram 检索
+                    engram_memory = None
+                    if self.use_engram:
+                        query = enc_out[:1].mean(dim=1)
+                        retrieved, _ = self.engram.retrieve(query)
+                        engram_memory = retrieved.expand(beam_size, -1, -1)
+
+                    dec_out = self.decode(engram_memory, enc_out, target_emb, causal_mask)
+                    logits = self.output_proj(dec_out)[:, -1, :]
+                    log_probs = torch.log_softmax(logits, dim=-1)
+                    topk_probs, topk_idx = log_probs[0].topk(beam_size)
+
+                    for i in range(beam_size):
+                        new_score = score + topk_probs[i].item()
+                        candidates.append((new_score, route + [topk_idx[i].item()]))
+
+                # 保留 top beam_size 个候选
+                candidates.sort(key=lambda x: x[0], reverse=True)
+                beams = candidates[:beam_size]
+
+            best_routes.append(beams[0][1])
+
+        # 填充到 max_len
+        routes = torch.zeros(batch_size, max_len, dtype=torch.long, device=device)
+        for b, route in enumerate(best_routes):
+            length = min(len(route), max_len)
+            routes[b, :length] = torch.tensor(route[:length], dtype=torch.long)
+
+        return routes

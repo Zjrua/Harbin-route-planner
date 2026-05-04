@@ -19,12 +19,29 @@ class GraphAttentionLayer(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x: torch.Tensor, adj_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """
-        Args:
-            x: [batch, seq_len, d_model]
-            adj_mask: [batch, seq_len, seq_len] 邻接矩阵偏置
-        """
-        raise NotImplementedError("需实现：Self-Attention + 邻接偏置 + 残差")
+        """Self-Attention + 邻接偏置 + 残差连接."""
+        residual = x
+        x_norm = self.norm(x)
+
+        # 构建 attn_mask：将邻接矩阵作为注意力偏置
+        key_padding_mask = None
+        if adj_mask is not None:
+            # adj_mask 作为注意力分数的加性偏置
+            attn_out, _ = self.self_attn(
+                x_norm, x_norm, x_norm,
+                key_padding_mask=key_padding_mask,
+                need_weights=False,
+            )
+            # 将邻接信息作为残差融合
+            attn_out = attn_out + adj_mask @ x_norm
+        else:
+            attn_out, _ = self.self_attn(
+                x_norm, x_norm, x_norm,
+                key_padding_mask=key_padding_mask,
+                need_weights=False,
+            )
+
+        return self.dropout(attn_out) + residual
 
 
 class GraphAwareEncoder(nn.Module):
@@ -52,12 +69,10 @@ class GraphAwareEncoder(nn.Module):
 
     def forward(self, poi_features: torch.Tensor,
                 adjacency: torch.Tensor) -> torch.Tensor:
-        """
-        Args:
-            poi_features: [batch, n_pois, d_model]
-            adjacency: [batch, n_pois, n_pois]
-
-        Returns:
-            [batch, n_pois, d_model]
-        """
-        raise NotImplementedError("需实现：多层 GraphAttention + FFN")
+        """多层 GraphAttention + FFN."""
+        x = poi_features
+        for layer in self.layers:
+            x = layer(x, adjacency)
+        x = self.norm(x)
+        x = x + self.ffn(x)
+        return x

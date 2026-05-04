@@ -26,7 +26,26 @@ def plot_route_on_map(pois: pd.DataFrame, route: List[int],
     Returns:
         folium.Map 对象
     """
-    raise NotImplementedError("需实现：folium 地图 + 路线折线 + POI 标记")
+    m = folium.Map(location=[center_lat, center_lng], zoom_start=12)
+
+    # 绘制路线上的 POI 标记和连线
+    route_coords = []
+    for idx in route:
+        row = pois.iloc[idx]
+        lat, lng = row["lat"], row["lng"]
+        name = row.get("name", f"POI-{idx}")
+        route_coords.append([lat, lng])
+        folium.Marker(
+            [lat, lng], popup=f"{name} (#{idx})",
+            icon=folium.Icon(color="blue"),
+        ).add_to(m)
+
+    # 绘制路线折线
+    if len(route_coords) >= 2:
+        folium.PolyLine(route_coords, color="red", weight=3, opacity=0.8).add_to(m)
+
+    m.save(output_path)
+    return m
 
 
 def plot_training_curves(log_data: dict, output_path: str = "training_curves.png") -> None:
@@ -36,7 +55,19 @@ def plot_training_curves(log_data: dict, output_path: str = "training_curves.png
         log_data: 训练日志数据字典
         output_path: 图片输出路径
     """
-    raise NotImplementedError("需实现：matplotlib 绘制训练/验证 loss 曲线")
+    fig, ax = plt.subplots(figsize=(10, 6))
+    if "train_loss" in log_data:
+        ax.plot(log_data["train_loss"], label="Train Loss")
+    if "val_loss" in log_data:
+        ax.plot(log_data["val_loss"], label="Val Loss")
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("Loss")
+    ax.set_title("Training Curves")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150)
+    plt.close()
 
 
 def plot_route_comparison(routes: List[List[int]], pois: pd.DataFrame,
@@ -50,7 +81,24 @@ def plot_route_comparison(routes: List[List[int]], pois: pd.DataFrame,
         labels: 路线标签
         output_path: 输出路径
     """
-    raise NotImplementedError("需实现：多条路线在同一地图上的对比可视化")
+    m = folium.Map(location=[pois["lat"].mean(), pois["lng"].mean()], zoom_start=12)
+    colors = ["red", "blue", "green", "purple", "orange"]
+
+    for i, (route, label) in enumerate(zip(routes, labels)):
+        color = colors[i % len(colors)]
+        coords = []
+        for idx in route:
+            row = pois.iloc[idx]
+            lat, lng = row["lat"], row["lng"]
+            coords.append([lat, lng])
+            folium.Marker(
+                [lat, lng], popup=f"{label}: {row.get('name', f'POI-{idx}')}",
+                icon=folium.Icon(color=color),
+            ).add_to(m)
+        if len(coords) >= 2:
+            folium.PolyLine(coords, color=color, weight=3, opacity=0.7, popup=label).add_to(m)
+
+    m.save(output_path)
 
 
 def plot_ablation_results(results: dict, output_path: str = "ablation_results.png") -> None:
@@ -60,4 +108,26 @@ def plot_ablation_results(results: dict, output_path: str = "ablation_results.pn
         results: 消融实验结果字典 {"实验名": {"指标": 值}}
         output_path: 输出路径
     """
-    raise NotImplementedError("需实现：分组柱状图展示消融实验对比")
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    experiment_names = list(results.keys())
+    metrics_names = list(results[experiment_names[0]].keys())
+    n_groups = len(experiment_names)
+    n_metrics = len(metrics_names)
+    x = np.arange(n_groups)
+    width = 0.8 / n_metrics
+
+    for j, metric in enumerate(metrics_names):
+        values = [results[exp].get(metric, 0) for exp in experiment_names]
+        ax.bar(x + j * width, values, width, label=metric)
+
+    ax.set_xlabel("Experiment")
+    ax.set_ylabel("Score")
+    ax.set_title("Ablation Study Results")
+    ax.set_xticks(x + width * n_metrics / 2)
+    ax.set_xticklabels(experiment_names, rotation=30, ha="right")
+    ax.legend()
+    ax.grid(True, alpha=0.3, axis="y")
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150)
+    plt.close()
