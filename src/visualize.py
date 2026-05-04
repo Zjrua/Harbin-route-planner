@@ -33,7 +33,7 @@ def plot_route_on_map(pois: pd.DataFrame, route: List[int],
     for idx in route:
         row = pois.iloc[idx]
         lat, lng = row["lat"], row["lng"]
-        name = row.get("name", f"POI-{idx}")
+        name = row["name"] if "name" in pois.columns else f"POI-{idx}"
         route_coords.append([lat, lng])
         folium.Marker(
             [lat, lng], popup=f"{name} (#{idx})",
@@ -91,8 +91,9 @@ def plot_route_comparison(routes: List[List[int]], pois: pd.DataFrame,
             row = pois.iloc[idx]
             lat, lng = row["lat"], row["lng"]
             coords.append([lat, lng])
+            pname = row["name"] if "name" in pois.columns else f"POI-{idx}"
             folium.Marker(
-                [lat, lng], popup=f"{label}: {row.get('name', f'POI-{idx}')}",
+                [lat, lng], popup=f"{label}: {pname}",
                 icon=folium.Icon(color=color),
             ).add_to(m)
         if len(coords) >= 2:
