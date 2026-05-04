@@ -23,7 +23,7 @@ from src.evaluate import (
     route_distance, route_time, satisfaction_score,
     diversity_score, composite_score,
 )
-from src.visualize import plot_route_on_map, plot_route_comparison
+from src.visualize import plot_route_on_map, plot_route_comparison, plot_route_on_map_with_roads
 
 
 def load_config(config_path: str) -> dict:
@@ -185,6 +185,81 @@ def filter_route(route: list[int], max_stops: int | None = None,
     return filtered
 
 
+def optimize_route_order(route: list[int], pois: pd.DataFrame,
+                         dist_matrix: np.ndarray) -> list[int]:
+    """优化路线顺序：使用最近邻算法，避免走回头路.
+
+    保持起点不变，按照距离最近的原则重新排列后续景点。
+    """
+    if len(route) <= 2:
+        return route
+
+    # 获取POI坐标
+    coords = []
+    for idx in route:
+        row = pois.iloc[idx]
+        lat = float(row["lat"]) if "lat" in pois.columns else 45.80
+        lng = float(row["lng"]) if "lng" in pois.columns else 126.53
+        coords.append((lat, lng))
+
+    # 最近邻算法：从起点开始，每次选择最近的未访问POI
+    optimized = [route[0]]  # 保持起点
+    remaining = set(range(1, len(route)))
+
+    current = 0
+    while remaining:
+        # 找到距离当前POI最近的下一个POI
+        min_dist = float('inf')
+        nearest = None
+        for next_idx in remaining:
+            # 使用路线中的实际距离
+            d = dist_matrix[route[current], route[next_idx]]
+            if d < min_dist:
+                min_dist = d
+                nearest = next_idx
+
+        if nearest is not None:
+            optimized.append(route[nearest])
+            remaining.remove(nearest)
+            current = nearest
+
+    return optimized
+
+
+def optimize_route_2opt(route: list[int], dist_matrix: np.ndarray,
+                        iterations: int = 100) -> list[int]:
+    """2-opt 优化：消除路线中的交叉，进一步优化路线顺序.
+
+    保持起点不变。
+    """
+    if len(route) <= 3:
+        return route
+
+    def route_cost(r):
+        return sum(dist_matrix[r[i], r[i+1]] for i in range(len(r)-1))
+
+    best = route[:]
+    best_cost = route_cost(best)
+
+    for _ in range(iterations):
+        improved = False
+        for i in range(1, len(best) - 2):
+            for j in range(i + 1, len(best)):
+                if j - i == 1:
+                    continue
+                # 尝试反转 i 到 j 的路径
+                new_route = best[:i] + best[i:j+1][::-1] + best[j+1:]
+                new_cost = route_cost(new_route)
+                if new_cost < best_cost:
+                    best = new_route
+                    best_cost = new_cost
+                    improved = True
+        if not improved:
+            break
+
+    return best
+
+
 def main():
     parser = argparse.ArgumentParser(description="哈尔滨文旅路线推荐")
     parser.add_argument("--checkpoint", type=str, required=True)
@@ -280,7 +355,11 @@ def main():
     for raw in raw_routes:
         filtered = filter_route(raw, max_stops, time_matrix, max_minutes)
         if len(filtered) >= 2:
-            all_routes.append(filtered)
+            # 优化路线顺序：避免走回头路
+            optimized = optimize_route_order(filtered, pois, dist_matrix)
+            # 2-opt 进一步优化
+            optimized = optimize_route_2opt(optimized, dist_matrix, iterations=50)
+            all_routes.append(optimized)
 
     # 评估
     metrics_cfg = config.get("metrics", {})
@@ -345,15 +424,34 @@ def main():
     if len(all_routes) > 1:
         labels = [f"路线{i+1}" for i in range(len(all_routes))]
         plot_route_comparison(all_routes, pois, labels,
-                              output_path=str(output_dir / "routes_comparison.html"))
+                              output_path=str(output_dir / "routes_comparison.html"),
+                              title=f"哈尔滨旅游路线对比 ({args.season})")
         print(f"路线对比图: {output_dir / 'routes_comparison.html'}")
 
-    # 地图：最优路线
+    # 地图：最优路线（使用沿道路绘制的版本）
     best_idx = max(range(len(results)), key=lambda i: results[i]["composite_score"])
     best_route = all_routes[best_idx]
-    plot_route_on_map(pois, best_route, output_path=str(output_dir / "best_route_map.html"),
-                      center_lat=config["data"]["center_lat"],
-                      center_lng=config["data"]["center_lng"])
+
+    # 尝试使用高德地图API获取实际道路路径
+    amap_key = config.get("data", {}).get("amap_key", None)
+    if amap_key:
+        from src.visualize import plot_route_on_map_with_roads
+        plot_route_on_map_with_roads(
+            pois, best_route,
+            output_path=str(output_dir / "best_route_map.html"),
+            center_lat=config["data"]["center_lat"],
+            center_lng=config["data"]["center_lng"],
+            title=f"最优路线 ({args.season})",
+            amap_key=amap_key
+        )
+    else:
+        plot_route_on_map(
+            pois, best_route,
+            output_path=str(output_dir / "best_route_map.html"),
+            center_lat=config["data"]["center_lat"],
+            center_lng=config["data"]["center_lng"],
+            title=f"最优路线 ({args.season})"
+        )
     print(f"最优路线地图: {output_dir / 'best_route_map.html'}")
 
 
