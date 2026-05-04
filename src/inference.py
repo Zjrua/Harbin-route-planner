@@ -67,14 +67,15 @@ def print_route_detail(route: list[int], pois: pd.DataFrame,
 def generate_with_constraints(model: RouteTransformer, encoder_output: torch.Tensor,
                               start_id: int, beam_size: int, max_len: int,
                               device: torch.device,
-                              poi_activity_types: torch.Tensor) -> list[int]:
-    """Constrained beam search with activity type awareness.
+                              poi_activity_types: torch.Tensor,
+                              cluster_id: np.ndarray = None) -> list[int]:
+    """Constrained beam search with cluster-aware masking.
 
     Rules:
     - Hotel masked to -inf until last 3 steps; selected hotel -> immediate break
     - After 3 consecutive scenic, push dining (max 3 dining total)
     - Last 2 steps: suppress dining/shopping
-    - Uses route length for steps_remaining, not loop step
+    - Once a cluster member is visited, mask the entire cluster
     """
     ATTR_SCENIC, ATTR_DINING, ATTR_HOTEL = 0, 1, 2
     CONSECUTIVE_THRESHOLD = 3
@@ -83,6 +84,11 @@ def generate_with_constraints(model: RouteTransformer, encoder_output: torch.Ten
     with torch.no_grad():
         route = [start_id]
         constraints = model.activity_constraints
+
+        # Track visited clusters
+        visited_clusters = set()
+        if cluster_id is not None and cluster_id[start_id] >= 0:
+            visited_clusters.add(int(cluster_id[start_id]))
 
         for _ in range(max_len - 1):
             route_t = torch.tensor([route], dtype=torch.long, device=device)
@@ -113,6 +119,12 @@ def generate_with_constraints(model: RouteTransformer, encoder_output: torch.Ten
 
             for poi_idx in range(logits.size(-1)):
                 activity = poi_activity_types[poi_idx].item()
+
+                # Cluster masking: don't revisit same area
+                if cluster_id is not None and cluster_id[poi_idx] >= 0:
+                    if int(cluster_id[poi_idx]) in visited_clusters:
+                        logits[0, poi_idx] = float('-inf')
+                        continue
 
                 # Hotel: mask to -inf if too early, encourage if near end
                 if activity == ATTR_HOTEL:
@@ -159,6 +171,10 @@ def generate_with_constraints(model: RouteTransformer, encoder_output: torch.Ten
             best_idx = topk_idx[0].item()
             route.append(best_idx)
 
+            # Mark cluster as visited
+            if cluster_id is not None and cluster_id[best_idx] >= 0:
+                visited_clusters.add(int(cluster_id[best_idx]))
+
             if poi_activity_types[best_idx].item() == ATTR_HOTEL:
                 break
 
@@ -167,19 +183,21 @@ def generate_diverse_routes(model: RouteTransformer, encoder_output: torch.Tenso
                             beam_size: int, max_len: int, n_routes: int,
                             start_id: int | None, pois: pd.DataFrame,
                             device: torch.device,
-                            poi_activity_types: torch.Tensor) -> list[list[int]]:
-    """生成多条多样化路线：不同起点 + 约束 beam search."""
+                            poi_activity_types: torch.Tensor,
+                            cluster_id: np.ndarray = None) -> list[list[int]]:
+    """Generate diverse routes: different starts + constrained beam search."""
     routes = []
     used_starts = set()
 
     if start_id is not None:
         route = generate_with_constraints(
-            model, encoder_output, start_id, beam_size, max_len, device, poi_activity_types
+            model, encoder_output, start_id, beam_size, max_len, device,
+            poi_activity_types, cluster_id
         )
         routes.append(route)
         used_starts.add(start_id)
 
-    # 后续路线选不同高评分 POI 作起点
+    # Subsequent routes: different high-rating POIs as start
     if "rating" in pois.columns:
         top_pois = pois.sort_values("rating", ascending=False).index.tolist()
     else:
@@ -191,7 +209,8 @@ def generate_diverse_routes(model: RouteTransformer, encoder_output: torch.Tenso
         if poi_idx in used_starts:
             continue
         route = generate_with_constraints(
-            model, encoder_output, poi_idx, beam_size, max_len, device, poi_activity_types
+            model, encoder_output, poi_idx, beam_size, max_len, device,
+            poi_activity_types, cluster_id
         )
         routes.append(route)
         used_starts.add(poi_idx)
@@ -224,6 +243,36 @@ def filter_route(route: list[int], max_stops: int | None = None,
                 filtered = filtered[:i]
                 break
             total += seg
+
+    return filtered
+
+
+def expand_clusters_in_route(route: list[int], cluster_id: np.ndarray,
+                             clusters: list, pois: pd.DataFrame) -> list[int]:
+    """Expand clusters: group consecutive same-cluster POIs into walking tours."""
+    if cluster_id is None:
+        return route
+    expanded = []
+    i = 0
+    while i < len(route):
+        poi = route[i]
+        cid = cluster_id[poi]
+        if cid >= 0:
+            # Check if next POI is also in same cluster
+            group = [poi]
+            for j in range(i + 1, len(route)):
+                if cluster_id[route[j]] == cid:
+                    group.append(route[j])
+                else:
+                    break
+            # Only keep the entry point, don't visit same cluster twice
+            expanded.append(group[0])
+            i += len(group)
+        else:
+            expanded.append(poi)
+            i += 1
+    return expanded
+
 
     return filtered
 
@@ -395,6 +444,14 @@ def main():
     with torch.no_grad():
         encoder_output = model.encode(poi_feat_dev, adj_dev)
 
+    # 加载聚类数据
+    cluster_id = None
+    clusters_list = None
+    if (data_dir / "cluster_id.npy").exists():
+        cluster_id = np.load(data_dir / "cluster_id.npy")
+        clusters_list = np.load(data_dir / "clusters.npy", allow_pickle=True)
+        print(f"已加载聚类: {len(clusters_list)} 个团, {int((cluster_id >= 0).sum())} 景入团")
+
     # 生成路线
     print(f"\n生成条件: 季节={args.season}, 最大游览点={max_stops}, beam_size={beam_size}")
     print("=" * 60)
@@ -402,7 +459,7 @@ def main():
     max_minutes = args.max_hours * 60 if args.max_hours else None
     raw_routes = generate_diverse_routes(
         model, encoder_output, beam_size, max_stops, args.n_routes,
-        start_id, pois, device, poi_activity_types
+        start_id, pois, device, poi_activity_types, cluster_id
     )
 
     all_routes = []
