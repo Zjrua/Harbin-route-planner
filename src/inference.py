@@ -68,10 +68,20 @@ def generate_with_constraints(model: RouteTransformer, encoder_output: torch.Ten
                               start_id: int, beam_size: int, max_len: int,
                               device: torch.device,
                               poi_activity_types: torch.Tensor) -> list[int]:
-    """带活动类型约束的 beam search."""
+    """带活动类型约束 + 位置感知的 beam search.
+
+    约束规则：
+    - 住宿只能在倒数2步内（起点或终点）
+    - 连续3个以上同类型时，鼓励切换（避免全是景点）
+    - 已访问的POI不再重复
+    """
+    ATTR_SCENIC, ATTR_DINING, ATTR_HOTEL = 0, 1, 2
+    CONSECUTIVE_THRESHOLD = 3
+
     model.eval()
     with torch.no_grad():
         route = [start_id]
+        constraints = model.activity_constraints  # [6, 6]
 
         for step in range(max_len - 1):
             route_t = torch.tensor([route], dtype=torch.long, device=device)
@@ -98,11 +108,36 @@ def generate_with_constraints(model: RouteTransformer, encoder_output: torch.Ten
             # 应用活动类型约束
             last_poi = route[-1]
             last_activity = poi_activity_types[last_poi].item()
-            constraints = model.activity_constraints  # [6, 6]
 
             for poi_idx in range(logits.size(-1)):
                 activity = poi_activity_types[poi_idx].item()
-                logits[0, poi_idx] += constraints[last_activity, activity]
+
+                # 基本约束
+                base_bias = constraints[last_activity, activity].item()
+
+                # 住宿只能在终点（倒数2步内）
+                if activity == ATTR_HOTEL:
+                    steps_remaining = max_len - (step + 1)
+                    if steps_remaining > 2:
+                        base_bias = -1e9
+                    else:
+                        base_bias = 3.0
+
+                # 连续同类型检测
+                if activity == last_activity:
+                    consecutive = 1
+                    for prev_idx in reversed(route):
+                        if prev_idx > 0 and poi_activity_types[prev_idx].item() == last_activity:
+                            consecutive += 1
+                        else:
+                            break
+                    if consecutive >= CONSECUTIVE_THRESHOLD:
+                        if activity == ATTR_SCENIC:
+                            base_bias -= 3.0
+                        if last_activity == ATTR_SCENIC and activity == ATTR_DINING:
+                            base_bias += 5.0
+
+                logits[0, poi_idx] += base_bias
 
             # 屏蔽已访问的 POI
             visited = set(route)
@@ -113,7 +148,6 @@ def generate_with_constraints(model: RouteTransformer, encoder_output: torch.Ten
             log_probs = torch.log_softmax(logits, dim=-1)
             topk_probs, topk_idx = log_probs[0].topk(beam_size)
 
-            # 选择最佳候选
             best_idx = topk_idx[0].item()
             route.append(best_idx)
 

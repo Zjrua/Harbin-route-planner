@@ -170,10 +170,15 @@ class RouteTransformer(nn.Module):
                  poi_activity_types: Optional[torch.Tensor] = None) -> torch.Tensor:
         """约束 Beam Search 推理生成路线.
 
+        增加位置感知逻辑：
+        - 前面步骤禁止住宿（住宿只能是终点）
+        - 连续 N 个同类型 POI 后鼓励转换（避免全是景点）
+        - 倒数几步才允许/鼓励住宿
+
         Args:
             encoder_output: [1, n_pois, d_model] 编码器输出
             beam_size: Beam Search 宽度
-            poi_activity_types: [n_pois] 每个 POI 的活动类型标签（用于约束解码）
+            poi_activity_types: [n_pois] 每个 POI 的活动类型标签
 
         Returns:
             routes: [1, max_len] 生成的路线
@@ -184,6 +189,14 @@ class RouteTransformer(nn.Module):
 
         # 加载活动类型约束矩阵
         constraints = self.activity_constraints  # [6, 6]
+
+        # 活动类型常量
+        ATTR_SCENIC = 0   # 景点
+        ATTR_DINING = 1   # 餐饮
+        ATTR_HOTEL = 2    # 住宿
+
+        # 连续同类型阈值：超过此值后强烈鼓励切换
+        CONSECUTIVE_THRESHOLD = 3
 
         best_routes = []
         for b in range(batch_size):
@@ -206,7 +219,6 @@ class RouteTransformer(nn.Module):
                     # 获取活动类型嵌入
                     activity_type_ids = None
                     if poi_activity_types is not None:
-                        # 根据路线中的 POI 索引获取活动类型
                         activity_type_ids = poi_activity_types[route_t]
 
                     target_emb = self.poi_embedding(route_t, activity_types=activity_type_ids)
@@ -222,14 +234,39 @@ class RouteTransformer(nn.Module):
                     if poi_activity_types is not None and len(route) > 0:
                         last_poi = route[-1]
                         last_activity = poi_activity_types[last_poi].item()
-                        # 获取当前步骤每个 POI 的活动类型
-                        current_activities = poi_activity_types  # [n_pois]
-                        # 获取约束掩码
+                        current_activities = poi_activity_types
                         constraint_mask = constraints[last_activity]  # [6]
-                        # 将约束应用到 logits
+
                         for poi_idx in range(logits.size(-1)):
                             activity = current_activities[poi_idx].item()
-                            logits[0, poi_idx] += constraint_mask[activity]
+
+                            # 基本约束：应用转换矩阵
+                            base_bias = constraint_mask[activity]
+
+                            # 住宿只能在终点（倒数 2 步内才允许）
+                            if activity == ATTR_HOTEL:
+                                steps_remaining = max_len - (step + 1)
+                                if steps_remaining > 2:
+                                    base_bias = -1e9  # 太早，禁止住宿
+                                elif steps_remaining > 0:
+                                    base_bias = 3.0   # 合适的终点，鼓励
+
+                            # 连续同类型检测：如果连续太多同类型，鼓励切换
+                            if activity == last_activity:
+                                consecutive = 1
+                                for prev_idx in reversed(route):
+                                    if prev_idx > 0 and poi_activity_types[prev_idx].item() == last_activity:
+                                        consecutive += 1
+                                    else:
+                                        break
+                                # 连续景点太多 → 降低再选景点的概率，提升餐饮
+                                if consecutive >= CONSECUTIVE_THRESHOLD:
+                                    if activity == ATTR_SCENIC:
+                                        base_bias -= 3.0  # 不想再选景点
+                                    if last_activity == ATTR_SCENIC and activity == ATTR_DINING:
+                                        base_bias += 5.0  # 强烈鼓励去吃饭
+
+                            logits[0, poi_idx] += base_bias
 
                     log_probs = torch.log_softmax(logits, dim=-1)
                     topk_probs, topk_idx = log_probs[0].topk(beam_size)

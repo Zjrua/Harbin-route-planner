@@ -245,6 +245,86 @@ def supplement_missing_categories(pois: pd.DataFrame, merged_path: Path,
     return pois
 
 
+def augment_routes_with_dining_and_hotel(matched_routes: list[dict],
+                                          pois: pd.DataFrame,
+                                          dist_matrix: np.ndarray) -> list[dict]:
+    """路线增强：在景点之间插入餐饮，末尾添加住宿.
+
+    规则：
+    - 每2-3个景点后插入一个餐饮POI
+    - 路线末尾添加住宿POI
+    - 选择距离当前位置最近的餐饮/住宿
+    """
+    # 获取餐饮和住宿POI的索引
+    dining_pois = pois[pois["category"] == "餐饮"].index.tolist()
+    hotel_pois = pois[pois["category"] == "住宿"].index.tolist()
+
+    if not dining_pois and not hotel_pois:
+        print("  警告：没有餐饮或住宿POI，跳过路线增强")
+        return matched_routes
+
+    augmented = []
+    for route_dict in matched_routes:
+        indices = route_dict["indices"]
+        if len(indices) < 3:
+            augmented.append(route_dict)
+            continue
+
+        new_route = []
+        consecutive_scenic = 0
+
+        for i, poi_idx in enumerate(indices):
+            new_route.append(poi_idx)
+
+            # 确定当前POI的活动类型
+            cat = str(pois.iloc[poi_idx]["category"])
+            if cat == "景点":
+                consecutive_scenic += 1
+            else:
+                consecutive_scenic = 0
+
+            # 每2-3个景点后插入餐饮
+            if consecutive_scenic >= 2 and dining_pois and i < len(indices) - 1:
+                # 选最近的餐饮POI
+                best_dining = None
+                best_dist = float('inf')
+                for d_idx in dining_pois:
+                    if d_idx in new_route or d_idx in indices:
+                        continue
+                    d = dist_matrix[poi_idx, d_idx]
+                    if d < best_dist and d > 0:
+                        best_dist = d
+                        best_dining = d_idx
+                if best_dining is not None:
+                    new_route.append(best_dining)
+                    consecutive_scenic = 0
+
+        # 末尾加住宿
+        if hotel_pois and len(indices) >= 3:
+            last_poi = indices[-1]
+            if str(pois.iloc[last_poi]["category"]) != "住宿":
+                best_hotel = None
+                best_dist = float('inf')
+                for h_idx in hotel_pois:
+                    if h_idx in new_route:
+                        continue
+                    d = dist_matrix[last_poi, h_idx]
+                    if d < best_dist and d > 0:
+                        best_dist = d
+                        best_hotel = h_idx
+                if best_hotel is not None:
+                    new_route.append(best_hotel)
+
+        augmented.append({
+            "indices": new_route,
+            "season": route_dict["season"],
+            "source": route_dict["source"],
+            "liked_count": route_dict.get("liked_count", 0),
+        })
+
+    return augmented
+
+
 def main():
     raw_dir = Path("data/raw")
     out_dir = Path("data/processed")
@@ -432,6 +512,24 @@ def main():
     # 保存活动类型标签（用于推理时约束解码）
     activity_types = pois["activity_type"].values.astype(np.int64)
     np.save(out_dir / "poi_activity_types.npy", activity_types)
+
+    # 路线增强：插入餐饮和住宿
+    print("\n=== 路线增强：插入餐饮/住宿 ===")
+    n_before = len(matched_routes)
+    avg_before = np.mean([len(r["indices"]) for r in matched_routes])
+    matched_routes = augment_routes_with_dining_and_hotel(matched_routes, pois, dist_matrix)
+    avg_after = np.mean([len(r["indices"]) for r in matched_routes])
+    print(f"  增强前: {n_before} 条, 平均 {avg_before:.1f} 站")
+    print(f"  增强后: {len(matched_routes)} 条, 平均 {avg_after:.1f} 站")
+    type_counts = {}
+    for r in matched_routes:
+        for idx in r["indices"]:
+            atype = int(activity_types[idx])
+            atype_name = {0: "景点", 1: "餐饮", 2: "住宿", 3: "交通", 4: "购物", 5: "出发点"}[atype]
+            type_counts[atype_name] = type_counts.get(atype_name, 0) + 1
+    total = sum(type_counts.values())
+    for k, v in sorted(type_counts.items(), key=lambda x: -x[1]):
+        print(f"    {k}: {v} ({v/total*100:.1f}%)")
 
     # 路线保存为 npy
     route_arrays = [np.array(r["indices"]) for r in matched_routes]
