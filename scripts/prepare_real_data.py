@@ -270,6 +270,15 @@ def augment_routes_with_dining_and_hotel(matched_routes: list[dict],
             augmented.append(route_dict)
             continue
 
+        # 清理：去掉原路线中出现在中间的住宿POI
+        cleaned = []
+        for j, poi_idx in enumerate(indices):
+            cat = str(pois.iloc[poi_idx]["category"])
+            if cat == "住宿" and j < len(indices) - 1:
+                continue  # 中间住宿去掉
+            cleaned.append(poi_idx)
+        indices = cleaned
+
         new_route = []
         consecutive_scenic = 0
 
@@ -299,10 +308,11 @@ def augment_routes_with_dining_and_hotel(matched_routes: list[dict],
                     new_route.append(best_dining)
                     consecutive_scenic = 0
 
-        # 末尾加住宿
+        # 末尾以住宿作为绝对终点（住宿后不再有任何POI）
         if hotel_pois and len(indices) >= 3:
-            last_poi = indices[-1]
-            if str(pois.iloc[last_poi]["category"]) != "住宿":
+            last_is_hotel = str(pois.iloc[indices[-1]]["category"]) == "住宿"
+            if not last_is_hotel:
+                last_poi = indices[-1]
                 best_hotel = None
                 best_dist = float('inf')
                 for h_idx in hotel_pois:

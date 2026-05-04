@@ -243,13 +243,13 @@ class RouteTransformer(nn.Module):
                             # 基本约束：应用转换矩阵
                             base_bias = constraint_mask[activity]
 
-                            # 住宿只能在终点（倒数 2 步内才允许）
+                            # 住宿只能在最后 3 步（选完即终止）
                             if activity == ATTR_HOTEL:
                                 steps_remaining = max_len - (step + 1)
-                                if steps_remaining > 2:
-                                    base_bias = -1e9  # 太早，禁止住宿
+                                if steps_remaining > 3:
+                                    base_bias = -1e9  # 太早，禁止
                                 elif steps_remaining > 0:
-                                    base_bias = 3.0   # 合适的终点，鼓励
+                                    base_bias = 2.0   # 合适，鼓励
 
                             # 连续同类型检测：如果连续太多同类型，鼓励切换
                             if activity == last_activity:
@@ -271,9 +271,26 @@ class RouteTransformer(nn.Module):
                     log_probs = torch.log_softmax(logits, dim=-1)
                     topk_probs, topk_idx = log_probs[0].topk(beam_size)
 
-                    for i in range(beam_size):
-                        new_score = score + topk_probs[i].item()
-                        candidates.append((new_score, route + [topk_idx[i].item()]))
+                    # 检查是否已选住宿：住宿后立即终止路线
+                    route_has_hotel = False
+                    if poi_activity_types is not None and len(route) > 0:
+                        route_has_hotel = any(
+                            poi_activity_types[pidx].item() == ATTR_HOTEL
+                            for pidx in route if pidx > 0
+                        )
+
+                    if route_has_hotel:
+                        # 住宿后不再扩展，直接加入候选
+                        candidates.append((score, route))
+                    else:
+                        for i in range(beam_size):
+                            new_score = score + topk_probs[i].item()
+                            new_route = route + [topk_idx[i].item()]
+                            # 如果刚选了住宿，标记路线已完成
+                            if poi_activity_types is not None and poi_activity_types[topk_idx[i].item()].item() == ATTR_HOTEL:
+                                candidates.append((new_score, new_route))
+                            else:
+                                candidates.append((new_score, new_route))
 
                 candidates.sort(key=lambda x: x[0], reverse=True)
                 beams = candidates[:beam_size]

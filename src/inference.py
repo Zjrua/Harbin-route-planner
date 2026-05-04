@@ -68,12 +68,13 @@ def generate_with_constraints(model: RouteTransformer, encoder_output: torch.Ten
                               start_id: int, beam_size: int, max_len: int,
                               device: torch.device,
                               poi_activity_types: torch.Tensor) -> list[int]:
-    """带活动类型约束 + 位置感知的 beam search.
+    """Constrained beam search with activity type awareness.
 
-    约束规则：
-    - 住宿只能在倒数2步内（起点或终点）
-    - 连续3个以上同类型时，鼓励切换（避免全是景点）
-    - 已访问的POI不再重复
+    Rules:
+    - Hotel masked to -inf until last 3 steps; selected hotel -> immediate break
+    - After 3 consecutive scenic, push dining (max 3 dining total)
+    - Last 2 steps: suppress dining/shopping
+    - Uses route length for steps_remaining, not loop step
     """
     ATTR_SCENIC, ATTR_DINING, ATTR_HOTEL = 0, 1, 2
     CONSECUTIVE_THRESHOLD = 3
@@ -81,12 +82,10 @@ def generate_with_constraints(model: RouteTransformer, encoder_output: torch.Ten
     model.eval()
     with torch.no_grad():
         route = [start_id]
-        constraints = model.activity_constraints  # [6, 6]
+        constraints = model.activity_constraints
 
-        for step in range(max_len - 1):
+        for _ in range(max_len - 1):
             route_t = torch.tensor([route], dtype=torch.long, device=device)
-
-            # 获取活动类型嵌入
             activity_type_ids = poi_activity_types[route_t]
             target_emb = model.poi_embedding(route_t, activity_types=activity_type_ids)
 
@@ -95,7 +94,6 @@ def generate_with_constraints(model: RouteTransformer, encoder_output: torch.Ten
                 torch.ones(seq_len, seq_len, device=device), diagonal=1
             ).bool()
 
-            # Engram 记忆
             engram_memory = None
             if model.use_engram:
                 query = encoder_output.mean(dim=1)
@@ -103,27 +101,37 @@ def generate_with_constraints(model: RouteTransformer, encoder_output: torch.Ten
                 engram_memory = retrieved
 
             dec_out = model.decode(engram_memory, encoder_output, target_emb, causal_mask)
-            logits = model.output_proj(dec_out)[:, -1, :]  # [1, n_pois]
+            logits = model.output_proj(dec_out)[:, -1, :]
 
-            # 应用活动类型约束
             last_poi = route[-1]
             last_activity = poi_activity_types[last_poi].item()
+            current_len = len(route)
+            steps_left = max_len - current_len
+
+            n_dining = sum(1 for pidx in route if pidx > 0 and
+                           poi_activity_types[pidx].item() == ATTR_DINING)
 
             for poi_idx in range(logits.size(-1)):
                 activity = poi_activity_types[poi_idx].item()
 
-                # 基本约束
+                # Hotel: mask to -inf if too early, encourage if near end
+                if activity == ATTR_HOTEL:
+                    if steps_left > 3:
+                        logits[0, poi_idx] = float('-inf')
+                        continue
+                    elif steps_left <= 2:
+                        logits[0, poi_idx] += 10.0
+                    else:
+                        logits[0, poi_idx] += 3.0
+                    continue
+
                 base_bias = constraints[last_activity, activity].item()
 
-                # 住宿只能在终点（倒数2步内）
-                if activity == ATTR_HOTEL:
-                    steps_remaining = max_len - (step + 1)
-                    if steps_remaining > 2:
-                        base_bias = -1e9
-                    else:
-                        base_bias = 3.0
+                # Last 2 steps: suppress dining/shopping
+                if steps_left <= 2 and activity in (ATTR_DINING, 4):
+                    base_bias -= 5.0
 
-                # 连续同类型检测
+                # Consecutive same-type detection
                 if activity == last_activity:
                     consecutive = 1
                     for prev_idx in reversed(route):
@@ -134,16 +142,16 @@ def generate_with_constraints(model: RouteTransformer, encoder_output: torch.Ten
                     if consecutive >= CONSECUTIVE_THRESHOLD:
                         if activity == ATTR_SCENIC:
                             base_bias -= 3.0
-                        if last_activity == ATTR_SCENIC and activity == ATTR_DINING:
+                        if last_activity == ATTR_SCENIC and activity == ATTR_DINING and n_dining < 3:
                             base_bias += 5.0
 
                 logits[0, poi_idx] += base_bias
 
-            # 屏蔽已访问的 POI
+            # Mask visited POIs
             visited = set(route)
             for v in visited:
                 if v < logits.size(-1):
-                    logits[0, v] = -1e9
+                    logits[0, v] = float('-inf')
 
             log_probs = torch.log_softmax(logits, dim=-1)
             topk_probs, topk_idx = log_probs[0].topk(beam_size)
@@ -151,9 +159,10 @@ def generate_with_constraints(model: RouteTransformer, encoder_output: torch.Ten
             best_idx = topk_idx[0].item()
             route.append(best_idx)
 
+            if poi_activity_types[best_idx].item() == ATTR_HOTEL:
+                break
+
     return route
-
-
 def generate_diverse_routes(model: RouteTransformer, encoder_output: torch.Tensor,
                             beam_size: int, max_len: int, n_routes: int,
                             start_id: int | None, pois: pd.DataFrame,
@@ -220,48 +229,59 @@ def filter_route(route: list[int], max_stops: int | None = None,
 
 
 def optimize_route_order(route: list[int], pois: pd.DataFrame,
-                         dist_matrix: np.ndarray) -> list[int]:
+                         dist_matrix: np.ndarray,
+                         poi_activity_types: np.ndarray = None) -> list[int]:
     """优化路线顺序：使用最近邻算法，避免走回头路.
 
-    保持起点不变，按照距离最近的原则重新排列后续景点。
+    保持起点不变，保持住宿在末尾，仅重排中间景点顺序。
     """
     if len(route) <= 2:
         return route
 
-    # 获取POI坐标
-    coords = []
-    for idx in route:
-        row = pois.iloc[idx]
-        lat = float(row["lat"]) if "lat" in pois.columns else 45.80
-        lng = float(row["lng"]) if "lng" in pois.columns else 126.53
-        coords.append((lat, lng))
+    # 分离：起点、中间、末尾住宿
+    start = route[0]
+    end = None
 
-    # 最近邻算法：从起点开始，每次选择最近的未访问POI
-    optimized = [route[0]]  # 保持起点
-    remaining = set(range(1, len(route)))
+    # 如果末尾是住宿，保护它
+    if poi_activity_types is not None and len(route) > 1:
+        last_type = poi_activity_types[route[-1]]
+        if last_type == 2:  # ATTR_HOTEL
+            end = route[-1]
 
-    current = 0
+    # 中间段（排除起点和末尾住宿）
+    middle = route[1:-1] if end is not None else route[1:]
+
+    if not middle:
+        return route
+
+    # 最近邻重排中间段
+    optimized = [start]
+    remaining = list(range(len(middle)))
+    current_poi = start
+
     while remaining:
-        # 找到距离当前POI最近的下一个POI
         min_dist = float('inf')
         nearest = None
-        for next_idx in remaining:
-            # 使用路线中的实际距离
-            d = dist_matrix[route[current], route[next_idx]]
+        for mid_idx in remaining:
+            d = dist_matrix[current_poi, middle[mid_idx]]
             if d < min_dist:
                 min_dist = d
-                nearest = next_idx
-
+                nearest = mid_idx
         if nearest is not None:
-            optimized.append(route[nearest])
+            optimized.append(middle[nearest])
+            current_poi = middle[nearest]
             remaining.remove(nearest)
-            current = nearest
+
+    # 把住宿放回末尾
+    if end is not None:
+        optimized.append(end)
 
     return optimized
 
 
 def optimize_route_2opt(route: list[int], dist_matrix: np.ndarray,
-                        iterations: int = 100) -> list[int]:
+                        iterations: int = 100,
+                        poi_activity_types = None) -> list[int]:
     """2-opt 优化：消除路线中的交叉，进一步优化路线顺序.
 
     保持起点不变。
@@ -386,13 +406,14 @@ def main():
     )
 
     all_routes = []
+    types_np = poi_activity_types.cpu().numpy() if poi_activity_types is not None else None
     for raw in raw_routes:
         filtered = filter_route(raw, max_stops, time_matrix, max_minutes)
         if len(filtered) >= 2:
-            # 优化路线顺序：避免走回头路
-            optimized = optimize_route_order(filtered, pois, dist_matrix)
-            # 2-opt 进一步优化
-            optimized = optimize_route_2opt(optimized, dist_matrix, iterations=50)
+            optimized = optimize_route_order(filtered, pois, dist_matrix, types_np)
+            # Only 2-opt if last stop isn't hotel (hotel must stay at end)
+            if types_np is None or types_np[optimized[-1]] != 2:
+                optimized = optimize_route_2opt(optimized, dist_matrix, iterations=50)
             all_routes.append(optimized)
 
     # 评估
