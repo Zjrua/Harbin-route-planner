@@ -1,9 +1,10 @@
 """RouteTransformer: 基于 Transformer 的旅游路线生成模型.
 
 完整模型架构:
-1. Encoder: Graph-aware Transformer Encoder，融合 POI 特征与路网拓扑
+1. Encoder: Graph-aware Transformer Encoder，融合 POI 特征、路网拓扑和活动类型相似性
 2. Decoder: Masked Transformer Decoder + Cross-Attention + Engram 记忆增强
 3. MHC: 双曲空间 POI 嵌入，提供结构化的距离先验
+4. 活动类型条件生成：支持约束解码，生成符合旅游节奏的路线
 """
 
 import torch
@@ -12,19 +13,19 @@ from typing import Optional
 
 from .engram import EngramMemory
 from .mhc import PoincareEmbedding
-from .embeddings import POIEmbedding
+from .embeddings import POIEmbedding, ACTIVITY_TYPES
 from .encoder import GraphAwareEncoder
-from .decoder import EngramDecoder
+from .decoder import EngramDecoder, ACTIVITY_TRANSITION_CONSTRAINTS
 
 
 class RouteTransformer(nn.Module):
     """基于 Transformer 的哈尔滨文旅路线生成模型.
 
     工作流程:
-    1. encode(): 将 POI 特征 + 路网邻接矩阵编码为上下文表征
-    2. decode(): 自回归解码，每步选择下一个 POI，融合 Engram 记忆
+    1. encode(): 将 POI 特征 + 路网邻接矩阵 + 活动类型偏置编码为上下文表征
+    2. decode(): 自回归解码，每步选择下一个 POI，融合 Engram 记忆和活动类型条件
     3. forward(): 训练时前向传播（Teacher Forcing）
-    4. generate(): 推理时 Beam Search 生成路线
+    4. generate(): 推理时约束 Beam Search 生成路线
     """
 
     def __init__(self, config: dict):
@@ -86,26 +87,42 @@ class RouteTransformer(nn.Module):
         # 输出层：映射到 POI 词表
         self.output_proj = nn.Linear(model_cfg["d_model"], config["data"]["max_pois"])
 
+        # 活动类型转换约束矩阵（注册为 buffer，随设备移动）
+        self.register_buffer("activity_constraints", ACTIVITY_TRANSITION_CONSTRAINTS)
+
     def encode(self, poi_features: torch.Tensor,
-               adjacency: torch.Tensor) -> torch.Tensor:
-        """Graph-aware 编码."""
-        return self.encoder(poi_features, adjacency)
+               adjacency: torch.Tensor,
+               activity_bias: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """Graph-aware 编码，支持活动类型偏置."""
+        return self.encoder(poi_features, adjacency, activity_bias)
 
     def decode(self, memory: torch.Tensor,
                encoder_output: torch.Tensor,
                target: Optional[torch.Tensor] = None,
-               mask: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """带 Engram 记忆增强的自回归解码."""
-        return self.decoder(memory, encoder_output, target, mask)
+               mask: Optional[torch.Tensor] = None,
+               activity_condition: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """带 Engram 记忆增强的自回归解码，支持活动类型条件."""
+        return self.decoder(memory, encoder_output, target, mask, activity_condition)
 
     def forward(self, batch: dict) -> dict:
-        """完整前向传播（训练模式）."""
+        """完整前向传播（训练模式）.
+
+        Args:
+            batch: 包含以下字段的字典:
+                - poi_features: [batch, n_pois, d_model] POI 特征
+                - adjacency: [batch, n_pois, n_pois] 邻接矩阵
+                - route_sequence: [batch, max_route_len] 路线序列
+                - activity_types: [batch, max_route_len] 活动类型序列（可选）
+                - scores: [batch, n_pois] POI 评分（可选）
+        """
         poi_features = batch["poi_features"]
         adjacency = batch["adjacency"]
         route_seq = batch["route_sequence"]
+        activity_types = batch.get("activity_types", None)
 
-        # 1. 编码
-        encoder_output = self.encode(poi_features, adjacency)
+        # 1. 编码（如果有活动类型偏置，可以在这里注入）
+        activity_bias = batch.get("activity_bias", None)
+        encoder_output = self.encode(poi_features, adjacency, activity_bias)
 
         # 2. 构建 Engram 记忆（可选）
         engram_memory = None
@@ -113,14 +130,19 @@ class RouteTransformer(nn.Module):
             scores = batch.get("scores", None)
             if scores is not None:
                 self.engram.build_memory(encoder_output.detach(), scores)
-            # 使用编码器输出的均值作为查询检索记忆
             query = encoder_output.mean(dim=1)
             retrieved, _ = self.engram.retrieve(query)
             engram_memory = retrieved
 
-        # 3. 目标路线嵌入
+        # 3. 目标路线嵌入（包含活动类型嵌入）
         max_route_len = self.config["model"]["max_route_len"]
-        target_emb = self.poi_embedding(route_seq[:, :-1] if route_seq.size(1) > 1 else route_seq)
+        target_seq = route_seq[:, :-1] if route_seq.size(1) > 1 else route_seq
+        target_activity = activity_types[:, :-1] if activity_types is not None and activity_types.size(1) > 1 else activity_types
+
+        target_emb = self.poi_embedding(
+            target_seq,
+            activity_types=target_activity
+        )
 
         # 4. 构建因果掩码
         seq_len = target_emb.size(1)
@@ -128,8 +150,9 @@ class RouteTransformer(nn.Module):
             torch.ones(seq_len, seq_len, device=target_emb.device), diagonal=1
         ).bool()
 
-        # 5. 解码
-        decoder_output = self.decode(engram_memory, encoder_output, target_emb, causal_mask)
+        # 5. 解码（如果有活动类型条件，可以注入）
+        activity_condition = batch.get("activity_condition", None)
+        decoder_output = self.decode(engram_memory, encoder_output, target_emb, causal_mask, activity_condition)
 
         # 6. 输出投影
         logits = self.output_proj(decoder_output)
@@ -143,23 +166,35 @@ class RouteTransformer(nn.Module):
         return result
 
     def generate(self, encoder_output: torch.Tensor,
-                 beam_size: int = 5) -> torch.Tensor:
-        """Beam Search 推理生成路线."""
+                 beam_size: int = 5,
+                 poi_activity_types: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """约束 Beam Search 推理生成路线.
+
+        Args:
+            encoder_output: [1, n_pois, d_model] 编码器输出
+            beam_size: Beam Search 宽度
+            poi_activity_types: [n_pois] 每个 POI 的活动类型标签（用于约束解码）
+
+        Returns:
+            routes: [1, max_len] 生成的路线
+        """
         batch_size = encoder_output.size(0)
         max_len = self.config["model"]["max_route_len"]
         device = encoder_output.device
 
-        # 每个 batch 独立做 beam search
+        # 加载活动类型约束矩阵
+        constraints = self.activity_constraints  # [6, 6]
+
         best_routes = []
         for b in range(batch_size):
             enc_single = encoder_output[b:b+1]  # [1, n_pois, d_model]
 
-            # Engram 检索（只做一次，所有 beam 共享）
+            # Engram 检索
             engram_memory = None
             if self.use_engram:
-                query = enc_single.mean(dim=1)  # [1, d_model]
+                query = enc_single.mean(dim=1)
                 retrieved, _ = self.engram.retrieve(query)
-                engram_memory = retrieved  # [1, d_model]
+                engram_memory = retrieved
 
             beams = [(0.0, [0])]  # (累计 log_prob, 路线索引列表)
 
@@ -167,7 +202,14 @@ class RouteTransformer(nn.Module):
                 candidates = []
                 for score, route in beams:
                     route_t = torch.tensor([route], dtype=torch.long, device=device)
-                    target_emb = self.poi_embedding(route_t)  # [1, seq_len, d_model]
+
+                    # 获取活动类型嵌入
+                    activity_type_ids = None
+                    if poi_activity_types is not None:
+                        # 根据路线中的 POI 索引获取活动类型
+                        activity_type_ids = poi_activity_types[route_t]
+
+                    target_emb = self.poi_embedding(route_t, activity_types=activity_type_ids)
                     seq_len = target_emb.size(1)
                     causal_mask = torch.triu(
                         torch.ones(seq_len, seq_len, device=device), diagonal=1
@@ -175,6 +217,20 @@ class RouteTransformer(nn.Module):
 
                     dec_out = self.decode(engram_memory, enc_single, target_emb, causal_mask)
                     logits = self.output_proj(dec_out)[:, -1, :]  # [1, n_pois]
+
+                    # 应用活动类型约束
+                    if poi_activity_types is not None and len(route) > 0:
+                        last_poi = route[-1]
+                        last_activity = poi_activity_types[last_poi].item()
+                        # 获取当前步骤每个 POI 的活动类型
+                        current_activities = poi_activity_types  # [n_pois]
+                        # 获取约束掩码
+                        constraint_mask = constraints[last_activity]  # [6]
+                        # 将约束应用到 logits
+                        for poi_idx in range(logits.size(-1)):
+                            activity = current_activities[poi_idx].item()
+                            logits[0, poi_idx] += constraint_mask[activity]
+
                     log_probs = torch.log_softmax(logits, dim=-1)
                     topk_probs, topk_idx = log_probs[0].topk(beam_size)
 

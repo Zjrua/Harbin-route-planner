@@ -1,5 +1,9 @@
 """推理脚本：加载训练好的模型，根据用户条件生成推荐路线.
 
+支持活动类型约束解码，生成符合真实旅游节奏的路线：
+- 景点 → 餐饮 → 景点 → 住宿（不连续餐饮、不连续住宿）
+- 多日游支持：通过住宿节点自然分割天数
+
 用法:
     python -m src.inference --checkpoint checkpoints/best_model.pt --start "冰雪大世界" --season winter
     python -m src.inference --checkpoint checkpoints/best_model.pt --start "中央大街" --season summer --max_stops 8 --max_hours 6
@@ -60,116 +64,77 @@ def print_route_detail(route: list[int], pois: pd.DataFrame,
     print(f"  总计: {len(route)} 个游览点 | {total_dist:.1f}km | {total_time:.0f}分钟 ({total_time/60:.1f}小时)")
 
 
-def generate_with_start(model: RouteTransformer, encoder_output: torch.Tensor,
-                        start_id: int, beam_size: int, max_len: int,
-                        device: torch.device) -> list[int]:
-    """指定起点的 beam search."""
+def generate_with_constraints(model: RouteTransformer, encoder_output: torch.Tensor,
+                              start_id: int, beam_size: int, max_len: int,
+                              device: torch.device,
+                              poi_activity_types: torch.Tensor) -> list[int]:
+    """带活动类型约束的 beam search."""
     model.eval()
     with torch.no_grad():
-        enc_single = encoder_output  # [1, n_pois, d_model]
-
-        engram_memory = None
-        if model.use_engram:
-            query = enc_single.mean(dim=1)
-            retrieved, _ = model.engram.retrieve(query)
-            engram_memory = retrieved
-
-        beams = [(0.0, [start_id])]
+        route = [start_id]
 
         for step in range(max_len - 1):
-            candidates = []
-            for score, route in beams:
-                route_t = torch.tensor([route], dtype=torch.long, device=device)
-                target_emb = model.poi_embedding(route_t)
-                seq_len = target_emb.size(1)
-                causal_mask = torch.triu(
-                    torch.ones(seq_len, seq_len, device=device), diagonal=1
-                ).bool()
+            route_t = torch.tensor([route], dtype=torch.long, device=device)
 
-                dec_out = model.decode(engram_memory, enc_single, target_emb, causal_mask)
-                logits = model.output_proj(dec_out)[:, -1, :]
-                log_probs = torch.log_softmax(logits, dim=-1)
+            # 获取活动类型嵌入
+            activity_type_ids = poi_activity_types[route_t]
+            target_emb = model.poi_embedding(route_t, activity_types=activity_type_ids)
 
-                # 已访问的 POI 不再访问
-                visited = set(route)
-                for v in visited:
-                    if v < log_probs.size(-1):
-                        log_probs[0, v] = -1e9
+            seq_len = target_emb.size(1)
+            causal_mask = torch.triu(
+                torch.ones(seq_len, seq_len, device=device), diagonal=1
+            ).bool()
 
-                topk_probs, topk_idx = log_probs[0].topk(beam_size)
+            # Engram 记忆
+            engram_memory = None
+            if model.use_engram:
+                query = encoder_output.mean(dim=1)
+                retrieved, _ = model.engram.retrieve(query)
+                engram_memory = retrieved
 
-                for i in range(beam_size):
-                    new_score = score + topk_probs[i].item()
-                    candidates.append((new_score, route + [topk_idx[i].item()]))
+            dec_out = model.decode(engram_memory, encoder_output, target_emb, causal_mask)
+            logits = model.output_proj(dec_out)[:, -1, :]  # [1, n_pois]
 
-            candidates.sort(key=lambda x: x[0], reverse=True)
-            beams = candidates[:beam_size]
+            # 应用活动类型约束
+            last_poi = route[-1]
+            last_activity = poi_activity_types[last_poi].item()
+            constraints = model.activity_constraints  # [6, 6]
 
-    return beams[0][1]
+            for poi_idx in range(logits.size(-1)):
+                activity = poi_activity_types[poi_idx].item()
+                logits[0, poi_idx] += constraints[last_activity, activity]
 
+            # 屏蔽已访问的 POI
+            visited = set(route)
+            for v in visited:
+                if v < logits.size(-1):
+                    logits[0, v] = -1e9
 
-def generate_free(model: RouteTransformer, encoder_output: torch.Tensor,
-                  beam_size: int, max_len: int,
-                  device: torch.device) -> list[int]:
-    """自由 beam search（不指定起点）."""
-    model.eval()
-    with torch.no_grad():
-        enc_single = encoder_output
+            log_probs = torch.log_softmax(logits, dim=-1)
+            topk_probs, topk_idx = log_probs[0].topk(beam_size)
 
-        engram_memory = None
-        if model.use_engram:
-            query = enc_single.mean(dim=1)
-            retrieved, _ = model.engram.retrieve(query)
-            engram_memory = retrieved
+            # 选择最佳候选
+            best_idx = topk_idx[0].item()
+            route.append(best_idx)
 
-        beams = [(0.0, [0])]
-
-        for step in range(max_len - 1):
-            candidates = []
-            for score, route in beams:
-                route_t = torch.tensor([route], dtype=torch.long, device=device)
-                target_emb = model.poi_embedding(route_t)
-                seq_len = target_emb.size(1)
-                causal_mask = torch.triu(
-                    torch.ones(seq_len, seq_len, device=device), diagonal=1
-                ).bool()
-
-                dec_out = model.decode(engram_memory, enc_single, target_emb, causal_mask)
-                logits = model.output_proj(dec_out)[:, -1, :]
-                log_probs = torch.log_softmax(logits, dim=-1)
-
-                visited = set(route)
-                for v in visited:
-                    if v < log_probs.size(-1):
-                        log_probs[0, v] = -1e9
-
-                topk_probs, topk_idx = log_probs[0].topk(beam_size)
-
-                for i in range(beam_size):
-                    new_score = score + topk_probs[i].item()
-                    candidates.append((new_score, route + [topk_idx[i].item()]))
-
-            candidates.sort(key=lambda x: x[0], reverse=True)
-            beams = candidates[:beam_size]
-
-    return beams[0][1]
+    return route
 
 
 def generate_diverse_routes(model: RouteTransformer, encoder_output: torch.Tensor,
                             beam_size: int, max_len: int, n_routes: int,
                             start_id: int | None, pois: pd.DataFrame,
-                            device: torch.device) -> list[list[int]]:
-    """生成多条多样化路线：不同起点 + beam search."""
+                            device: torch.device,
+                            poi_activity_types: torch.Tensor) -> list[list[int]]:
+    """生成多条多样化路线：不同起点 + 约束 beam search."""
     routes = []
     used_starts = set()
 
     if start_id is not None:
-        # 第 1 条用指定起点
-        route = generate_with_start(model, encoder_output, start_id, beam_size, max_len, device)
+        route = generate_with_constraints(
+            model, encoder_output, start_id, beam_size, max_len, device, poi_activity_types
+        )
         routes.append(route)
         used_starts.add(start_id)
-    else:
-        start_id = None
 
     # 后续路线选不同高评分 POI 作起点
     if "rating" in pois.columns:
@@ -182,7 +147,9 @@ def generate_diverse_routes(model: RouteTransformer, encoder_output: torch.Tenso
             break
         if poi_idx in used_starts:
             continue
-        route = generate_with_start(model, encoder_output, poi_idx, beam_size, max_len, device)
+        route = generate_with_constraints(
+            model, encoder_output, poi_idx, beam_size, max_len, device, poi_activity_types
+        )
         routes.append(route)
         used_starts.add(poi_idx)
 
@@ -248,6 +215,16 @@ def main():
     dist_matrix = np.load(data_dir / "distance_matrix.npy")
     time_matrix = np.load(data_dir / "time_matrix.npy")
 
+    # 加载活动类型标签
+    if (data_dir / "poi_activity_types.npy").exists():
+        poi_activity_types = torch.from_numpy(
+            np.load(data_dir / "poi_activity_types.npy")
+        ).long().to(device)
+        print(f"已加载活动类型标签: {poi_activity_types.shape}")
+    else:
+        poi_activity_types = None
+        print("警告: 未找到活动类型标签，将使用无约束解码")
+
     if (data_dir / "poi_metadata.csv").exists():
         pois = pd.read_csv(data_dir / "poi_metadata.csv", encoding="utf-8")
     else:
@@ -296,7 +273,7 @@ def main():
     max_minutes = args.max_hours * 60 if args.max_hours else None
     raw_routes = generate_diverse_routes(
         model, encoder_output, beam_size, max_stops, args.n_routes,
-        start_id, pois, device
+        start_id, pois, device, poi_activity_types
     )
 
     all_routes = []
@@ -326,9 +303,17 @@ def main():
              "max_distance": max_d, "max_time": max_t}
         score = composite_score(m, weights)
 
+        # 获取活动类型序列
+        activity_sequence = []
+        if poi_activity_types is not None:
+            activity_names = {0: "景点", 1: "餐饮", 2: "住宿", 3: "交通", 4: "购物", 5: "出发点"}
+            for idx in route:
+                activity_sequence.append(activity_names.get(poi_activity_types[idx].item(), "未知"))
+
         results.append({
             "route_indices": [int(x) for x in route],
             "route_names": [str(pois.iloc[idx]["name"]) if "name" in pois.columns else f"POI-{idx}" for idx in route],
+            "activity_sequence": activity_sequence,
             "distance_km": round(float(d), 1),
             "time_min": round(float(t), 0),
             "satisfaction": round(float(s), 3),
@@ -340,6 +325,11 @@ def main():
         if len(all_routes) > 1:
             print(f"\n--- {label} ---")
         print_route_detail(route, pois, dist_matrix, time_matrix)
+
+        # 打印活动类型序列
+        if activity_sequence:
+            print(f"  活动节奏: {' → '.join(activity_sequence)}")
+
         print(f"  评估: 距离={d:.1f}km | 耗时={t:.0f}min | 满意度={s:.2f} | 多样性={div:.2f} | 综合={score:.3f}")
 
     # 保存结果

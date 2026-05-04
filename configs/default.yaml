@@ -10,7 +10,7 @@ data:
   center_lng: 126.53
   poi_source: "amap"  # 高德地图
   min_rating: 3.5
-  max_pois: 135
+  max_pois: 180
   seasons:
     winter: [11, 12, 1, 2]  # 冰雪季
     summer: [6, 7, 8]

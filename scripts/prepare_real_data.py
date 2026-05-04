@@ -17,6 +17,40 @@ from difflib import SequenceMatcher
 # 确保 src 包可导入
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+# 活动类型映射（与 embeddings.py 中的 ACTIVITY_TYPES 保持一致）
+ACTIVITY_TYPE_MAP = {
+    "景点": 0,
+    "餐饮": 1,
+    "住宿": 2,
+    "交通": 3,
+    "购物": 4,
+    "出发点": 5,  # 交通枢纽、机场、火车站等
+}
+
+def get_activity_type(category: str, name: str = "") -> int:
+    """根据类别和名称判断活动类型."""
+    category = str(category).strip()
+    name = str(name).strip()
+
+    # 交通枢纽 → 出发点
+    if category == "交通":
+        return ACTIVITY_TYPE_MAP["出发点"]
+
+    # 住宿
+    if category == "住宿":
+        return ACTIVITY_TYPE_MAP["住宿"]
+
+    # 餐饮
+    if category == "餐饮":
+        return ACTIVITY_TYPE_MAP["餐饮"]
+
+    # 购物
+    if category == "购物":
+        return ACTIVITY_TYPE_MAP["购物"]
+
+    # 景点（默认）
+    return ACTIVITY_TYPE_MAP["景点"]
+
 
 def clean_liked_count(val) -> int:
     """清洗点赞数（处理 '1.2万' 这种格式）."""
@@ -163,6 +197,54 @@ def fix_zero_distances(dist_matrix: np.ndarray, time_matrix: np.ndarray,
     return fixed_dist, fixed_time
 
 
+def supplement_missing_categories(pois: pd.DataFrame, merged_path: Path,
+                                   quotas: dict[str, int]) -> pd.DataFrame:
+    """从合并数据中补充缺失类别（餐饮、购物等）."""
+    merged = pd.read_csv(merged_path, encoding="utf-8-sig")
+    merged.columns = [c.strip() for c in merged.columns]
+    col_map = {"名称": "name", "经度": "lng", "纬度": "lat", "类别": "category",
+               "地址": "address", "POI类型": "poi_type", "评分": "rating", "人均消费": "avg_cost"}
+    merged = merged.rename(columns={k: v for k, v in col_map.items() if k in merged.columns})
+
+    # 确保必要列存在
+    for col in ["name", "lng", "lat", "category", "rating"]:
+        if col not in merged.columns:
+            return pois
+
+    # 去掉已有的 POI（按名称去重）
+    existing_names = set(pois["name"].astype(str))
+    merged = merged[~merged["name"].astype(str).isin(existing_names)]
+
+    # 清洗评分
+    merged["rating"] = pd.to_numeric(merged["rating"], errors="coerce").fillna(4.0)
+    merged.loc[merged["rating"] == 0, "rating"] = 4.0
+
+    new_rows = []
+    for category, target_n in quotas.items():
+        current_n = len(pois[pois["category"] == category])
+        need = target_n - current_n
+        if need <= 0:
+            continue
+        candidates = merged[merged["category"] == category].copy()
+        if len(candidates) == 0:
+            continue
+        # 按评分排序，取 top N
+        candidates = candidates.sort_values("rating", ascending=False).head(need)
+        print(f"  补充 {category}: {len(candidates)} 个")
+        new_rows.append(candidates)
+
+    if new_rows:
+        supplement = pd.concat(new_rows, ignore_index=True)
+        # 确保列对齐
+        for col in pois.columns:
+            if col not in supplement.columns:
+                supplement[col] = ""
+        supplement = supplement[pois.columns]
+        pois = pd.concat([pois, supplement], ignore_index=True)
+
+    return pois
+
+
 def main():
     raw_dir = Path("data/raw")
     out_dir = Path("data/processed")
@@ -172,13 +254,21 @@ def main():
     print("=== 加载核心节点 ===")
     pois = pd.read_csv(raw_dir / "哈尔滨POI_核心节点.csv", encoding="utf-8-sig")
     pois.columns = [c.strip() for c in pois.columns]
-    # 统一列名
     col_map = {"名称": "name", "经度": "lng", "纬度": "lat", "类别": "category",
                "地址": "address", "POI类型": "poi_type", "评分": "rating", "人均消费": "avg_cost"}
     pois = pois.rename(columns={k: v for k, v in col_map.items() if k in pois.columns})
-    n_pois = len(pois)
-    print(f"  核心节点: {n_pois} 个")
+    print(f"  原始核心节点: {len(pois)} 个")
     print(f"  类别: {pois['category'].value_counts().to_dict()}")
+
+    # 补充缺失类别：餐饮 30、购物 15
+    merged_path = raw_dir / "merged_pois.csv"
+    if merged_path.exists():
+        print("\n=== 补充餐饮/购物 POI ===")
+        pois = supplement_missing_categories(pois, merged_path, {"餐饮": 30, "购物": 15})
+        print(f"  补充后: {len(pois)} 个")
+        print(f"  类别: {pois['category'].value_counts().to_dict()}")
+
+    n_pois = len(pois)
 
     # 2. 加载并去重路线
     print("\n=== 加载路线数据 ===")
@@ -226,15 +316,43 @@ def main():
     dist_df = pd.read_csv(raw_dir / "距离矩阵_公里.csv", encoding="utf-8-sig", index_col=0)
     time_df = pd.read_csv(raw_dir / "耗时矩阵_分钟.csv", encoding="utf-8-sig", index_col=0)
 
-    # 确保 POI 顺序一致
-    dist_matrix = dist_df.values.astype(np.float32)
-    time_matrix = time_df.values.astype(np.float32)
+    # 原始矩阵（135x135）
+    orig_dist = dist_df.values.astype(np.float32)
+    orig_time = time_df.values.astype(np.float32)
+    orig_n = orig_dist.shape[0]
+
+    if n_pois > orig_n:
+        # 扩展矩阵：用 Haversine 计算新增 POI 的距离
+        print(f"  扩展矩阵: {orig_n}x{orig_n} → {n_pois}x{n_pois}")
+        dist_matrix = np.zeros((n_pois, n_pois), dtype=np.float32)
+        time_matrix = np.zeros((n_pois, n_pois), dtype=np.float32)
+        # 填充原始部分
+        dist_matrix[:orig_n, :orig_n] = orig_dist
+        time_matrix[:orig_n, :orig_n] = orig_time
+
+        lats = pois["lat"].values.astype(float)
+        lngs = pois["lng"].values.astype(float)
+
+        # 计算新增 POI 与所有 POI 的距离
+        for i in range(orig_n, n_pois):
+            for j in range(n_pois):
+                if i == j:
+                    continue
+                d = haversine(lats[i], lngs[i], lats[j], lngs[j])
+                dist_matrix[i, j] = d
+                dist_matrix[j, i] = d
+                speed = 30.0 if d < 30 else 60.0
+                t = d / speed * 60
+                time_matrix[i, j] = t
+                time_matrix[j, i] = t
+    else:
+        dist_matrix = orig_dist
+        time_matrix = orig_time
 
     # 检查形状
     assert dist_matrix.shape == (n_pois, n_pois), f"距离矩阵形状 {dist_matrix.shape} != ({n_pois}, {n_pois})"
-    assert time_matrix.shape == (n_pois, n_pois), f"时间矩阵形状 {time_matrix.shape} != ({n_pois}, {n_pois})"
 
-    n_zero = (dist_matrix == 0).sum() - n_pois  # 减去对角线
+    n_zero = (dist_matrix == 0).sum() - n_pois
     print(f"  非对角线零距离: {n_zero} 对")
     dist_matrix, time_matrix = fix_zero_distances(dist_matrix, time_matrix, pois)
 
@@ -289,6 +407,18 @@ def main():
 
     features = extract_poi_features(pois, d_model=128)
 
+    # 7.5 为每个 POI 添加活动类型标签
+    print("\n=== 添加活动类型标签 ===")
+    pois["activity_type"] = pois.apply(
+        lambda r: get_activity_type(r["category"], r["name"]),
+        axis=1
+    )
+    activity_type_names = {v: k for k, v in ACTIVITY_TYPE_MAP.items()}
+    activity_dist = pois["activity_type"].value_counts().to_dict()
+    print(f"  活动类型分布: {activity_dist}")
+    for atype, count in activity_dist.items():
+        print(f"    {activity_type_names.get(atype, '未知')}: {count}")
+
     # 8. 保存所有数据
     print("\n=== 保存数据 ===")
     pois.to_csv(out_dir / "poi_metadata.csv", index=False, encoding="utf-8")
@@ -298,6 +428,10 @@ def main():
     np.save(out_dir / "distance_std.npy", dist_std)
     np.save(out_dir / "time_matrix.npy", time_matrix)
     np.save(out_dir / "time_std.npy", time_std)
+
+    # 保存活动类型标签（用于推理时约束解码）
+    activity_types = pois["activity_type"].values.astype(np.int64)
+    np.save(out_dir / "poi_activity_types.npy", activity_types)
 
     # 路线保存为 npy
     route_arrays = [np.array(r["indices"]) for r in matched_routes]
@@ -310,6 +444,7 @@ def main():
     print(f"  distance_std.npy   — {dist_std.shape}")
     print(f"  time_matrix.npy    — {time_matrix.shape} (真实路网耗时)")
     print(f"  time_std.npy       — {time_std.shape}")
+    print(f"  poi_activity_types — {activity_types.shape} (活动类型标签)")
     print(f"  routes.npy         — {len(matched_routes)} 条真实路线 (平均 {np.mean([len(r) for r in route_arrays]):.1f} 站)")
     print(f"\n完成！")
 

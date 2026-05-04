@@ -102,14 +102,26 @@ def train_one_epoch(model: RouteTransformer, dataloader, optimizer,
     pbar = tqdm(dataloader, desc=f"Epoch {epoch+1} [Train]", leave=False,
                 ncols=120, unit="batch")
     for batch in pbar:
-        poi_feat, adj, route_seq, dist, scores = batch
-        batch_device = {
-            "poi_features": poi_feat.to(device),
-            "adjacency": adj.to(device),
-            "route_sequence": route_seq.to(device),
-            "distances": dist.to(device),
-            "scores": scores.to(device),
-        }
+        # 支持5元素（旧格式）和7元素（新格式，含活动类型）的batch
+        if len(batch) == 7:
+            poi_feat, adj, route_seq, dist, scores, route_activity, poi_activity = batch
+            batch_device = {
+                "poi_features": poi_feat.to(device),
+                "adjacency": adj.to(device),
+                "route_sequence": route_seq.to(device),
+                "distances": dist.to(device),
+                "scores": scores.to(device),
+                "activity_types": route_activity.to(device),
+            }
+        else:
+            poi_feat, adj, route_seq, dist, scores = batch
+            batch_device = {
+                "poi_features": poi_feat.to(device),
+                "adjacency": adj.to(device),
+                "route_sequence": route_seq.to(device),
+                "distances": dist.to(device),
+                "scores": scores.to(device),
+            }
 
         optimizer.zero_grad()
         output = model(batch_device)
@@ -153,14 +165,26 @@ def validate(model: RouteTransformer, dataloader, criterion: RouteLoss,
     pbar = tqdm(dataloader, desc=f"Epoch {epoch+1} [Val]  ", leave=False,
                 ncols=120, unit="batch")
     for batch in pbar:
-        poi_feat, adj, route_seq, dist, scores = batch
-        batch_device = {
-            "poi_features": poi_feat.to(device),
-            "adjacency": adj.to(device),
-            "route_sequence": route_seq.to(device),
-            "distances": dist.to(device),
-            "scores": scores.to(device),
-        }
+        # 支持5元素（旧格式）和7元素（新格式，含活动类型）的batch
+        if len(batch) == 7:
+            poi_feat, adj, route_seq, dist, scores, route_activity, poi_activity = batch
+            batch_device = {
+                "poi_features": poi_feat.to(device),
+                "adjacency": adj.to(device),
+                "route_sequence": route_seq.to(device),
+                "distances": dist.to(device),
+                "scores": scores.to(device),
+                "activity_types": route_activity.to(device),
+            }
+        else:
+            poi_feat, adj, route_seq, dist, scores = batch
+            batch_device = {
+                "poi_features": poi_feat.to(device),
+                "adjacency": adj.to(device),
+                "route_sequence": route_seq.to(device),
+                "distances": dist.to(device),
+                "scores": scores.to(device),
+            }
         output = model(batch_device)
 
         logits = output["logits"]

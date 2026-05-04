@@ -50,6 +50,13 @@ class HarbinRouteDataset(Dataset):
         self.adjacency = np.load(data_path / "adjacency.npy")
         self.distances = np.load(data_path / "distance_matrix.npy")
 
+        # 加载活动类型标签
+        activity_path = data_path / "poi_activity_types.npy"
+        if activity_path.exists():
+            self.poi_activity_types = np.load(activity_path)
+        else:
+            self.poi_activity_types = np.zeros(self.poi_features.shape[0], dtype=np.int64)
+
         # 加载距离方差（优先使用预处理计算的 std，否则用 noise_scale 估算）
         std_path = data_path / "distance_std.npy"
         if std_path.exists():
@@ -118,12 +125,20 @@ class HarbinRouteDataset(Dataset):
         distances = self._sample_distances()
         score = self.route_scores[idx] if idx < len(self.route_scores) else 1.0
 
+        # 获取路线中每个 POI 的活动类型
+        route_activity_types = np.zeros(self.max_route_len, dtype=np.int64)
+        for i, poi_idx in enumerate(route):
+            if poi_idx < len(self.poi_activity_types):
+                route_activity_types[i] = self.poi_activity_types[poi_idx]
+
         return (
             torch.tensor(self.poi_features, dtype=torch.float32),
             torch.tensor(self.adjacency, dtype=torch.float32),
             torch.tensor(route, dtype=torch.long),
             torch.tensor(distances, dtype=torch.float32),
             torch.tensor(score, dtype=torch.float32),
+            torch.tensor(route_activity_types, dtype=torch.long),
+            torch.tensor(self.poi_activity_types, dtype=torch.long),
         )
 
 
