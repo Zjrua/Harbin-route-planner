@@ -1,46 +1,55 @@
-# 消融实验配置
-# 基于 default.yaml，覆盖特定字段
+# 消融实验配置 (与论文表5对应)
+# 基于 default.yaml 覆盖特定字段
 
-# 实验1: 无 Engram 记忆模块
-ablation_no_engram:
+# 实验1: 完整模型 (Full Model)
+full_model:
+  engram:
+    enabled: true
+  mhc:
+    enabled: true
+  optimizer:
+    name: "adamw"  # 当前最佳
+
+# 实验2: 移除Engram (-Engram)
+no_engram:
   engram:
     enabled: false
 
-# 实验2: 无 MHC 双曲流形约束
-ablation_no_mhc:
+# 实验3: 移除MHC (-MHC)
+no_mhc:
   mhc:
     enabled: false
 
-# 实验3: 使用 AdamW 替代 Muon
-ablation_adamw:
+# 实验4: AdamW替代Muon (AdamW)
+# 注：当前默认已是AdamW，此实验保留用于对比
+adamw:
   optimizer:
     name: "adamw"
-    lr: 5.0e-4
+    lr_attn: 1.0e-4
+    lr_ffn: 3.0e-4
 
-# 实验4: 无 Engram + 无 MHC (纯 Transformer baseline)
-ablation_baseline:
+# 实验5: 移除Engram+MHC (-Engram-MHC)
+no_engram_mhc:
+  engram:
+    enabled: false
+  mhc:
+    enabled: false
+
+# 实验6: 纯Transformer Baseline (Baseline)
+baseline:
   engram:
     enabled: false
   mhc:
     enabled: false
   optimizer:
     name: "adamw"
-    lr: 5.0e-4
 
-# 实验5: 不同 Engram top_k 值
-ablation_engram_k3:
+# 实验7: Engram K=3
+engram_k3:
   engram:
     top_k: 3
 
-ablation_engram_k10:
+# 实验8: Engram K=10
+engram_k10:
   engram:
     top_k: 10
-
-# 实验6: 不同 MHC 曲率
-ablation_mhc_curvature_05:
-  mhc:
-    curvature: -0.5
-
-ablation_mhc_curvature_2:
-  mhc:
-    curvature: -2.0
