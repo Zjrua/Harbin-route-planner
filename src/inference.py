@@ -40,17 +40,27 @@ def find_poi_by_name(pois: pd.DataFrame, query: str) -> list[int]:
 
 
 def print_route_detail(route: list[int], pois: pd.DataFrame,
-                       dist_matrix: np.ndarray, time_matrix: np.ndarray):
+                       dist_matrix: np.ndarray, time_matrix: np.ndarray,
+                       atypes = None, n_days: int = 1):
     print(f"\n  {'='*58}")
     print(f"  {'序号':>4s}  {'POI名称':<24s}  {'类别':<6s}  {'评分':>4s}  {'距上一站':>8s}  {'耗时':>6s}")
     print(f"  {'----':>4s}  {'------------------------':<24s}  {'------':<6s}  {'----':>4s}  {'--------':>8s}  {'------':>6s}")
 
     total_dist = 0.0
     total_time = 0.0
+    # Determine day boundaries for display
+    n_days_route = 1
+
     for i, idx in enumerate(route):
         row = pois.iloc[idx]
         name = str(row["name"])[:24] if "name" in pois.columns else str(row.iloc[0])[:24]
         cat = str(row.get("category", "-"))
+
+        # Day separator
+        if atypes is not None and i > 0 and i < len(route) - 1 and atypes[idx] == 2:
+            print(f"  {'─'*58}")
+            print(f"  {'第' + str(n_days_route + 1) + '天':>30s}")
+            n_days_route += 1
         rating = float(row.get("rating", 0))
         seg_dist = float(dist_matrix[route[i - 1], idx]) if i > 0 else 0.0
         seg_time = float(time_matrix[route[i - 1], idx]) if i > 0 else 0.0
@@ -128,21 +138,34 @@ def generate_with_constraints(model: RouteTransformer, encoder_output: torch.Ten
                         logits[0, poi_idx] = float('-inf')
                         continue
 
-                # Hotel: allowed at day boundaries and end
-                # Calculate current day and stops_per_day
-                stops_per_day = max_len // n_days
-                current_stop_in_day = (current_len - 1) % stops_per_day if stops_per_day > 0 else 0
-
+                # Hotel constraint: only in last steps of each day segment
+                # For single-day: hotel only at end. For multi-day: hotel at day end + final end.
                 if activity == ATTR_HOTEL:
-                    is_day_end = (current_stop_in_day >= stops_per_day - 2)  # near end of current day
-                    is_final_end = (steps_left <= 2)  # near total end
-                    if not is_day_end and not is_final_end:
-                        logits[0, poi_idx] = float('-inf')
-                        continue
-                    elif is_final_end:
-                        logits[0, poi_idx] += 10.0  # strongly encourage
+                    if n_days == 1:
+                        # Single day: hotel only at absolute end
+                        if steps_left > 3:
+                            logits[0, poi_idx] = float('-inf')
+                            continue
                     else:
-                        logits[0, poi_idx] += 3.0   # day boundary
+                        # Multi-day: hotel when reaching end of current day segment
+                        stops_per_day = max_len // n_days
+                        hotel_needed = n_days  # one per day
+                        hotels_so_far = sum(1 for p in route if poi_activity_types[p].item() == ATTR_HOTEL)
+                        # Current position in this day cycle
+                        day_progress = current_len % stops_per_day if stops_per_day > 0 else 0
+                        in_day_end_zone = (day_progress >= stops_per_day - 3 or day_progress == 0)
+
+                        if not in_day_end_zone and hotels_so_far < n_days - 1:
+                            logits[0, poi_idx] = float('-inf')
+                            continue
+                        elif hotels_so_far >= n_days - 1:
+                            # Last hotel: must be at very end
+                            if steps_left > 3:
+                                logits[0, poi_idx] = float('-inf')
+                                continue
+                            logits[0, poi_idx] += 10.0
+                        else:
+                            logits[0, poi_idx] += 3.0
                     continue
 
                 base_bias = constraints[last_activity, activity].item()
@@ -481,8 +504,9 @@ def main():
         filtered = filter_route(raw, max_stops, time_matrix, max_minutes)
         if len(filtered) >= 2:
             optimized = optimize_route_order(filtered, pois, dist_matrix, types_np)
-            # Only 2-opt if last stop isn't hotel (hotel must stay at end)
-            if types_np is None or types_np[optimized[-1]] != 2:
+            # Skip 2-opt for multi-day (preserve day structure) or if hotel at end
+            has_mid_hotel = types_np is not None and sum(1 for i in optimized if types_np[i] == 2) > 1
+            if not has_mid_hotel and types_np is not None and types_np[optimized[-1]] != 2:
                 optimized = optimize_route_2opt(optimized, dist_matrix, iterations=50)
             all_routes.append(optimized)
 
@@ -528,7 +552,7 @@ def main():
         label = f"路线 {i+1}" if len(all_routes) > 1 else "推荐路线"
         if len(all_routes) > 1:
             print(f"\n--- {label} ---")
-        print_route_detail(route, pois, dist_matrix, time_matrix)
+        print_route_detail(route, pois, dist_matrix, time_matrix, types_np, n_days)
 
         # 打印活动类型序列
         if activity_sequence:
