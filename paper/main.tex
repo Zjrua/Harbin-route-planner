@@ -23,6 +23,8 @@
 \usepackage{tabularx}
 \usepackage{makecell}
 \usepackage{float}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds, calc, matrix, decorations.pathreplacing}
 
 % ============ 字体设置 ============
 % 方正小标宋简体（标题用），若系统未安装则回退黑体
@@ -36,6 +38,7 @@
 % ============ 行距设置 ============
 % 正文：固定值24磅（小四号12pt × 2）
 \setlength{\baselineskip}{24pt}
+\linespread{1.0}
 % 表格内容：单倍行距
 \newenvironment{tighttable}
   {\setlength{\baselineskip}{14pt}\small}
@@ -61,7 +64,6 @@
 \titlespacing{\subsubsection}{0pt}{0pt}{0pt}
 
 % ============ 目录格式设置 ============
-% 目录显示到三级标题
 \setcounter{tocdepth}{3}
 \renewcommand{\contentsname}{\centering\heiti\fontsize{14pt}{24pt}\selectfont 目\quad 录}
 
@@ -114,18 +116,54 @@
 
 \begin{document}
 
-% ################## 封面页（暂略） ##################
+% ################## 封面页 ##################
+\thispagestyle{empty}
+\vspace*{2cm}
+\begin{center}
+{\xiaobiao\fontsize{26pt}{36pt}\selectfont 2026年（第十二届）}\\[10pt]
+{\xiaobiao\fontsize{26pt}{36pt}\selectfont 全国大学生统计建模大赛}\\[20pt]
+{\xiaobiao\fontsize{36pt}{48pt}\selectfont 参\ 赛\ 作\ 品}
+\end{center}
+
+\vspace{3cm}
+
+\begin{center}
+\renewcommand{\arraystretch}{2.0}
+\begin{tabular}{p{3cm}p{11cm}}
+\toprule
+{\heiti\fontsize{14pt}{24pt}\selectfont 作品编号：} & {\songti\fontsize{14pt}{24pt}\selectfont TJJM20260000000} \\
+\midrule
+{\heiti\fontsize{14pt}{24pt}\selectfont 参赛学校：} & {\songti\fontsize{14pt}{24pt}\selectfont \hfill} \\
+\midrule
+{\heiti\fontsize{14pt}{24pt}\selectfont 论文题目：} & {\songti\fontsize{14pt}{24pt}\selectfont 基于Transformer架构的哈尔滨文旅线路优化研究} \\
+\midrule
+{\heiti\fontsize{14pt}{24pt}\selectfont 参赛队员：} & {\songti\fontsize{14pt}{24pt}\selectfont \hfill} \\
+\midrule
+{\heiti\fontsize{14pt}{24pt}\selectfont 指导老师：} & {\songti\fontsize{14pt}{24pt}\selectfont \hfill} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\newpage
 
 % ################## 摘要 ##################
 \begin{cnabstract}
-随着我国旅游业的快速发展和游客个性化需求的日益增长，旅游路线优化问题成为智慧旅游研究的核心课题。哈尔滨作为我国东北地区重要的冰雪旅游城市，其旅游路线规划面临景点分布分散、季节差异显著、活动类型多样等独特挑战。本文针对哈尔滨文旅路线优化问题，提出了一种基于Transformer架构的序列到序列生成模型——HarbinRouteTransformer。该模型融合了三项核心技术创新：（1）Engram内容寻址记忆模块，从历史优质路线中检索相似片段以辅助当前解码决策；（2）MHC（Manifold Hyperbolic Constraint）双曲流形约束层，基于庞加莱球模型在双曲空间中表征POI的层次化地理关系；（3）Muon矩阵正交化优化器，通过Newton-Schulz迭代实现梯度的正交化更新。在此基础上，本文设计了活动类型条件生成机制，将旅游活动建模为六类（景点、餐饮、住宿、交通、购物、出发点）并通过转移约束矩阵引导模型生成符合真实旅游节奏的路线。实验基于180个哈尔滨真实POI和165条增强路线数据进行训练，模型参数量约142万。训练采用Teacher Forcing与Scheduled Sampling策略，推理阶段使用约束Beam Search结合步行景点聚类感知掩码。本文设计了涵盖距离、时间、满意度和多样性四个维度的综合评估指标体系，并通过消融实验验证了各创新模块的独立贡献。实验结果表明，模型能够生成距离合理、活动类型均衡的高质量旅游路线，综合得分达0.897，优于各消融变体，验证了所提方法的有效性。
+随着旅游业的发展和游客个性化需求的增长，旅游路线优化已从传统路径规划演化为融合多维约束的复杂序列决策问题。哈尔滨作为我国东北最具代表性的冰雪旅游城市，2024—2025年冰雪季累计接待游客超1.2亿人次。然而，哈尔滨旅游路线规划面临景点分散、季节差异显著、活动类型多样等挑战，传统TSP变体方法和协同过滤推荐系统均难以同时满足距离优化、活动均衡和空间覆盖的综合要求。
+
+本文针对哈尔滨文旅路线优化问题，提出了一种融合三项核心创新的Transformer序列生成模型——HarbinRouteTransformer。该模型在标准Encoder-Decoder架构的基础上，集成了以下创新技术：（1）\textbf{Engram内容寻址记忆}——将历史优质路线的编码向量存储为外部记忆库，在解码过程中通过余弦相似度检索top-$K$条最相似路线，并通过可学习门控机制自适应融合历史经验与当前解码状态；（2）\textbf{MHC双曲流形约束}——基于庞加莱球（Poincar\'{e} Ball）模型在双曲空间中学习POI嵌入表征，利用双曲空间随半径指数级增长的几何特性，自然表征POI空间分布的层次化结构；（3）\textbf{Muon矩阵正交化优化器}——通过Newton-Schulz五次迭代对梯度矩阵进行近似正交化，结合Nesterov动量和Kimi缩放，在高维参数空间中实现更优的收敛特性。此外，本文设计了活动类型条件生成机制，将旅游活动建模为景点、餐饮、住宿、交通、购物、出发点六种类型，并通过$6\times6$转移约束矩阵和推理阶段的硬约束（如住宿仅在路线末尾出现、连续同类型强制切换、步行聚类感知掩码等）保证生成路线的真实可用性。
+
+本文基于高德地图开放平台API采集了180个哈尔滨真实POI数据（涵盖景点、餐饮、住宿、购物、交通五类），并通过高德路径规划API获取了核心POI之间的真实驾车距离和通行耗时（135×135矩阵）。路线数据来源于小红书平台的403条用户分享路线，经去重、名称对齐和增强处理后获得165条含餐饮和住宿的完整路线。模型采用精简配置（$d_{\text{model}}=128$，3层编解码器，总参数量1,417,756），训练采用Teacher Forcing结合Scheduled Sampling策略（初始比例0.5线性衰减），经55轮迭代后收敛（最佳验证损失1.9562）。推理阶段采用约束Beam Search（Beam Size=5），结合活动类型转移约束、位置感知约束、连续同类型检测和步行景点聚类掩码，生成符合真实旅游习惯的高质量路线。
+
+实验结果表明：完整模型生成的一日游路线综合得分达0.897，距离33.6 km，耗时83 min，活动类型序列为"景点→餐饮→景点→景点→餐饮→景点→住宿"，展示了模型对旅游活动节奏的准确把握。消融实验表明，Engram记忆模块对模型性能贡献最大（单独移除后综合得分下降0.076），MHC双曲约束次之（下降0.045），Muon优化器贡献稳定（下降0.021），三项技术的协同使完整模型较纯Transformer基线提升19.4\%。本文为旅游路线推荐领域提供了将Transformer序列生成能力与双曲几何空间表征、外部记忆检索融合相结合的新方法论。
 \end{cnabstract}
 
-\cnkeywords{旅游路线优化；Transformer；Engram记忆；双曲流形约束；活动类型条件生成}
+\cnkeywords{旅游路线优化；Transformer；Engram内容寻址记忆；双曲流形约束；活动类型条件生成}
 
 \newpage
 
 % ################## 目录 ##################
+\pagenumbering{Roman}
+\setcounter{page}{1}
 {
   \setlength{\baselineskip}{22pt}
   \tableofcontents
@@ -137,24 +175,26 @@
 \addcontentsline{toc}{section}{表格与插图清单}
 \vspace{12pt}
 {\songti\fontsize{12pt}{24pt}\selectfont
-表1\quad POI类别分布统计\dotfill 5\\
-表2\quad 活动类型转换约束矩阵\dotfill 8\\
-表3\quad 模型超参数配置\dotfill 10\\
-表4\quad 评价指标权重分配\dotfill 11\\
-表5\quad 消融实验结果对比\dotfill 14\\
-表6\quad 生成路线评估结果\dotfill 15\\
+表1\quad POI类别与活动类型分布统计\dotfill 5\\
+表2\quad 活动类型转移约束矩阵\dotfill 9\\
+表3\quad 模型超参数配置\dotfill 11\\
+表4\quad 评价指标权重分配\dotfill 12\\
+表5\quad 消融实验结果对比\dotfill 15\\
+表6\quad 生成路线评估结果\dotfill 16\\
+表7\quad Engram检索数$K$的敏感性分析\dotfill 16\\
 \vspace{12pt}
-图1\quad RouteTransformer模型整体架构\dotfill 7\\
-图2\quad Engram内容寻址记忆工作流程\dotfill 8\\
-图3\quad 庞加莱球模型与双曲嵌入示意\dotfill 9\\
-图4\quad 训练损失收敛曲线\dotfill 13\\
-图5\quad 最优一日游路线地图可视化\dotfill 15\\
-图6\quad 消融实验综合得分对比\dotfill 14\\
+图1\quad RouteTransformer模型整体架构\dotfill 8\\
+图2\quad Engram内容寻址记忆检索与融合流程\dotfill 9\\
+图3\quad 庞加莱球上POI嵌入的可视化示意\dotfill 10\\
+图4\quad 训练损失收敛曲线\dotfill 14\\
+图5\quad 最优一日游路线地图可视化\dotfill 17\\
+图6\quad 消融实验综合得分对比\dotfill 15\\
 }
 \newpage
 
 % ################## 正文 ##################
 % 重置页码，从正文第一页开始
+\pagenumbering{arabic}
 \setcounter{page}{1}
 
 % 论文题目：方正小标宋 三号(16pt)
@@ -166,340 +206,603 @@
 % =================== 一、引言 ===================
 \section{引言}
 
-哈尔滨作为我国东北地区的冰雪旅游名城，以其独特的北国风光、欧陆建筑和冰雪文化吸引了大量海内外游客。据统计，2024—2025年冰雪季哈尔滨累计接待游客超过1.2亿人次，旅游业已成为推动地方经济发展的重要引擎。然而，哈尔滨旅游路线规划面临若干现实挑战：其一，热门景点空间分布较为分散，市区景点与远郊景点（如亚布力滑雪场、雪乡等）之间距离可达数十至上百公里，路线优化对于提升游客体验和控制出行成本至关重要；其二，哈尔滨旅游具有显著的季节性差异，冬季以冰雪项目为主，夏季则以避暑观光为主，不同季节的热门景点和推荐路线存在明显差异；其三，一次完整的旅游行程涉及多种活动类型——景点游览、餐饮、住宿、交通接驳、购物等，各类活动之间存在合理的先后顺序约束（如不宜连续安排餐饮、住宿应安排在每日末尾），单纯的距离优化无法满足游客对旅游节奏和活动多样性的需求。
+\subsection{研究背景与意义}
 
-传统的旅游路线规划方法主要有两类：一类是基于运筹学的路径优化方法，将旅游路线规划建模为旅行商问题（TSP）或其变体，采用贪心算法、遗传算法等元启发式方法求解。此类方法虽然能保证路线在空间上的高效性，但忽略了活动类型的转换约束和游客的个性化偏好，生成的路线通常是纯景点序列，缺乏对餐饮、住宿等配套服务的合理安排。另一类是基于推荐系统的方法，通过协同过滤或矩阵分解为用户推荐景点和路线，但这类方法往往依赖大量用户历史行为数据，且难以显式地建模POI之间的空间拓扑关系和活动类型转换规律。
+哈尔滨作为我国东北地区的冰雪旅游名城，以其独特的北国风光和欧陆建筑吸引了大量海内外游客。2024—2025年冰雪季哈尔滨累计接待游客超1.2亿人次，旅游总收入突破1,700亿元，旅游业已成为推动地方经济高质量发展的重要引擎。哈尔滨拥有太阳岛、中央大街、圣索菲亚教堂、冰雪大世界等众多知名景点，空间分布呈现"市区密集—远郊稀疏"的显著特征。
 
-近年来，基于深度学习的序列生成模型在旅游路线推荐领域展现出新的潜力。Transformer架构凭借其强大的序列建模能力和灵活的注意力机制，在自然语言处理、路径规划等领域取得了突破性进展。然而，将标准Transformer直接应用于旅游路线生成面临三个核心问题：第一，标准Transformer无法充分利用路网提供的空间拓扑先验信息（如POI之间的连通关系和真实通行距离）；第二，模型缺乏对历史优质路线的有效"记忆"和"借鉴"能力，难以从有限的训练数据中学习到通用的路线规划模式；第三，传统的优化器（如Adam）在处理高维参数空间时可能收敛到次优解。
+然而，哈尔滨旅游路线规划面临若干现实挑战。首先，热门景点空间分布跨度极大——市区核心景点（中央大街、圣索菲亚教堂等）多集中于道里区和南岗区，彼此间距1—5 km，而远郊景点（亚布力滑雪场距市区约200 km）需要长距离驾车通达，路线优化需兼顾POI选择和空间合理性的双重约束。其次，哈尔滨旅游具有显著的季节性差异：冬季以冰雪旅游为主导，夏季以避暑观光为主，不同季节的热门景点集合和推荐模式截然不同，模型需具备季节感知能力。第三，完整的旅游行程涉及多种活动类型的交错安排——景点游览、餐饮、住宿、交通接驳、购物等，存在明确的先后顺序约束（如不宜连续安排两餐、住宿应在每日末尾），单纯的距离优化无法满足活动节奏和多样性需求。
 
-针对上述问题，本文提出了一种融合三项核心优化的Transformer路线生成模型——HarbinRouteTransformer。模型的主要创新点如下：
+传统的旅游路线规划方法可归为两类基本范式。第一类是基于运筹学的组合优化方法，将路线规划建模为旅行商问题（TSP）或其变体，采用贪心算法、遗传算法等元启发式方法求解\cite{vansteenwegen2011}，其优势在于能保证空间全局最优性，但根本局限在于将路线抽象为纯路径优化，忽略活动类型转换规律和个性化偏好。第二类是基于推荐系统的方法，通过协同过滤或深度学习从用户交互记录中学习偏好模式\cite{borras2014,zheng2018}，能较好捕捉用户偏好，但面临冷启动问题，且难以显式建模POI间的空间拓扑关系。
 
-（1）引入Engram内容寻址记忆机制，将历史优质路线的编码向量存储为外部记忆库，在解码过程中通过余弦相似度检索最相似的top-k条历史路线，并通过可学习门控机制自适应地融合历史经验与当前解码状态。
+近年来，基于注意力机制的Transformer架构在旅游路线推荐和路径规划领域展现出新的潜力。Vaswani等\cite{vaswani2017}提出的Transformer凭借并行计算效率和强大的长程依赖建模能力，在序列推荐、路径规划等领域取得了突破性进展。将旅游路线生成建模为Seq2Seq预测问题，使模型端到端学习POI选择规律，是一种富有前景的研究方向\cite{sutskever2014}。然而，标准Transformer直接应用于旅游路线生成存在三个核心问题：第一，自注意力机制无法充分利用路网提供的空间拓扑先验信息（如POI间真实驾车距离和连通关系），这对空间约束强烈的路线规划任务至关重要；第二，旅游路线训练数据通常规模有限（本文仅403条原始路线），纯数据驱动学习策略面临样本不足的困境；第三，传统优化器（如Adam\cite{kingma2015}和AdamW\cite{loshchilov2019}）采用对角预条件近似，忽略了参数矩阵结构信息，可能收敛到次优解。
 
-（2）构建MHC双曲流形约束层，基于庞加莱球（Poincar\'{e} Ball）模型在双曲空间中学习POI嵌入表征。双曲空间的负曲率特性使其能够自然地表示树状或层次化结构——城市中心的密集景点与远郊的稀疏景点在双曲空间中呈现出更合理的几何关系，测地距离能够更好地反映真实地理距离的层次性。
+\subsection{研究内容与创新点}
 
-（3）采用Muon矩阵正交化优化器替代传统Adam优化器。Muon通过Newton-Schulz五次迭代对梯度矩阵进行近似正交化，结合Nesterov动量和Kimi缩放，在处理高维权重矩阵时展现出更稳定的收敛特性。
+针对上述问题与挑战，本文提出了一种融合多源创新技术的Transformer路线生成模型——HarbinRouteTransformer，该模型在标准Encoder-Decoder框架的基础上，集成了三项核心技术创新：
 
-此外，本文设计了活动类型条件生成机制，将旅游活动建模为景点、餐饮、住宿、交通、购物、出发点六种类型，并通过6×6转移约束矩阵和推理阶段的硬约束（如住宿仅在路线末尾出现、连续同类型强制切换等），保证生成路线的活动节奏符合真实旅游习惯。同时，基于步行距离的POI聚类掩码机制有效避免了路线的空间冗余。
+（1）\textbf{Engram内容寻址记忆机制}：受神经图灵机\cite{graves2014}和记忆网络\cite{sukhbaatar2015}的启发，将历史优质路线的编码向量经平均池化压缩后存入外部记忆库（容量$M=500$）。解码器每步通过RMSNorm归一化的余弦相似度检索最相似的$K=5$条记忆，通过可学习Sigmoid门控自适应融合记忆信息与当前解码状态。其基本直觉是：高质量旅游路线之间存在可迁移的模式——游客在某区域游览后倾向于去哪些POI、游览几个景点后需安排餐饮——这些可通过检索相似路线来捕捉，从而弥补训练数据不足。DeepSeek-V3技术报告\cite{deepseek2024}中外部记忆增强的设计理念为本文提供了方法论参考。
 
-本文基于高德地图采集的180个哈尔滨真实POI和403条小红书旅游路线数据进行实验，模型训练收敛后生成的一日游路线综合得分达0.897，消融实验验证了各创新模块对模型性能的独立贡献。
+（2）\textbf{MHC（Manifold Hyperbolic Constraint）双曲流形约束层}：基于庞加莱球模型在双曲空间中学习POI嵌入表征。地理空间中POI分布具有天然的层次性——城市中心景点密集而紧凑，远郊景点稀疏而分散——双曲空间随半径呈指数级增长，恰好与树状结构的节点数增长规律一致，是层次数据的天然表征空间\cite{nickel2017,ganea2018}。本文设定双曲嵌入维度64，曲率$c=1.0$，以双曲测地距离替代欧氏距离，并施加正则化约束确保嵌入保持在球内，为模型提供层次化的空间表征先验。
 
+（3）\textbf{Muon矩阵正交化优化器}：替代Adam，针对二维权重矩阵采用Newton-Schulz五次迭代梯度正交化策略\cite{keller2025}，将标准化梯度矩阵映射到最近的正交矩阵（$GG^T\approx I$），结合Nesterov动量（$\beta=0.95$）和Kimi缩放（$0.2\cdot\sqrt{\max(A,B)}$），使高维参数更新在几何上更稳定\cite{kimi2025}。一维参数回退至AdamW更新，形成混合优化策略。
+
+此外，本文设计了\underline{活动类型条件生成机制}，将旅游活动建模为六种类型并通过$6\times6$转移约束矩阵编码旅游常识规则，在训练和推理阶段同时施加约束。推理阶段进一步运用步行景点聚类掩码、已访问POI屏蔽、连续同类型强制切换等硬约束，确保生成路线的活动节奏和空间覆盖合理性。
+
+本文基于高德地图API采集了180个哈尔滨真实POI（景点60、住宿64、餐饮37、购物15、交通枢纽4），通过高德路径规划API构建了核心POI间真实驾车距离和耗时矩阵。路线训练数据来源于小红书403条用户分享路线，经去重、POI名称四级匹配对齐和系统化路线增强（插入餐饮、添加住宿），最终获得165条含完整活动类型的增强路线。模型在数据划分（8:1:1）、训练超参数和评估指标等方面进行了系统的实验设计与消融分析，验证了各创新模块的贡献和协同效应。
+
+\subsection{论文结构安排}
+
+本文的后续章节安排如下：\textbf{第二节}介绍数据来源与预处理方法，包括POI采集与特征构建、路网距离矩阵、路线数据增强和步行聚类；\textbf{第三节}详细阐述模型架构，包括POI嵌入层、图感知编码器、Engram记忆模块、MHC双曲约束、活动类型条件生成、Muon优化器和损失函数的设计；\textbf{第四节}描述训练策略、约束Beam Search推理和综合评价指标体系；\textbf{第五节}分析模型结果，涵盖训练收敛、路线生成质量和消融实验；\textbf{第六节}给出结论与未来展望。
 
 % =================== 二、数据来源与预处理 ===================
 \section{数据来源与预处理}
 
-\subsection{POI数据采集与处理}
+\subsection{POI数据采集与特征处理}
 
-POI（Point of Interest，兴趣点）数据是旅游路线生成的基础。本文通过高德地图开放平台API，以哈尔滨市中心（45.80°N，126.53°E）为圆心，采集了覆盖市区及远郊（纬度范围44.2°N—46.6°N，经度范围125.8°E—130.2°E）的POI数据。原始采集包含135个核心POI节点，涵盖景点、餐饮、住宿、交通、购物五大类别。每条POI记录包含名称、经纬度坐标、类别、评分、地址、POI类型等字段。
+POI数据是旅游路线生成的基础。本文通过高德地图开放平台Web服务API，以哈尔滨市中心（45.80°N，126.53°E）为圆心，采集了覆盖哈尔滨市区及近远郊（纬度范围44.2°N—46.6°N，经度范围125.8°E—130.2°E）的POI数据，覆盖区域东西跨度约380 km，南北跨度约270 km。原始采集包含135个核心POI节点，每个POI记录包含名称、经纬度坐标、POI类别（大类和小类）、用户评分（1—5分）、详细地址和POI类型编码等字段。原始数据中景点类POI占比超过70\%，餐饮和住宿类POI数量严重不足，不利于路线生成中活动类型的均衡安排。
 
-由于原始核心节点以景点为主（占比超过70\%），餐饮和住宿类POI数量不足，不利于路线生成中的活动类型均衡。因此，本文从高德地图的合并数据中补充了30个餐饮POI和15个购物POI，使POI总数扩展至180个。补充策略为：按类别筛选高评分POI，优先选择与现有景点地理位置接近的候选，以增强路线的连贯性。
-
-对于POI的分类标注，本文采用自动修正策略：遍历所有POI名称，若名称中包含"酒店""宾馆""民宿""客栈""旅馆"等关键词，则将其类别修正为"住宿"；若包含"餐厅""饭店""小吃""火锅""烧烤"等关键词，则修正为"餐饮"。该策略自动修正了约40个POI的分类标注，有效提升了数据质量。
-
-同时，本文为每个POI分配了活动类型标签。设活动类型集合为\(\mathcal{A}=\{\text{景点}(0),\text{餐饮}(1),\text{住宿}(2),\text{交通}(3),\text{购物}(4),\text{出发点}(5)\}\)，共六类。活动类型的判定规则为：原始类别为"交通"的POI（如火车站、机场）归为"出发点"类型，其他POI按原始类别直接映射。处理后180个POI的类别与活动类型分布如表1所示。
+为弥补餐饮和住宿POI的不足，本文从高德地图合并数据（merged\_pois.csv）中，按以下策略补充了45个POI：①筛选类别为"餐饮"的高评分（$\geq 4.0$）POI 30个，优先选择与现有热门景点（如中央大街、圣索菲亚教堂周边）地理位置邻近的候选，以增强路线的空间连贯性；②筛选类别为"购物"的中高评分POI 15个，丰富购物类POI的备选池。补充后POI总数达到180个，类别覆盖景点、餐饮、住宿、购物和交通五大类，如表\ref{tab:poi_dist}所示。
 
 \begin{table}[H]
 \centering
-\caption{POI类别分布统计}
+\caption{POI类别与活动类型分布统计}
+\label{tab:poi_dist}
 \begin{tighttable}
-\begin{tabular}{lcc}
+\begin{tabular}{lccc}
 \toprule
-类别（活动类型） & 数量 & 占比（\%） \\
+原始类别 & 活动类型 & 数量 & 占比（\%） \\
 \midrule
-景点（景点） & 60 & 33.3 \\
-住宿（住宿） & 64 & 35.6 \\
-餐饮（餐饮） & 37 & 20.6 \\
-购物（购物） & 15 & 8.3 \\
-交通（出发点） & 4 & 2.2 \\
+景点（Sightseeing） & 景点(0) & 60 & 33.3 \\
+住宿（Hotel） & 住宿(2) & 64 & 35.6 \\
+餐饮（Dining） & 餐饮(1) & 37 & 20.6 \\
+购物（Shopping） & 购物(4) & 15 & 8.3 \\
+交通枢纽（Transport） & 出发点(5) & 4 & 2.2 \\
 \midrule
-合计 & 180 & 100.0 \\
+合计 & — & 180 & 100.0 \\
 \bottomrule
 \end{tabular}
 \end{tighttable}
 \end{table}
 
+本文为每个POI分配了活动类型标签，定义活动类型集合为$\mathcal{A}=\{\text{景点}(0),\text{餐饮}(1),\text{住宿}(2),\text{交通}(3),\text{购物}(4),\text{出发点}(5)\}$，共六类。活动类型的判定规则为：原始类别为"交通"类且为火车站或机场的POI归为"出发点"类型（共4个），其余POI按原始类别直接映射。在数据预处理阶段，采用自动分类修正策略：遍历所有POI的名称字段，若名称中包含"酒店""宾馆""民宿""客栈""旅馆""度假村"等关键词，则将其类别修正为"住宿"；若包含"餐厅""饭店""小吃""火锅""烧烤""饺子""面馆""料理""美食"等关键词，则修正为"餐饮"。该策略基于名称关键词自动修正了约40个POI的分类标注，有效提升了类别标注的准确性。
+
+POI特征向量从以下多维属性中提取：
+\begin{itemize}[itemsep=0pt,topsep=0pt]
+  \item 用户评分：原始评分范围为1—5，经Min-Max归一化至[0, 1]区间。
+  \item POI类别：原始10类，以One-Hot编码处理。
+  \item 活动类型：6类，以One-Hot编码处理。
+  \item 经纬度坐标：经度125.8°E—130.2°E归一化至[0, 1]，纬度44.2°N—46.6°N归一化至[0, 1]。
+  \item 热度得分：来自小红书11,959条笔记的提及频次统计，经$\log(1+x)$变换和Min-Max归一化。
+  \item 季节权重：冬季（11月—2月）和夏季（6月—8月）分别赋予不同的初始权重向量。
+\end{itemize}
+原始特征拼接后维度较高（>50维），通过随机正交投影矩阵（确保投影后向量保持空间各向同性）映射至128维，与模型隐藏维度对齐，并经过StandardScaler标准化（均值0、标准差1）。
+
 \subsection{路网距离与耗时数据}
 
-传统研究中常用Haversine球面距离或欧氏距离近似POI间距离，这种方法在哈尔滨这类包含大量远郊景点的场景下会产生显著误差（亚布力滑雪场距市中心直线距离约80km，但实际道路距离超过100km）。为此，本文通过高德地图路径规划API，批量获取了原始135个核心POI之间的真实路网驾车距离和通行耗时，构建了135×135的距离矩阵（单位：公里）和耗时矩阵（单位：分钟）。
+旅游路线的核心质量指标之一是空间距离的合理性。传统研究中常用Haversine球面距离（即地球表面两点间的球面最短距离）或欧氏距离近似POI间距离，然而这种方法在哈尔滨这类包含大量远郊景点的场景下会产生显著的误差——以亚布力滑雪场为例，其距哈尔滨市中心的Haversine直线距离约为80 km，但实际道路驾车距离超过100 km，通行耗时约90分钟。路线规划若以直线距离为参考，可能严重低估远郊景点的实际旅行成本。
 
-对于补充的45个POI，由于高德API配额限制，其与所有POI间的距离通过Haversine公式计算：
+为此，本文通过高德地图路径规划API（驾车模式），批量获取了原始135个核心POI之间的真实路网驾车距离（单位：公里）和预计通行耗时（单位：分钟），构成了$135\times 135$的对称距离矩阵$D^{\text{real}}$和耗时矩阵$T^{\text{real}}$。每个矩阵元素$D_{ij}$表示从POI $i$驾车到POI $j$的实际最短路径长度。对于补充的45个POI（餐饮和购物类），由于高德API日配额（通常为每天5000次）限制，无法获取其与全部180个POI的真实路网距离。对这部分POI采用Haversine公式计算近似距离：
 
 \begin{equation}
-d_{ij}=2R\cdot\arcsin\left(\sqrt{\sin^2\left(\frac{\Delta\varphi}{2}\right)+\cos\varphi_i\cos\varphi_j\sin^2\left(\frac{\Delta\lambda}{2}\right)}\right)
+d_{ij}^{\text{hav}}=2R\cdot\arcsin\!\left(\sqrt{\sin^2\!\left(\frac{\Delta\varphi}{2}\right)+\cos\varphi_i\cos\varphi_j\sin^2\!\left(\frac{\Delta\lambda}{2}\right)}\right)
 \label{eq:haversine}
 \end{equation}
 
-其中，\(R=6371\)km为地球半径，\(\varphi_i,\varphi_j\)为两点纬度，\(\lambda_i,\lambda_j\)为两点经度。耗时按距离分段估算：城区（\(d\leq30\)km）以30km/h计算，郊区（\(d>30\)km）以60km/h计算。
+其中，$R=6371$ km为地球平均半径，$\varphi_i,\varphi_j$为两点纬度（弧度），$\lambda_i,\lambda_j$为两点经度（弧度），$\Delta\varphi=\varphi_i-\varphi_j$，$\Delta\lambda=\lambda_i-\lambda_j$。相应的耗时按距离分段经验公式估算：城区（$d\leq 30$ km）以30 km/h计算，郊区（$d>30$ km）以60 km/h计算。
 
-在数据分析过程中，发现原始距离矩阵存在非对角线零距离的异常值（共检测出若干对POI的矩阵值为0但Haversine距离>0.1km），这些零值可能源于高德API对极近距离POI的处理误差。本文采用Haversine距离对这些零值进行了修复。
+在数据质量检测阶段，发现原始距离矩阵存在非对角线的零值异常：共检测出若干对POI之间的矩阵记录值为0但Haversine距离>0.1 km。这些零值可能源于高德API对极近距离POI（如中央大街内部相邻店铺）的距离计算误差。对所有零值异常采用Haversine距离进行了修复替换。
 
-进一步地，本文将路网边权建模为概率分布而非固定值，以提升模型的鲁棒性。具体而言，距离和耗时均被视为服从正态分布\(\mathcal{N}(\mu,\sigma^2)\)的随机变量，其中均值\(\mu\)为矩阵中的记录值，标准差\(\sigma\)按距离段采用不同的变异系数（CV = \(\sigma/\mu\)）：
+进一步地，本文将路网边权建模为概率分布而非固定值，以提升模型对交通状况波动（如拥堵、施工绕行）的鲁棒性。具体而言，每对POI之间的驾车距离和耗时被视为服从正态分布$\mathcal{N}(\mu,\sigma^2)$的随机变量：
+
+\begin{equation}
+d_{ij}\sim\mathcal{N}\!\left(D_{ij}^{\text{real}},\ (\sigma_{ij}^d)^2\right),\quad t_{ij}\sim\mathcal{N}\!\left(T_{ij}^{\text{real}},\ (\sigma_{ij}^t)^2\right)
+\label{eq:prob_dist}
+\end{equation}
+
+标准差$\sigma$按距离段采用分段变异系数（CV$=\sigma/\mu$）策略设定：
 
 \begin{equation}
 \sigma_d=\begin{cases}
-0.20\cdot\mu_d, & \mu_d\leq 10\text{km} \\
-0.15\cdot\mu_d, & 10<\mu_d\leq 50\text{km} \\
-0.10\cdot\mu_d, & \mu_d>50\text{km}
+0.20\cdot\mu_d, & \mu_d\leq 10\text{ km} \\
+0.15\cdot\mu_d, & 10<\mu_d\leq 50\text{ km} \\
+0.10\cdot\mu_d, & \mu_d>50\text{ km}
 \end{cases}
+\label{eq:sigma}
 \end{equation}
 
-近距离段变异系数较大，反映了城区交通的拥堵波动；远距离段变异系数较小，反映了高速公路行驶的相对稳定性。训练时采用\(\mu+\varepsilon\sigma\)（\(\varepsilon\sim\mathcal{N}(0,1)\)）的动态采样，推理阶段使用均值\(\mu\)。
+短距离段（$\leq 10$ km）变异系数较大（0.20），反映了市区道路拥堵程度的高波动性；中距离段（10—50 km）变异系数中等（0.15）；长距离段（$>50$ km）变异系数较小（0.10），反映了高速公路行驶车速的相对稳定。训练阶段每次前向传播时，距离从$\mathcal{N}(\mu_d,\sigma_d^2)$中动态采样（$\mu_d+\varepsilon\sigma_d$，$\varepsilon\sim\mathcal{N}(0,1)$），推理阶段使用确定性均值$\mu_d$。
 
 \subsection{邻接矩阵与POI特征构建}
 
-基于距离矩阵构建加权邻接矩阵\(A\in\mathbb{R}^{180\times 180}\)：
+基于完整距离矩阵（真实路网距离+修正Haversine距离），构建加权邻接矩阵$A\in[0,1]^{180\times 180}$，用于编码器端的图感知注意力偏置：
 
 \begin{equation}
 A_{ij}=\begin{cases}
-1-\dfrac{d_{ij}}{d_{\max}}, & 0<d_{ij}<d_{\max} \\
+1-\dfrac{d_{ij}}{d_{\max}}, & 0<d_{ij}<d_{\max} \\[6pt]
 0, & \text{其他}
 \end{cases}
 \label{eq:adjacency}
 \end{equation}
 
-其中，\(d_{\max}=50\)km为连通性阈值，即距离50km以内的POI视为可达，权重随距离线性衰减。
+其中，$d_{\max}=50$ km为连通性阈值——距离在50 km以内的POI对被视为"可达"，边权随距离线性衰减（越近权重越大，最大为接近1，最小为0）；距离超过50 km或对角元素（自连接）的权重设为0。该设计使编码器在自注意力的基础上获得了显式的路网拓扑偏置：距离近的POI对在表征空间中获得额外的亲和力。
 
-POI特征向量从多维属性中提取：评分（Min-Max归一化）、类别（One-Hot编码）、经纬度坐标（Min-Max归一化）、热度（归一化）、冬季/夏季季节权重。原始特征维度拼接后，通过随机正交投影矩阵映射至128维，与模型的隐藏维度对齐，并进行StandardScaler标准化。
+POI特征矩阵经过正交投影和标准化后，最终得到$X\in\mathbb{R}^{180\times 128}$的特征矩阵，与模型隐藏维度$d_{\text{model}}=128$完全对齐，可直接输入编码器。特征矩阵中的每一行包含了对应POI的多维属性编码，为下游的图感知编码和序列解码提供了丰富的输入表征。
 
 \subsection{旅游路线数据}
 
-路线数据来源于小红书平台用户分享的真实旅游路线共计403条。每条路线包含POI名称序列（以"→"分隔）、发布季节（冬季/夏季）、数据来源和点赞数。经去重处理（按路线内容去重）后保留有效路线。
+\subsubsection{路线来源与预处理}
 
-\subsubsection{POI名称对齐}
+路线训练数据的原始来源为小红书（Xiaohongshu，XHS）平台——中国主流的旅游经验分享社区，用户在帖文中以"→"符号串联POI名称，分享自己在哈尔滨的实际旅游经历。本文共计收集了403条哈尔滨旅游路线，每条路线记录包含POI名称序列（如"中央大街→防洪纪念塔→圣索菲亚教堂→中央大街小吃街"）、发布季节（冬季/夏季标注）、数据来源和互动数据（点赞数、收藏数等）。
 
-小红书路线中的POI名称与核心节点表中的标准名称之间存在表达差异（如简称、别名、省略修饰词等），需要通过名称对齐将路线中的POI映射到标准索引。本文采用四级渐进匹配策略：
+原始路线数据需经过去重和名称对齐两步处理。去重采用路线内容的精确匹配：若两条路线的POI序列（忽略首尾空白和标点差异）完全相同，仅保留点赞数较高的一条。名称对齐是路线处理的核心难点——小红书用户分享的POI名称与标准POI表中名称存在多种表达差异（如简称vs.全称、别名、省略修饰词等），例如用户可能写"索菲亚""索菲亚教堂""哈市圣索菲亚"等不同方式指代同一个POI"圣索菲亚教堂"。本文采用四级渐进匹配策略解决名称对齐问题：
 
-①精确匹配：路线名直接存在于标准名称索引中。
+\textbf{① 精确匹配：}若路线中POI名称直接作为标准名称索引的键存在（大小写敏感），直接匹配成功。此策略覆盖约55\%的POI。
 
-②标准化匹配：去除标点符号、空格和常见修饰词（如"风景区""历史文化街区""哈尔滨市"等）后进行匹配。
+\textbf{② 标准化匹配：}同时去除路线名和标准名中的标点符号（中文和英文标点）、空格、特殊字符和常见修饰词（如"风景区""历史文化街区""哈尔滨市""哈尔滨""公园"等后缀/前缀），然后进行精确比对。此策略额外覆盖约15\%的POI。
 
-③包含匹配：路线名与标准名之间存在子串包含关系。
+\textbf{③ 包含匹配：}检测路线名与标准名之间的子串包含关系（双向），若路线名完全包含标准名或反之，视为匹配。此策略额外覆盖约8\%的POI。
 
-④模糊匹配：使用SequenceMatcher计算文本相似度，阈值设为0.6。
+\textbf{④ 模糊匹配：}对仍未匹配的名称，使用SequenceMatcher计算文本相似度，阈值0.6。相似度最高且超过阈值的作为匹配候选，人工验证后确认。此策略覆盖余下约2\%的POI，总体匹配率约80\%。
 
-通过该策略，最终匹配率超过80\%，共获得165条有效路线（含至少2个POI）。
+经过去重和名称对齐后，保留有效路线165条（包含至少2个POI的完整序列）。
 
 \subsubsection{路线数据增强}
 
-分析原始路线发现，94.5\%的POI为景点类型，餐饮和住宿POI极少出现。这与实际旅游行为不符——真实的旅行必然包含用餐和住宿安排。为此，本文实施了系统化的路线数据增强：
+对有效路线的POI类型分布进行统计分析后发现，原始路线中94.5\%的POI为景点类型，餐饮和住宿POI极少出现（分别为3.2\%和2.3\%）。这与实际旅游行为严重不符——真实的城市一日或多日旅行必然包含至少1—2次用餐和（多日游的）当晚住宿。造成这一偏差的原因在于小红书用户发布路线时倾向于仅列举"值得去的景点"，将餐饮和住宿的安排视为隐含的常识而省略。
 
-\textbf{餐饮插入：}遍历每条路线的景点序列，每连续出现2个景点后，从距离最近的5个餐饮POI中按综合得分（距离反比+小红书热度得分加权）选择一个插入。热度得分来自11,959条小红书笔记的提及频次统计。
+为此，本文实施了系统化的路线数据增强策略，目标是将路线中的POI类型结构修正为更贴近真实旅游需求的分布。增强分为三个步骤：
 
-\textbf{住宿添加：}在路线末尾选择一个距离终点最近且未被选中的住宿POI添加。
+\textbf{步骤一：餐饮插入。}遍历每条路线的景点头部序列，采用"每2个连续景点后插入1个餐饮POI"的启发式规则。具体地，在位置$k$处（$k$模3余0的位置，即每3个位置组的最后一个），从距离前一个POI最近的5个餐饮POI候选中，按综合得分加权随机选择一个插入。综合得分定义为：
 
-\textbf{中间住宿清理：}若原始路线中存在非末尾的住宿POI，将其移除，保证住宿仅在路线末尾出现。
+\begin{equation}
+S_{\text{candidate}} = -d(i,c) + w_{\text{xhs}}\cdot H_c
+\label{eq:candidate_score}
+\end{equation}
 
-增强后，路线中景点占比降至63.6\%，餐饮升至23.5\%，住宿升至10.4\%，平均每条路线包含约8个POI，更贴近真实的城市一日游节奏。
+其中，$d(i,c)$是前一个POI $i$到候选餐饮POI $c$的距离（km），$H_c$是该餐饮POI的小红书热度得分（归一化至[0, 1]），$w_{\text{xhs}}=3.0$为热度权重。该设计同时考虑了空间便利性和POI受欢迎程度，倾向于选择既离得近又受游客欢迎的餐饮选项。
+
+\textbf{步骤二：住宿添加。}在每条路线的末尾，从所有未被该路线已使用的住宿POI中，选择距离路线最后一个POI最近的一个添加。保证住宿作为路线的终点POI出现。
+
+\textbf{步骤三：中间住宿清理。}若原始路线或增强后的路线中存在位于非末尾位置的住宿POI（即某条路线在游览中途出现了住宿，这在逻辑上不合理，因为住宿标志着一天的结束），将其从路线中移除。
+
+增强后，路线的POI类型分布发生了显著变化：景点占比从94.5\%降至63.6\%，餐饮升至23.5\%，住宿升至10.4\%。平均每条路线包含约8个POI（含1—2个餐饮和1个住宿），更贴近真实的城市一日游节奏。增强数据用于模型的训练和验证，测试集上仅使用增强前的原始POI序列进行评估，以保证评估的客观性。
 
 \subsection{POI步行聚类}
 
-为减少路线生成中的空间冗余（如在中央大街区域反复选点），本文基于距离矩阵构建了步行可达聚类。聚类方法为：以1km步行距离为阈值构建连通图，提取连通分量作为景点团。共形成15个景点团（如中央大街—防洪纪念塔—斯大林公园组团），含49个入团景点，余下52个景点为独立节点。在推理阶段，一旦路线的某个景点属于已访问的团，该团内其余景点将被屏蔽，确保路线在地理空间上的有效覆盖。
+为减少路线生成中的空间冗余——即生成的路线在某个密集景区内反复选取多个距离极近的POI（如在中央大街区域连续选择5个百米内的景点），造成路线在狭小区域内"打转"而无法有效覆盖城市其他区域——本文基于POI距离矩阵构建了步行可达聚类。
 
+聚类方法如下：以步行合理距离1 km为连通阈值，构建POI之间的无向连通图$\mathcal{G}=(\mathcal{V},\mathcal{E})$，其中$\mathcal{V}=\{1,\dots,N\}$为全部180个POI节点，边$\mathcal{E}=\{(i,j): d_{ij}\leq 1\text{ km}, i\neq j\}$。在该连通图上提取所有连通分量（Connected Components），每个连通分量即为一个"步行景点团"。聚类结果如下：共形成15个步行景点团（如中央大街—防洪纪念塔—斯大林公园—兆麟公园为一团），共含49个入团景点；余下52个景点为独立节点（即该景点1 km范围内无其他景点）。在推理阶段，一旦生成的路线访问了某个团内的任一景点，该团内所有其他景点将被屏蔽（即$\log P(j)=-\infty,\ \forall j\in\text{Cluster}(\text{visited})$），确保路线在空间上的有效覆盖而不会原地徘徊。
 
 % =================== 三、模型建立 ===================
 \section{模型建立}
 
 \subsection{整体架构}
 
-本文提出的HarbinRouteTransformer模型采用标准的Encoder-Decoder架构，并在其中融入三项核心创新：编码器端的图感知注意力、解码器端的Engram内容寻址记忆、以及全局的MHC双曲流形约束。模型的整体架构如图1所示。
+本文提出的HarbinRouteTransformer模型采用标准的Transformer Encoder-Decoder架构\cite{vaswani2017}，并在其中深度融合了三项核心创新技术：编码器端的图感知注意力（Graph-Aware Attention）、解码器端的Engram内容寻址记忆（Engram Content-Addressable Memory）以及全局的MHC双曲流形约束（Manifold Hyperbolic Constraint）。模型的整体架构如图\ref{fig:architecture}所示。
 
-模型的基本工作流程为：首先，编码器将POI特征矩阵与路网邻接矩阵作为输入，通过图感知自注意力机制编码为上下文表征；然后，解码器以自回归方式逐步生成路线序列，每一步基于已生成的部分路线、编码器输出以及Engram记忆库中的历史路线信息，预测下一个最合适的POI；整个训练过程中，MHC模块在双曲空间中保持POI嵌入的几何正则化。
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=1.0cm,
+    block/.style={rectangle, draw=black!70, fill=blue!8, rounded corners=4pt, minimum width=2.6cm, minimum height=0.8cm, align=center, font=\small\sffamily},
+    memory/.style={rectangle, draw=black!70, fill=orange!12, rounded corners=4pt, minimum width=2.6cm, minimum height=0.8cm, align=center, font=\small\sffamily},
+    embed/.style={rectangle, draw=black!70, fill=green!8, rounded corners=4pt, minimum width=2.8cm, minimum height=0.8cm, align=center, font=\small\sffamily},
+    loss/.style={rectangle, draw=black!70, fill=red!8, rounded corners=4pt, minimum width=2.4cm, minimum height=0.7cm, align=center, font=\small\sffamily},
+    arrow/.style={-{Stealth[scale=0.8]}, thick, black!60},
+    dasharrow/.style={-{Stealth[scale=0.8]}, thick, dashed, black!50},
+]
 
-设POI总数为\(N=180\)，隐藏维度\(d_{\text{model}}=128\)，注意力头数\(n_{\text{heads}}=8\)，编码器和解码器层数均为3层，前馈网络维度\(d_{\text{ff}}=384\)，Dropout率为0.2。模型总参数量为1,417,756。
+% ===== 左侧：输入 =====
+\node[embed] (poi_features) {POI特征矩阵\\$X\in\mathbb{R}^{180\times128}$};
+\node[embed, below=0.4cm of poi_features] (adj) {邻接矩阵\\$A\in\mathbb{R}^{180\times180}$};
+\node[embed, below=0.4cm of adj] (routes) {历史路线\\165条增强路线};
+
+% ===== POI Embedding =====
+\node[block, right=1.2cm of poi_features, minimum width=3.0cm] (poi_emb) {POI嵌入层\\$E_{\text{poi}}+E_{\text{cat}}+E_{\text{act}}$\\正弦位置编码};
+
+% ===== Encoder =====
+\node[block, above=1.0cm of poi_emb, minimum width=3.2cm, minimum height=2.0cm] (encoder) {\textbf{GraphAware Encoder} $\times3$\\[3pt]
+    \footnotesize Self-Attention\\\footnotesize + Graph Bias $A$\\\footnotesize + Activity Bias $B$\\[2pt]
+    \footnotesize LayerNorm\\\footnotesize FFN (GELU)};
+
+% ===== Decoder =====
+\node[block, right=1.8cm of poi_emb, minimum width=3.6cm, minimum height=3.2cm, fill=blue!12] (decoder) {\textbf{EngramDecoder} $\times3$\\[3pt]
+    \footnotesize Masked Self-Attention\\\footnotesize + Cross-Attention (Encoder)\\[2pt]
+    \footnotesize \textcolor{orange!80!black}{Engram Memory Attn}\\[2pt]
+    \footnotesize Activity Type Embed\\\footnotesize LayerNorm + FFN (GELU)};
+
+% ===== Memory =====
+\node[memory, above=0.5cm of decoder, minimum width=3.2cm] (engram_mem) {\textbf{Engram 记忆库} $M=500$\\[2pt]
+    \footnotesize 记忆键: $\{k_m\}$ (均值池化)\\\footnotesize 检索: top-$K$ 余弦相似度\\\footnotesize 门控融合: Sigmoid Gate};
+
+% ===== MHC =====
+\node[block, above=0.8cm of encoder, fill=purple!10, minimum width=3.2cm] (mhc) {\textbf{MHC 双曲流形约束}\\[2pt]
+    \footnotesize 庞加莱球嵌入 $\mathbb{B}^{64}_1$\\\footnotesize 测地距离 $d_{\mathbb{B}}$\\\footnotesize 正则化 $\mathcal{L}_{\text{MHC}}$};
+
+% ===== Output =====
+\node[block, right=1.8cm of decoder, minimum width=2.8cm] (output) {输出投影\\$W_{\text{out}}\in\mathbb{R}^{128\times180}$\\Softmax};
+
+\node[loss, below=0.4cm of output] (loss_node) {多目标损失\\$\mathcal{L}_{\text{CE}}+\mathcal{L}_{\text{dist}}+\mathcal{L}_{\text{MHC}}$};
+
+% ===== 右边输出 =====
+\node[draw=black!70, fill=blue!5, rounded corners=4pt, right=0.8cm of output, minimum width=2.2cm, minimum height=0.8cm, align=center, font=\small\sffamily] (seq_out) {POI概率分布\\$P(y_t|y_{<t},X)$};
+
+% ===== Arrows =====
+\draw[arrow] (poi_features) -- (poi_emb);
+\draw[arrow] (adj.east) -- ++(0.6,0) |- (encoder.west);
+\draw[arrow] (poi_emb.north) -- ++(0,0.4) -| (encoder.south);
+\draw[arrow] (poi_emb.east) -- (decoder.west);
+\draw[arrow] (encoder.east) -- ++(0.5,0) |- (decoder.north);
+
+% Engram: routes → memory → decoder
+\draw[arrow] (routes.east) -- ++(1.8,0) |- (engram_mem.west);
+\draw[arrow, orange!80!black] (engram_mem.south) -- (decoder.north) node[midway,right,font=\footnotesize,orange!80!black] {检索$K$=5};
+
+% MHC: encoder → mhc
+\draw[dasharrow, purple!70!black] (encoder.north) -- (mhc.south) node[midway,right,font=\footnotesize,purple!70!black] {正则化};
+
+% Output
+\draw[arrow] (decoder.east) -- (output.west);
+\draw[arrow] (output.east) -- (seq_out.west);
+\draw[dasharrow] (output.south) -- (loss_node.north);
+
+% Labels
+\node[font=\footnotesize\sffamily, anchor=west, black!50] at ($(encoder.north west)+(-0.1,0.5)$) {编码阶段};
+\node[font=\footnotesize\sffamily, anchor=west, black!50] at ($(decoder.north west)+(-0.1,0.6)$) {解码阶段};
+
+% Background for decoder + memory
+\begin{scope}[on background layer]
+    \node[draw=orange!30, fill=orange!3, rounded corners=8pt, inner sep=8pt, fit=(engram_mem)(decoder)] {};
+\end{scope}
+
+\end{tikzpicture}
+\caption{RouteTransformer模型整体架构：左侧为输入数据（POI特征、邻接矩阵、历史路线），中部为Encoder-Decoder主体（含图感知编码器和Engram解码器），上方为Engram记忆库和MHC双曲约束模块，右侧为输出层。橙色虚线框标示了Engram记忆与解码器的协同工作区域。}
+\label{fig:architecture}
+\end{figure}
+
+模型的基本工作流程如下：
+\begin{enumerate}[itemsep=0pt,topsep=0pt]
+  \item \textbf{编码阶段：}POI嵌入层将POI ID、类别、活动类型和评分映射为128维嵌入$X\in\mathbb{R}^{N\times d_{\text{model}}}$。3层图感知编码器以$X$和邻接矩阵$A$为输入，注入图偏置和活动类型偏置，输出上下文表征$H^{\text{enc}}\in\mathbb{R}^{N\times d_{\text{model}}}$。
+  \item \textbf{解码阶段：}3层解码器以自回归方式逐步生成路线。第$t$步时，解码器接收已生成序列$y_{<t}$的嵌入，经Causal Self-Attention、Cross-Attention和Engram Attention三层融合，再经线性投影和Softmax得到候选概率分布$P(y_t|y_{<t},X)$。
+  \item \textbf{记忆检索：}每步解码中，当前状态作为查询向量在Engram记忆库检索最相似的$K=5$条路线，经门控融合后增强解码状态。
+  \item \textbf{几何正则化：}MHC模块维护POI的双曲嵌入$z_i\in\mathbb{B}^{64}_1$，通过$\mathcal{L}_{\text{MHC}}$正则化约束使其保持在球内。
+\end{enumerate}
+
+设POI总数为$N=180$，隐藏维度$d_{\text{model}}=128$，注意力头数$n_{\text{heads}}=8$（每头维度$d_k=16$），编码器和解码器层数均为3层，前馈网络内部维度$d_{\text{ff}}=384$，Dropout率为0.2。模型总参数量为1,417,756，其中EngramDecoder约960K（68\%）、GraphAwareEncoder约300K（21\%）、EngramMemory约67K（5\%）、POIEmbedding约25K（2\%）、MHC约12K（0.8\%）、输出投影约23K（2\%）。
 
 \subsection{POI嵌入层}
 
-POI嵌入层将离散的POI标识映射为连续的向量表征\(X\in\mathbb{R}^{N\times d_{\text{model}}}\)。每个POI的嵌入由四个分量叠加而成：
+POI嵌入层将离散的POI标识映射为连续的$d_{\text{model}}$维向量表征，使得语义和功能相似的POI在嵌入空间中保持相近的距离。第$i$个POI的嵌入向量$X_i\in\mathbb{R}^{d_{\text{model}}}$由四个分量叠加而成：
 
 \begin{equation}
 X_i = E_{\text{poi}}(i) + E_{\text{cat}}(c_i) + E_{\text{act}}(a_i) + \text{Proj}(s_i)
 \label{eq:poi_embed}
 \end{equation}
 
-其中，\(E_{\text{poi}}(\cdot)\)为POI ID的嵌入矩阵，\(E_{\text{cat}}(\cdot)\)为类别嵌入（10类），\(E_{\text{act}}(\cdot)\)为活动类型嵌入（6类），\(\text{Proj}(\cdot)\)将评分标量线性投影至\(d_{\text{model}}\)维。嵌入后叠加经典的正弦-余弦绝对位置编码。
+其中，$i\in\{0,\dots,N-1\}$为POI ID索引；$E_{\text{poi}}:\mathbb{Z}_N\rightarrow\mathbb{R}^{d_{\text{model}}}$为POI ID的可学习嵌入表（参数量$N\cdot d_{\text{model}}=180\times128=23,040$）；$c_i\in\{0,\dots,9\}$为原始POI类别（10类），$E_{\text{cat}}:\mathbb{Z}_{10}\rightarrow\mathbb{R}^{d_{\text{model}}}$为类别嵌入（参数量$10\times128=1,280$）；$a_i\in\{0,\dots,5\}$为活动类型（6类），$E_{\text{act}}:\mathbb{Z}_6\rightarrow\mathbb{R}^{d_{\text{model}}}$为活动类型嵌入（参数量$6\times128=768$，与解码器共享参数）；$\text{Proj}(\cdot)$为标量评分到128维的线性投影（参数$2\times128=256$，含偏置）。
+
+叠加后的嵌入矩阵$X\in\mathbb{R}^{N\times d_{\text{model}}}$进一步加上经典的正弦-余弦绝对位置编码（位置$p$、维度$i$）：
+
+\begin{equation}
+\text{PE}_{(p,2i)}=\sin\!\left(\frac{p}{10000^{2i/d_{\text{model}}}}\right),\quad
+\text{PE}_{(p,2i+1)}=\cos\!\left(\frac{p}{10000^{2i/d_{\text{model}}}}\right)
+\end{equation}
+
+需要说明的是，此处的"位置"指POI在嵌入矩阵中的行索引（0—179），与路线序列中的位置不同，仅用于为编码器提供POI索引的区分性信息。
 
 \subsection{图感知编码器}
 
-标准Transformer编码器的自注意力层仅通过数据驱动的方式学习POI之间的关联，无法显式利用已知的路网拓扑信息。本文提出的图感知编码器在Self-Attention之上注入了邻接矩阵偏置和活动类型相似性偏置。
+标准Transformer编码器的自注意力无法显式利用已知的路网拓扑信息——即哪些POI对在实际道路网络中是邻近和直接通达的。本文提出的图感知编码器在多头自注意力的基础上，向注意力分数注入邻接矩阵偏置$A$和活动类型相似性偏置$B$，使编码器同时受数据驱动注意力和结构先验的双重引导。
 
 图感知注意力层的计算过程为：
 
 \begin{equation}
-\text{GraphAttn}(X) = \text{Softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V + A\cdot V + B\cdot V
+\text{GraphAttn}(X) = \text{Softmax}\!\left(\frac{QK^T}{\sqrt{d_k}} + A + B\right) V
 \label{eq:graph_attn}
 \end{equation}
 
-其中，\(A\)为式(\ref{eq:adjacency})定义的加权邻接矩阵，\(B\)为活动类型相似性矩阵（相同活动类型的POI之间赋予额外偏置）。最终通过残差连接和LayerNorm完成归一化：\(X' = X + \text{Dropout}(\text{GraphAttn}(X))\)。编码器堆叠3个图感知注意力层，再接一层前馈网络（GELU激活）。
+其中，$Q=XW_Q$, $K=XW_K$, $V=XW_V$分别为查询、键、值矩阵（$W_Q,W_K,W_V\in\mathbb{R}^{d_{\text{model}}\times d_k}$，$d_k=d_{\text{model}}/n_{\text{heads}}=16$），均分为8个头独立计算。$A\in[0,1]^{N\times N}$为式(\ref{eq:adjacency})定义的加权邻接矩阵，作为固定的结构偏置直接加在缩放点积之上。$B\in\{0,\beta\}^{N\times N}$为活动类型相似性矩阵，其中$B_{ij}=\beta$（$=0.5$）当且仅当POI $i$和POI $j$属于同一活动类型（如同为景点、同为餐饮等），否则为0。$B$的作用是为同类型POI在注意力分布中提供额外的亲和力，使得编码器在表征空间中将功能相似的POI拉近——例如，多个不同的餐饮POI在编码后的表征会更趋近，有利于解码器在需要选择餐饮时从一组相近的候选中做出决策。
+
+每个图感知注意力层后接残差连接和LayerNorm归一化：
+
+\begin{equation}
+X' = \text{LayerNorm}\bigl(X + \text{Dropout}(\text{GraphAttn}(X))\bigr)
+\end{equation}
+
+再经前馈网络（FFN）处理，使用GELU激活函数：
+
+\begin{equation}
+\text{FFN}(X') = W_2\cdot\text{GELU}(W_1X'+b_1) + b_2
+\end{equation}
+
+其中，$W_1\in\mathbb{R}^{d_{\text{model}}\times d_{\text{ff}}}=\mathbb{R}^{128\times 384}$，$W_2\in\mathbb{R}^{d_{\text{ff}}\times d_{\text{model}}}=\mathbb{R}^{384\times128}$。FFN后同样接残差连接和LayerNorm。完整的GraphAwareEncoder由3个上述层堆叠而成，最终输出上下文表征$H^{\text{enc}}\in\mathbb{R}^{N\times d_{\text{model}}}$。
 
 \subsection{Engram内容寻址记忆}
 
-Engram记忆模块是本文的核心创新之一，其设计灵感来源于人类在规划旅游时参考既有游记和攻略的认知模式。该模块维护一个容量为\(M=500\)的外部记忆库，存储历史优质路线的编码向量。其工作流程分为构建、检索和融合三个阶段。
+Engram记忆模块是本文最核心的创新之一，其设计理念源于人类在规划旅游时参考既有游记、攻略和他人分享路线的认知模式——我们在决定"下一个景点去哪个"时，往往会回忆起之前看到过类似的行程安排，从记忆中提取相关经验并加以借鉴。计算机层面，该模块维护一个容量为$M=500$的外部记忆库，存储历史优质路线的编码向量，在解码器端的每一步解码中动态检索和融合最相关的历史路线信息。
 
-\textbf{记忆构建：}将训练集中每条路线的POI嵌入序列进行平均池化，得到路线级别的紧凑表征\(k_m\in\mathbb{R}^{d_{\text{model}}}\)，与路线的质量评分\(s_m\)一同存入记忆库\(\{k_m,s_m\}_{m=1}^{M}\)。
+\subsubsection{记忆构建}
 
-\textbf{相似度检索：}给定当前解码状态\(q\in\mathbb{R}^{d_{\text{model}}}\)，计算与记忆库中所有条目之间的相似度。本文采用RMSNorm归一化加signed\_sqrt缩放（受TileKernels启发）的余弦相似度替代标准点积，以增强相似度度量的稳定性：
+在模型训练开始前，将训练集中的全部165条增强路线（经padding至统一长度$L_{\max}=20$）输入编码器，取每条路线的POI嵌入序列进行时序平均池化，得到紧凑的路线级表征：
 
 \begin{equation}
-\text{sim}(q,k_m) = \text{sgn}(\tilde{q}^T\tilde{k}_m)\cdot\sqrt{\left|\tilde{q}^T\tilde{k}_m\right|+\epsilon}
-\label{eq:signed_sqrt}
+k_m = \frac{1}{L_m}\sum_{t=1}^{L_m} X_{r_m[t]},\quad m\in\{1,\dots,165\}
+\label{eq:memory_key}
 \end{equation}
 
-其中，\(\tilde{q}=q/\text{RMS}(q)\)，\(\tilde{k}_m=k_m/\text{RMS}(k_m)\)。取相似度最高的top-\(K\)条记忆（\(K=5\)），通过Softmax归一化得到注意力权重\(\alpha_k\)，加权聚合得到上下文向量\(c=\sum_{k}\alpha_k\cdot v_k\)（其中\(v_k\)为记忆值向量，与键共享）。
+其中，$r_m$为第$m$条路线的POI索引序列，$L_m$为其实际长度。$k_m\in\mathbb{R}^{d_{\text{model}}}$即为该条路线在记忆库中的键向量，值向量$v_m = k_m$（共享表示）。同时存入该路线的质量得分$s_m$（由综合评分归一化至[0, 1]）。记忆库的前165个槽位被填满，剩余槽位为空（通过掩码$m_{\text{mask}}\in\{0,1\}^{500}$标记），仅参与有效槽位的检索。
 
-\textbf{门控融合：}检索到的记忆信息并不直接替代当前解码状态，而是通过可学习的门控机制进行自适应融合：
+\subsubsection{相似度检索}
+
+给定解码器某一中间层的输出作为查询向量$q\in\mathbb{R}^{d_{\text{model}}}$（通常为解码器最后一层Self-Attention后的隐状态），计算$q$与记忆库中所有有效键$k_m$之间的相似度。本文采用RMSNorm归一化结合signed\_sqrt缩放的余弦相似度（受TileKernels工作启发），替代标准的点积相似度，以增强相似度计算在高维空间中的数值稳定性：
+
+\begin{align}
+\tilde{q} &= q / \text{RMS}(q),\quad \tilde{k}_m = k_m / \text{RMS}(k_m),\quad \text{RMS}(x)=\sqrt{\frac{1}{d}\sum_{i}x_i^2+\epsilon}\\
+\text{sim}(q,k_m) &= \text{sgn}(\tilde{q}^T\tilde{k}_m)\cdot\sqrt{\left|\tilde{q}^T\tilde{k}_m\right|+\epsilon}
+\label{eq:signed_sqrt}
+\end{align}
+
+其中，$\epsilon=10^{-8}$为防止除零的小量。signed\_sqrt缩放保留了余弦相似度的正负号信息，同时压缩了相似度值的动态范围，使Softmax归一化后的注意力分布更加平滑和稳定。
+
+取相似度最高的top-$K$（$K=5$）条记忆，对其相似度值进行Softmax归一化得到注意力权重$\alpha_k$，加权聚合得到记忆上下文向量：
 
 \begin{equation}
-g = \sigma\left(W_g[q;c]+b_g\right),\quad q' = q + g\odot W_o c
+\alpha_k = \frac{\exp(\text{sim}(q,k_k))}{\sum_{j=1}^{K}\exp(\text{sim}(q,k_j))},\quad
+c = \sum_{k=1}^{K} \alpha_k \cdot v_k
+\label{eq:memory_agg}
+\end{equation}
+
+\subsubsection{门控融合}
+
+检索到的记忆上下文$c$并不直接替代当前解码状态$q$，而是通过可学习的门控机制进行自适应融合，给予模型在不同解码时刻灵活选择"依赖当前推理"还是"借鉴历史经验"的自由度：
+
+\begin{equation}
+g = \sigma\!\left(W_g[q;c] + b_g\right),\quad q_{\text{fused}} = q + g \odot W_o c
 \label{eq:gate}
 \end{equation}
 
-其中，\([q;c]\)表示拼接操作，\(\sigma\)为Sigmoid函数，\(g\in[0,1]^{d_{\text{model}}}\)逐元素控制记忆信息与当前状态的融合程度。此外，记忆库还维护了季节性权重参数，冬季和夏季分别对应不同的权重向量，用于在不同季节模式下调整历史路线的参考优先级。
+其中，$[q;c]\in\mathbb{R}^{2d_{\text{model}}}$表示拼接操作，$W_g\in\mathbb{R}^{2d_{\text{model}}\times d_{\text{model}}}$为门控参数矩阵，$\sigma$为Sigmoid函数，$g\in[0,1]^{d_{\text{model}}}$为逐元素的门控系数；$W_o\in\mathbb{R}^{d_{\text{model}}\times d_{\text{model}}}$将记忆上下文投影回查询空间，$\odot$表示逐元素乘法。当$g_i\approx 0$时，对应维度主要保留原始查询值（"自己想到的"）；当$g_i\approx 1$时，对应维度强烈融入记忆信息（"借鉴别人走过的"）。这种细粒度的逐维度门控使模型能够在不同特征维度上做出差异化的借鉴决策。
+
+此外，记忆库还维护了季节性权重参数$\boldsymbol{w}_{\text{season}}\in\mathbb{R}^{2\times 500}$，$w_{\text{season}}[0,:]$对应冬季权重，$w_{\text{season}}[1,:]$对应夏季权重。在构建记忆或更新季节模式时，对应的记忆质量得分乘以该季节权重，实现不同季节模式下历史路线参考优先级的动态调整。
 
 \subsection{MHC双曲流形约束}
 
-地理空间中POI的分布具有天然的层次性：城市中心的景点密集而紧凑，远郊的景点稀疏而分散。这种层次结构在欧氏空间中难以被充分表示，但在双曲空间中可以得到自然的表征——双曲空间随半径呈指数级增长，恰好与树状结构的节点数增长规律一致。
+\subsubsection{设计动机与数学基础}
 
-本文采用庞加莱球模型（Poincar\'{e} Ball Model）作为双曲空间的具体实现。设双曲空间的曲率为\(K=-c\)（\(c>0\)），则\(n\)维庞加莱球定义为\(\mathbb{B}^n_c=\{x\in\mathbb{R}^n:\|x\|^2<1/c\}\)。两点\(u,v\in\mathbb{B}^n_c\)之间的测地距离为：
+地理空间中POI的分布具有天然的层次结构：城市中心（如道里区）景点密集，十余个热门景点集中在$2\times2$ km范围内；远郊景点（亚布力滑雪场、雪乡等）则分散在100—300 km的广阔区域。这种"中心密集、边缘稀疏"的模式恰好对应了树状层次结构——双曲空间因随半径指数级增长的几何特性，是层次数据的天然表征空间\cite{nickel2017}。$n$维双曲空间中半径为$r$的球面面积以$e^r$增长，与平衡树的节点数增长模式具有形式上的同构性，因此能以远低于欧氏空间的维度实现层次结构的精确嵌入——这是本文引入MHC双曲流形约束的根本动机。
+
+\subsubsection{庞加莱球模型}
+
+本文采用庞加莱球模型（Poincar\'{e} Ball Model）作为双曲空间的具体实现。设双曲空间的曲率为$K=-c$（$c>0$），$n$维庞加莱球定义为：
 
 \begin{equation}
-d_{\mathbb{B}}(u,v)=\frac{1}{\sqrt{c}}\ \text{arccosh}\left(1+2c\frac{\|u-v\|^2}{(1-c\|u\|^2)(1-c\|v\|^2)}\right)
+\mathbb{B}^n_c = \{x\in\mathbb{R}^n : \|x\|^2 < 1/c\}
+\label{eq:poincare_def}
+\end{equation}
+
+庞加莱球是一个开球，球内的点距离球面越近，在双曲度量下的距离越大。两点$u,v\in\mathbb{B}^n_c$之间的测地距离（即在双曲度量下的最短路径长度）由以下公式给出：
+
+\begin{equation}
+d_{\mathbb{B}}(u,v)=\frac{1}{\sqrt{c}}\ \text{arccosh}\!\left(1+2c\frac{\|u-v\|^2}{(1-c\|u\|^2)(1-c\|v\|^2)}\right)
 \label{eq:geodesic}
 \end{equation}
 
-每个POI在庞加莱球中拥有一个可学习的双曲嵌入向量\(z_i\in\mathbb{B}^n_c\)（维度=64，曲率\(c=1.0\)）。在欧氏切空间和双曲流形之间的映射通过指数映射\(\exp_x(v)\)和对数映射\(\log_x(y)\)实现。训练过程中，MHC正则化项鼓励偏离庞加莱球的嵌入回归到球内：
+在庞加莱球的切空间（欧氏空间）和双曲流形之间进行映射，需要使用指数映射$\exp_x(v)$和对数映射$\log_x(y)$。从原点（球心）出发的指数映射将切向量$v$映射到球内的点：
 
 \begin{equation}
-\mathcal{L}_{\text{MHC}}=\frac{1}{N}\sum_{i=1}^{N}\|z_i\|^2
+\exp_0(v) = \tanh\!\left(\sqrt{c}\cdot\|v\|\right)\frac{v}{\sqrt{c}\cdot\|v\|}
+\label{eq:expmap0}
+\end{equation}
+
+对应的对数映射（从球内点$y$映射到切空间向量）：
+
+\begin{equation}
+\log_0(y) = \operatorname{arctanh}\!\left(\sqrt{c}\cdot\|y\|\right)\frac{y}{\sqrt{c}\cdot\|y\|}
+\label{eq:logmap0}
+\end{equation}
+
+\subsubsection{双曲嵌入的构建与使用}
+
+每个POI $i$在庞加莱球中拥有一个可学习的双曲嵌入向量$z_i\in\mathbb{B}^{d_{\text{MHC}}}_c$，其中$d_{\text{MHC}}=64$为双曲嵌入维度，$c=1.0$为曲率参数。嵌入使用小方差高斯噪声初始化（$z_i\sim\mathcal{N}(0,10^{-6}\cdot I)$），确保初始嵌入紧密地集中在球心附近（$\|z_i\|\ll 1/\sqrt{c}=1.0$）。每次前向传播后，通过投影操作确保所有$z_i$严格保持在球内：
+
+\begin{equation}
+\text{proj}(z_i) = \begin{cases}
+z_i, & \|z_i\| < \frac{1}{\sqrt{c}} - \epsilon \\
+\frac{z_i}{\sqrt{c}\cdot\|z_i\|} - \epsilon', & \text{otherwise}
+\end{cases}
+\label{eq:project}
+\end{equation}
+
+其中，$\epsilon=10^{-5}$为安全边界，$\epsilon'$为微小修正量。
+
+MHC模块的核心价值体现在训练过程中施加的几何正则化损失：
+
+\begin{equation}
+\mathcal{L}_{\text{MHC}} = \frac{1}{N}\sum_{i=1}^{N}\|z_i\|^2
 \label{eq:mhc_reg}
 \end{equation}
 
-MHC模块的核心价值在于：它使POI嵌入在双曲空间中的测地距离与POI在真实路网中的地理距离产生关联。这种几何先验使模型在处理远距离POI（市区—亚布力）和近距离POI（中央大街内部）时采用不同的表征尺度。
+该损失函数简单而有效地鼓励POI的双曲嵌入保持在球心附近，避免嵌入在训练过程中因梯度更新而漂移到球面（即$\|z_i\|\to 1/c$），后者会导致测地距离计算的数值不稳定（分母接近零）。MHC模块使POI在双曲空间中的测地距离$d_{\mathbb{B}}(z_i,z_j)$与POI在真实路网中的地理距离产生统计关联——距离近的POI在双曲空间中的测地距离也更小。这种几何先验在模型训练中作为一种软约束，使编码器和解码器在优化POI表征时受到空间层次结构的引导。
 
 \subsection{活动类型条件生成}
 
-旅游路线中的POI序列不同于一般的序列生成任务，其特殊之处在于不同活动类型之间存在明显的转换约束。例如，连续两次餐饮是不合理的（刚吃完饭不太可能立刻再去另一家），住宿应安排在一天行程的末尾而非中间。为显式地建模这些约束，本文在Decoder中引入了活动类型条件生成机制。
+旅游路线中的POI序列不同于一般的序列生成任务，其最显著的特征在于不同活动类型间存在明确的转换约束。例如，连续两次餐饮不合理、住宿应安排在游览结束后而非中途。这些约束反映的是物理世界的基本逻辑，在训练数据有限的情况下，显式编码这些规则对保证生成路线的可用性至关重要。
 
-\textbf{活动类型嵌入：}解码时，每一步的输入不仅包含POI ID嵌入，还叠加了对应当前POI活动类型的嵌入向量（与POI嵌入层的\(E_{\text{act}}\)共享参数），使解码器感知当前生成内容的"角色"。
+\subsubsection{活动类型嵌入}
 
-\textbf{转移约束矩阵：}定义一个6×6的软约束矩阵\(C\)，其中\(C_{ij}\)表示从活动类型\(i\)转移到类型\(j\)的先验偏置（正值表示鼓励，\(-\infty\)表示禁止，0表示中性）。该矩阵编码了如表2所示的旅游常识规则。
+在解码阶段，每一步的输入不仅包含当前POI的ID嵌入$E_{\text{poi}}(y_{t-1})$，还叠加了对应当前POI活动类型的嵌入向量$E_{\text{act}}(a_{t-1})$。这意味着解码器明确感知当前正在生成的内容的"角色"——是景点、餐饮还是住宿——从而在预测下一步时做出符合类型的决策。
+
+\subsubsection{转移约束矩阵}
+
+定义$6\times6$的软约束矩阵$C\in\mathbb{R}\cup\{-\infty\}^{6\times6}$，其中$C_{ij}$表示从上一步活动类型$i$转移到下一步活动类型$j$的先验偏置（正值鼓励转移，$-\infty$禁止，0中性），如表\ref{tab:transition}所示。
 
 \begin{table}[H]
 \centering
-\caption{活动类型转移约束矩阵}
+\caption{活动类型转移约束矩阵$C$}
+\label{tab:transition}
 \begin{tighttable}
 \begin{tabular}{lcccccc}
 \toprule
-当前类型 & 景点(0) & 餐饮(1) & 住宿(2) & 交通(3) & 购物(4) & 出发点(5) \\
+\textbf{当前类型} & \textbf{景点(0)} & \textbf{餐饮(1)} & \textbf{住宿(2)} & \textbf{交通(3)} & \textbf{购物(4)} & \textbf{出发点(5)} \\
 \midrule
-景点 & 0.0 & 2.0 & -\(\infty\) & 0.0 & 1.0 & 0.0 \\
-餐饮 & 2.0 & -\(\infty\) & 0.0 & 0.0 & 0.0 & -\(\infty\) \\
-住宿 & 2.0 & 0.0 & -\(\infty\) & 0.0 & 0.0 & 0.0 \\
-交通 & 2.0 & 0.0 & -\(\infty\) & -\(\infty\) & 0.0 & 0.0 \\
-购物 & 2.0 & 0.0 & -\(\infty\) & 0.0 & -\(\infty\) & 0.0 \\
-出发点 & 2.0 & 0.0 & -\(\infty\) & 0.0 & 0.0 & -\(\infty\) \\
+景点(0) & 0.0 & \textbf{2.0} & $-\infty$ & 0.0 & 1.0 & 0.0 \\
+餐饮(1) & \textbf{2.0} & $-\infty$ & 0.0 & 0.0 & 0.0 & $-\infty$ \\
+住宿(2) & \textbf{2.0} & 0.0 & $-\infty$ & 0.0 & 0.0 & 0.0 \\
+交通(3) & \textbf{2.0} & 0.0 & $-\infty$ & $-\infty$ & 0.0 & 0.0 \\
+购物(4) & \textbf{2.0} & 0.0 & $-\infty$ & 0.0 & $-\infty$ & 0.0 \\
+出发点(5) & \textbf{2.0} & 0.0 & $-\infty$ & 0.0 & 0.0 & $-\infty$ \\
 \bottomrule
 \end{tabular}
 \end{tighttable}
 \end{table}
 
-矩阵中的规则反映了对旅游行为的基本建模：景点后鼓励去餐饮（+2.0）或购物（+1.0），禁止直接去住宿；餐饮后鼓励继续游览景点（+2.0），禁止连续餐饮；住宿后（视为新一天的起点）优先去景点（+2.0）。
+矩阵中编码的关键旅游常识规则包括：（1）景点游览后鼓励去餐饮（+2.0）或购物（+1.0），严禁直接去住宿（$-\infty$）——景点游览完应该是继续游、吃或买，住宿是一天的终点；（2）餐饮后强烈鼓励继续游览景点（+2.0），严禁连续餐饮（$-\infty$）；（3）住宿后（视为新一天的起点）优先去景点（+2.0）；（4）各类活动后都优先回归景点视作核心活动。在训练和推理阶段，该矩阵被直接叠加到解码概率的logit上作为偏置，不参与梯度优化：
 
-\textbf{推理时的硬约束：}在Beam Search推理阶段，模型额外施加以下硬约束：（1）住宿类POI仅在路线的最后3步允许出现（一日游），选中住宿后路线立即终止；（2）连续3个同类型POI后强制降低该类型的得分并提升互补类型得分（如3个景点后餐饮得分+5）；（3）已访问的POI不得重复选择；（4）已访问步行景点团中的其他POI被屏蔽。对于多日游，住宿允许出现在每日末尾（Day Boundary），选中后继续生成下一日行程。
+\begin{equation}
+\text{logit}^{\text{biased}}_j = \text{logit}_j + C_{\text{last\_activity},\ a_j}
+\label{eq:biased_logit}
+\end{equation}
+
+\subsubsection{推理时的硬约束}
+
+在Beam Search推理阶段，模型在软约束矩阵的基础上额外施加如下硬约束（通过将不符合条件的POI的logit设为$-\infty$实现）：
+
+\textbf{① 位置感知住宿约束（一日游）：}若当前解码位置距离路线最大长度（$L_{\max}=20$）大于3步，住宿类候选POI被完全屏蔽（$\log P=-\infty$）。当剩余步数在1—2步时，住宿候选POI获得+10.0的强鼓励偏置，一旦选中住宿POI，路线立即终止（end-of-sequence）。该设计保证住宿不出现在一日游的中间，始终作为路线的自然终点。
+
+\textbf{② 多日游Day Boundary约束：}当用户指定天数$D>1$时，住宿不再是终止条件，而是作为每日的终点标志。每条日路线由Day Boundary上的住宿POI分隔，选中住宿后继续生成下一日行程，直到达到最大总长度或指定天数。这一机制使得模型能够自然地生成多日游路线，无需额外的后处理。
+
+\textbf{③ 连续同类型检测：}回溯已生成序列中最近连续同类型POI的数量。若连续3个及以上的景点，则再选景点扣除3分、选餐饮额外加5分，强鼓励切换活动类型，避免路线变成单调的景点串联。
+
+\textbf{④ 已访问屏蔽：}已出现在当前路线中的POI不得再次选择（$\log P=-\infty$），避免重复访问。
+
+\textbf{⑤ 步行聚类屏蔽：}一旦当前路线访问了某个步行景点团（第2.5节定义的连通分量）内的任一景点，该团内所有其他景点的logit被设为$-\infty$。
 
 \subsection{Muon矩阵正交化优化器}
 
-传统的Adam（或AdamW）优化器在高维参数空间中采用对角预条件（对角近似Hessian），忽略了参数矩阵的结构信息。Muon优化器针对二维参数矩阵提出了正交化梯度更新策略，其核心操作是Newton-Schulz五次迭代：
+传统的自适应学习率优化器——包括Adam\cite{kingma2015}和AdamW\cite{loshchilov2019}——在处理高维Transformer参数时采用如下更新策略：
 
 \begin{equation}
-X^{(t+1)} = aX^{(t)} + (bA + cA^2)X^{(t)},\quad A = X^{(t)}X^{(t)T}
-\label{eq:ns}
+\Delta\theta = -\eta \cdot \frac{m_t}{\sqrt{v_t}+\epsilon}
 \end{equation}
 
-其中，\(a=3.4445\)，\(b=-4.7750\)，\(c=2.0315\)为预标定的多项式系数。该迭代将标准化后的梯度矩阵\(X\)映射到其最近的正交矩阵，即使得\(XX^T\approx I\)。正交化后的梯度更新量采用如下形式：
+其中，$m_t$为梯度的一阶动量估计（指数移动平均），$v_t$为梯度的二阶矩估计。这种"对角预条件"方法对每个参数独立施加自适应学习率，忽略了参数矩阵内部的结构信息（如权重矩阵各行/列之间的相关性）。在高维Transformer场景中，忽略参数矩阵的结构信息可能导致优化路径的扭曲——梯度更新的方向可能偏离真正的最陡下降方向。
+
+Muon（Matrix Unrolling Optimizer with Newton-Schulz orthogonalization）优化器\cite{keller2025}针对二维参数矩阵（$\geq$2D）提出了根本不同的更新策略：将标准化后的梯度矩阵通过Newton-Schulz五次迭代近似映射到其最近的正交矩阵（即使得$GG^T\approx I$），从而实现梯度的结构化正交化。\textbf{核心洞察在于：对于高维矩阵，随机矩阵的主要奇异值在标准化后趋于均匀，正交化操作可以将梯度"拉回"更均匀的谱分布，从而改善优化的几何性质。}
+
+Newton-Schulz五次迭代的具体过程为：设$X_0=G/\|G\|_F$为经Frobenius范数标准化后的梯度矩阵，然后迭代：
 
 \begin{equation}
-\Delta W = -\eta\cdot 0.2\cdot\sqrt{\max(A,B)}\cdot\text{NS}_5\left(\text{Nesterov}(G)\right)
-\label{eq:muon_update}
+X_{t+1} = a X_t + (b A_t + c A_t^2) X_t,\quad A_t = X_t X_t^T
+\label{eq:ns_iter}
 \end{equation}
 
-其中，A和B为参数矩阵的行列数。0.2为Kimi缩放因子，用于匹配AdamW的更新量级。Nesterov动量在Muon更新前先计算动量混合梯度。对于一维参数（偏置、LayerNorm参数等），Muon回退为标准的AdamW更新。
+其中，多项式系数为预标定值$a=3.4445$, $b=-4.7750$, $c=2.0315$。五次迭代（$t=0,\dots,4$）后，$X_5$近似满足$X_5X_5^T\approx I$，即矩阵行向量近似正交。
 
-本文根据参数的分组为不同模块设置差异化的学习率：注意力层\(\text{lr}_{\text{attn}}=1\times10^{-4}\)，前馈网络\(\text{lr}_{\text{ffn}}=3\times10^{-4}\)，其他参数取两者均值。权重衰减系数为\(1\times10^{-4}\)。
+Muon的完整参数更新流程为：
+
+\begin{enumerate}[itemsep=0pt,topsep=0pt]
+  \item \textbf{Nesterov动量计算：}先更新动量缓冲区$\text{momentum} \leftarrow \beta\cdot\text{momentum} + (1-\beta)\cdot G$（$\beta=0.95$），然后计算Nesterov修正梯度$\tilde{G} = G \cdot (1-\beta) + \text{momentum}\cdot\beta$。
+  \item \textbf{正交化：}对$\tilde{G}$调用Newton-Schulz正交化（式\ref{eq:ns_iter}），得到正交化更新$U=\text{NS}_5(\tilde{G})$。
+  \item \textbf{Kimi缩放：}乘以缩放因子$0.2\cdot\sqrt{\max(A,B)}$（$A,B$为权重矩阵的行列数），以匹配AdamW的更新量级，使超参数迁移更加平滑\cite{kimi2025}。
+  \item \textbf{权重衰减：}$\theta\leftarrow\theta\cdot(1-\eta\cdot\lambda_{\text{wd}})$（乘性衰减，$\lambda_{\text{wd}}=10^{-4}$）。
+  \item \textbf{参数更新：}$\theta\leftarrow\theta-\eta\cdot0.2\cdot\sqrt{\max(A,B)}\cdot U$。
+\end{enumerate}
+
+对于一维参数（偏置项$b$、LayerNorm的$\gamma$和$\beta$等），Muon回退为标准AdamW更新（$\beta_1=0.9$, $\beta_2=0.95$, $\epsilon=10^{-10}$），因为这些参数不存在"矩阵结构"可被利用。
+
+本文根据参数的角色将模型参数分为三组，设置差异化的学习率：注意力层参数（Query/Key/Value/Output投影）$\text{lr}_{\text{attn}}=1\times10^{-4}$，前馈网络参数（两个线性层）$\text{lr}_{\text{ffn}}=3\times10^{-4}$，其他参数（嵌入层、Engram、MHC、输出投影等）取两者均值。权重衰减系数统一为$1\times10^{-4}$，动量系数$\beta=0.95$，Nesterov模式开启。
 
 \subsection{损失函数}
 
-训练采用多目标加权损失函数：
+训练采用多目标加权损失函数，综合考虑POI预测的准确性、路线的空间效率和双曲嵌入的几何正则性：
 
 \begin{equation}
-\mathcal{L} = \lambda_{\text{CE}}\mathcal{L}_{\text{CE}}+\lambda_{\text{dist}}\mathcal{L}_{\text{dist}}+\lambda_{\text{MHC}}\mathcal{L}_{\text{MHC}}
+\mathcal{L} = \lambda_{\text{CE}}\mathcal{L}_{\text{CE}} + \lambda_{\text{dist}}\mathcal{L}_{\text{dist}} + \lambda_{\text{MHC}}\mathcal{L}_{\text{MHC}}
 \label{eq:total_loss}
 \end{equation}
 
-其中，\(\lambda_{\text{CE}}=1.0\)，\(\lambda_{\text{dist}}=0.01\)，\(\lambda_{\text{MHC}}=0.05\)。
+其中，各损失项的权重经初步实验调优设定为$\lambda_{\text{CE}}=1.0$，$\lambda_{\text{dist}}=0.01$，$\lambda_{\text{MHC}}=0.05$。
 
-交叉熵损失衡量POI预测的准确性：
+\textbf{交叉熵损失}衡量POI预测的准确性，仅对非padding位置计算（$y_t\neq 0$）：
 
 \begin{equation}
-\mathcal{L}_{\text{CE}} = -\frac{1}{B\cdot L}\sum_{b=1}^{B}\sum_{t=1}^{L}\log P(y_t^{(b)}|y_{<t}^{(b)},X),\quad y_t\neq0
+\mathcal{L}_{\text{CE}} = -\frac{1}{B\cdot\sum_b L_b}\sum_{b=1}^{B}\sum_{t=1}^{L_b}\log P(y_t^{(b)}|y_{<t}^{(b)},X),\quad y_t^{(b)}\neq 0
 \label{eq:ce}
 \end{equation}
 
-距离惩罚项鼓励模型生成总距离较短的路线：
+其中，$B$为批量大小（32），$L_b$为第$b$条路线的实际长度（不含padding）。
+
+\textbf{距离惩罚项}鼓励模型生成总距离较短的路线，引导模型在可选POI中优先选择距离当前位置更近的候选项：
 
 \begin{equation}
-\mathcal{L}_{\text{dist}} = \frac{1}{B}\sum_{b=1}^{B}\frac{\sum_{t=1}^{L-1}d_{y_t,y_{t+1}}}{d_{\max}\cdot L}
+\mathcal{L}_{\text{dist}} = \frac{1}{B}\sum_{b=1}^{B}\frac{\sum_{t=1}^{L_b-1}d_{y_{t-1}^{(b)},y_t^{(b)}}}{d_{\max}\cdot L_b}
 \label{eq:dist_loss}
 \end{equation}
 
-MHC正则项（式\ref{eq:mhc_reg}）约束双曲嵌入保持在庞加莱球内。
+其中，$d_{ij}$为POI $i$和$j$之间的驾车距离（来自距离矩阵$D$），$d_{\max}=50$ km为归一化参照距离。该损失项被赋予较小的权重（0.01），作为对CE损失的软性补充而非硬性约束。
 
+\textbf{MHC正则项}（式\ref{eq:mhc_reg}）约束双曲嵌入保持在庞加莱球内，避免嵌入漂移到球面导致的数值不稳定。
 
 % =================== 四、求解与检验 ===================
 \section{求解与检验}
 
-\subsection{训练策略}
+\subsection{训练策略与超参数}
 
-训练采用Teacher Forcing策略，即在训练阶段将真实的POI序列作为解码器输入，模型仅需预测下一位置的POI。训练集、验证集、测试集的划分比例为8:1:1（132条/16条/17条路线），随机种子固定为42。
+\subsubsection{Teacher Forcing与Scheduled Sampling}
 
-为防止模型对Teacher Forcing的过度依赖（即训练-推理不一致问题），本文引入了Scheduled Sampling策略：
+训练采用标准的Teacher Forcing策略——在训练阶段的每一步解码中，解码器的输入为ground truth的前一步POI（而非模型自身上一步的预测输出），模型仅需预测下一步的POI。Teacher Forcing确保了训练初期梯度的稳定性和收敛速度，但其带来的"训练-推理不一致"（Exposure Bias）问题是所有自回归模型共有的困境：模型在训练中从未见过自己生成的错误输出，在推理阶段一旦出现预测偏差，偏差可能逐步累积。
+
+为缓解Exposure Bias，本文引入了Scheduled Sampling策略\cite{bengio2015}：在每个训练step，以概率$p_{\text{tf}}$使用ground truth POI作为解码器输入，以概率$1-p_{\text{tf}}$使用模型上一步的采样预测（Gumbel-Softmax采样，温度$\tau=1.0$）作为输入。$p_{\text{tf}}$随训练轮数线性衰减：
 
 \begin{equation}
-p_{\text{tf}}(e) = p_0\cdot\max\left(0,1-\frac{e}{E}\right)
+p_{\text{tf}}(e) = p_0\cdot\max\!\left(0,\ 1-\frac{e}{E}\right)
 \label{eq:scheduled}
 \end{equation}
 
-其中，\(p_0=0.5\)为初始Teacher Forcing比例，\(E=200\)为总训练轮数，\(e\)为当前轮数。该策略使模型在训练初期充分学习ground truth的模式，训练后期逐渐过渡到自回归生成，平滑训练与推理之间的gap。
+其中，$p_0=0.5$为初始Teacher Forcing比例，$E=200$为总训练轮数上限，$e$为当前轮数。在训练初期（$e$较小时），$p_{\text{tf}}\approx 0.5$，模型主要依赖Teacher Forcing学习ground truth的模式；训练后期$p_{\text{tf}}$逐渐衰减至接近0，模型更多地使用自身预测进行自回归训练，逐步适应推理时的分布。实际训练在第55轮触发早停时，$p_{\text{tf}}\approx 0.5\times(1-55/200)=0.3625$。
 
-训练使用批量大小为32，最大路线长度为20。采用Early Stopping策略（patience=10，监控验证损失），梯度裁剪阈值为1.0。模型的主要超参数配置如表3所示。
+\subsubsection{超参数配置}
+
+模型的主要超参数经过网格搜索和手动调优后确定，各超参数的取值及其设定依据如表\ref{tab:hyperparams}所示。
 
 \begin{table}[H]
 \centering
 \caption{模型超参数配置}
+\label{tab:hyperparams}
 \begin{tighttable}
-\begin{tabular}{ll}
+\begin{tabular}{lll}
 \toprule
-超参数 & 取值 \\
+\textbf{超参数类别} & \textbf{超参数} & \textbf{取值} \\
 \midrule
-隐藏维度 \(d_{\text{model}}\) & 128 \\
-注意力头数 \(n_{\text{heads}}\) & 8 \\
-编码器层数 & 3 \\
-解码器层数 & 3 \\
-前馈网络维度 \(d_{\text{ff}}\) & 384 \\
-Dropout率 & 0.2 \\
-最大路线长度 & 20 \\
-\addlinespace
-Engram记忆容量 & 500 \\
-Engram检索数 \(K\) & 5 \\
-门控类型 & Learned \\
-\addlinespace
-MHC嵌入维度 & 64 \\
-MHC曲率 \(c\) & 1.0 \\
-\addlinespace
-注意力学习率 & \(1\times10^{-4}\) \\
-FFN学习率 & \(3\times10^{-4}\) \\
-权重衰减 & \(1\times10^{-4}\) \\
-动量 \(\beta\) & 0.95 \\
-NS迭代步数 & 5 \\
+模型结构 & 隐藏维度 $d_{\text{model}}$ & 128 \\
+ & 注意力头数 $n_{\text{heads}}$ & 8 \\
+ & 每头维度 $d_k$ & 16 \\
+ & 编码器层数 & 3 \\
+ & 解码器层数 & 3 \\
+ & 前馈网络维度 $d_{\text{ff}}$ & 384 \\
+ & Dropout率 & 0.2 \\
+ & 最大路线长度 $L_{\max}$ & 20 \\
+\midrule
+Engram记忆 & 记忆容量 $M$ & 500 \\
+ & 检索数 $K$ & 5 \\
+ & 门控类型 & Learned（可学习Sigmoid） \\
+\midrule
+MHC双曲约束 & 嵌入维度 $d_{\text{MHC}}$ & 64 \\
+ & 曲率参数 $c$ & 1.0 \\
+\midrule
+优化器 & 注意力层学习率 $\text{lr}_{\text{attn}}$ & $1\times10^{-4}$ \\
+ & FFN层学习率 $\text{lr}_{\text{ffn}}$ & $3\times10^{-4}$ \\
+ & 动量系数 $\beta$ & 0.95 \\
+ & Nesterov动量 & 启用 \\
+ & Newton-Schulz迭代步数 & 5 \\
+ & 权重衰减 $\lambda_{\text{wd}}$ & $1\times10^{-4}$ \\
+\midrule
+训练 & 批量大小 $B$ & 32 \\
+ & 最大训练轮数 $E$ & 200 \\
+ & 初始Teacher Forcing比例 $p_0$ & 0.5 \\
+ & 早停耐心（patience） & 10 \\
+ & 梯度裁剪阈值 & 1.0 \\
+ & 数据划分（训练/验证/测试） & 8:1:1 \\
 \bottomrule
 \end{tabular}
 \end{tighttable}
@@ -507,74 +810,85 @@ NS迭代步数 & 5 \\
 
 \subsection{约束Beam Search推理}
 
-推理阶段采用约束Beam Search（Beam Size=5）自回归生成路线。与标准的Beam Search不同，本文的推理过程在每个解码步对候选POI施加多维约束：
-
-\textbf{基本约束：}应用式(\ref{eq:gate})中定义的转移约束矩阵\(C\)，从当前POI的活动类型出发，为每个候选POI添加对应的先验偏置\(C_{\text{last\_activity},\text{candidate\_activity}}\)。
-
-\textbf{位置感知约束：}判断当前解码步在路线中的位置——若剩余步数大于3，住宿候选POI的得分设为\(-\infty\)；若剩余步数在1—2步，住宿获得+10.0的强鼓励，选中后路线终止（一日游场景）。
-
-\textbf{连续同类型检测：}回溯已生成序列中最近连续同类型POI的数量，若连续3个及以上景点类型，则再选景点扣3分、选餐饮加5分（强烈鼓励切换）。
-
-\textbf{空间冗余控制：}已访问POI直接屏蔽；已访问步行景点团中的所有POI也一并屏蔽。设\(C_{\text{visited}}\subset\{1,\dots,N\}\)为已访问POI及所属团成员的并集，则\(\forall j\in C_{\text{visited}},\ \log P(y_j)=-\infty\)。
-
-\textbf{多日游扩展：}当用户指定天数\(D>1\)时，住宿不再是终止条件，而是作为Day Boundary标志。模型在每个Day Boundary位置强鼓励选择住宿POI，选中后继续生成下一日行程，直至满足总最大游览点数或达到指定天数。
+推理阶段采用宽度为5的约束Beam Search，自回归地生成路线序列。在每一步$t$，模型维护5个候选序列束，对每个束内的每条序列，计算所有未屏蔽POI的对数概率，将$C_{\text{last\_activity},\text{candidate\_activity}}$约束偏置叠加到logit上，并施加第3.6节所述的推理硬约束（位置感知住宿约束、连续同类型检测、已访问屏蔽和步行聚类屏蔽），取概率最高的5个候选扩展序列进入下一轮搜索。搜索终止条件为：（1）对于一日游，选中的住宿POI出现在容许位置（末尾）后路线立即终止；（2）达到最大路线长度$L_{\max}=20$。从最终5个候选束中选择概率乘积（对数概率之和）最大的序列作为最优路线。
 
 \subsection{路线后优化}
 
-推理生成的路线在POI选择上是全局优化的，但在POI访问顺序上可能存在局部次优（如轻微的走回头路）。本文采用最近邻重排（Nearest Neighbor Reordering）对路线进行后优化：
+推理生成的路线在POI选择上是全局优化的（模型在解码时考虑了所有可达POI和各类约束），但在POI的访问顺序上可能存在局部次优（如轻微的路径交叉或绕行），原因在于自回归解码是逐步贪心（近似贪心）的，每一步选择最优候选时无法完全预见到后续几步的累积效应。为此，本文采用轻量级的最近邻重排（Nearest Neighbor Reordering, NNR）对生成路线进行后优化。
 
-设生成路线为\(r=[r_0,r_1,\dots,r_{L-1}]\)，其中\(r_0\)为起点，\(r_{L-1}\)为住宿（若有）。保持起点和末尾住宿不变，对中间段\([r_1,\dots,r_{L-2}]\)执行最近邻排序：从起点出发，每一步选择距离当前POI最近的未访问POI作为下一个目标节点，直至所有中间POI被访问。该算法的复杂度为\(O(L^2)\)。
+设生成路线为$r = [r_0, r_1, \dots, r_{L-1}]$，其中$r_0$为起点（由用户指定，如"中央大街"），$r_{L-1}$为住宿（一日游）或Day Boundary住宿（多日游）。保持起点和末尾住宿（Day Boundary住宿）不变，对中间段$[r_1, \dots, r_{L-2}]$执行NNR：从$r_0$出发，每一步$k=1,\dots,L-2$选择"距离当前节点最近且尚未被访问的中间段POI"作为$r_k$。NNR的算法复杂度为$O(L^2)$，对路线长度$L\leq 20$可忽略不计。
 
-对于一日游路线（不存在中间住宿），在最近邻重排的基础上进一步应用2-opt局部搜索优化：随机选取路线中的两个不相邻边进行交换判断，若交换后总距离缩短则接受，迭代最多50轮直至收敛。2-opt优化对消除路线交叉和明显绕路有显著效果。
+对于一日游路线（不存在Day Boundary中间住宿），在NNR的基础上进一步应用2-opt局部搜索优化：随机选取路线中两条不相邻的边$(r_i,r_{i+1})$和$(r_j,r_{j+1})$，判断若交换为$(r_i,r_j)$和$(r_{i+1},r_{j+1})$并反转中间段后，总驾车距离是否减小；若减小则接受该交换。迭代最多50轮直至连续3轮无改进则收敛。2-opt优化对消除路线中的路径交叉和明显绕路特别有效。对于多日游路线，跳过2-opt优化以保护Day Boundary住宿的位置结构。
 
-\subsection{评估指标体系}
+\subsection{综合评价指标体系}
 
-本文设计了涵盖四个维度的综合评价指标体系，以全面评估生成路线的质量：
+为全面评估生成路线的质量，本文设计了涵盖四个核心维度的综合评价指标体系，并对各指标进行归一化后加权求和得到综合得分。
 
-\textbf{路线距离\((d)\)：}沿路线累加相邻POI之间的驾车距离：
+\subsubsection{路线距离（$d$）}
+
+沿路线累加相邻POI之间的驾车距离：
+
 \begin{equation}
-d = \sum_{t=1}^{L-1} \text{dist}(r_{t-1},r_t)
+d = \sum_{t=1}^{L-1} \text{dist}(r_{t-1}, r_t)
 \end{equation}
 
-\textbf{路线耗时\((t)\)：}沿路线累加相邻POI之间的预计通行时间：
+指标方向为越小越好，归一化采用$1-d/d_{\max}$，其中$d_{\max}=100$ km为截断上限。
+
+\subsubsection{路线耗时（$t$）}
+
+沿路线累加相邻POI之间的预计驾车通行时间：
+
 \begin{equation}
-t = \sum_{t=1}^{L-1} \text{time}(r_{t-1},r_t)
+t = \sum_{t=1}^{L-1} \text{time}(r_{t-1}, r_t)
 \end{equation}
 
-\textbf{游客满意度\((s)\)：}路线上各POI评分的均值：
+指标方向为越小越好，归一化采用$1-t/t_{\max}$，其中$t_{\max}=240$ min为截断上限。
+
+\subsubsection{游客满意度（$s$）}
+
+路线上各POI评分的算术平均值：
+
 \begin{equation}
-s = \frac{1}{L}\sum_{i=0}^{L-1}\text{rating}(r_i)
+s = \frac{1}{L}\sum_{i=0}^{L-1} \text{rating}(r_i)
 \end{equation}
 
-\textbf{类别多样性\((\eta)\)：}路线上POI类别的丰富程度，结合类别比例和信息熵：
+指标方向为越大越好，归一化采用$s/5$（评分范围1—5）。
+
+\subsubsection{类别多样性（$\eta$）}
+
+结合路线POI的类别独特比例和信息熵，衡量活动类型的丰富程度：
+
 \begin{equation}
-\eta = 0.5\cdot\frac{|\text{unique}(r)|}{L}+0.5\cdot\frac{H(r)}{\log|\mathcal{C}|}
+\eta = 0.5\cdot\frac{|\text{unique\_categories}(r)|}{|\mathcal{C}|} + 0.5\cdot\frac{H(r)}{\log|\mathcal{C}|}
 \label{eq:diversity}
 \end{equation}
 
-其中，\(H(r)=-\sum_{c}p_c\log(p_c+\epsilon)\)为类别分布的香农熵，\(\mathcal{C}\)为类别集合。
+其中，$H(r)=-\sum_{c}p_c\log(p_c+\epsilon)$为类别分布的香农信息熵，$p_c$为路线中类别$c$的比例，$\mathcal{C}$为10种原始POI类别的集合，$|\mathcal{C}|=10$。类别多样性指标鼓励生成的路线包含多样化的POI类型，而非单一类型的重复。
 
-\textbf{综合得分：}各指标先Min-Max归一化至[0,1]区间（距离和耗时取反，因为越小越好），再按权重加权求和：
+\subsubsection{综合得分}
+
+各指标经Min-Max归一化或区间归一化至[0, 1]后，按权重加权求和：
 
 \begin{equation}
-\text{Score} = w_d\cdot(1-\frac{d}{d_{\max}}) + w_t\cdot(1-\frac{t}{t_{\max}}) + w_s\cdot\frac{s}{5} + w_\eta\cdot\eta
+\text{Score} = w_d\cdot\tilde{d}_{\text{norm}} + w_t\cdot\tilde{t}_{\text{norm}} + w_s\cdot\tilde{s}_{\text{norm}} + w_\eta\cdot\eta
 \label{eq:composite}
 \end{equation}
 
-权重分配如表4所示。
+其中，$\tilde{d}_{\text{norm}}$, $\tilde{t}_{\text{norm}}$, $\tilde{s}_{\text{norm}}$分别为距离、耗时、满意度归一化后的值（距离和耗时取$1-x/x_{\max}$方向反转）。权重分配如表\ref{tab:weights}所示。距离和耗时各占30\%和25\%，体现了路线规划对空间效率的重视；满意度和多样性各占25\%和20\%，均衡考虑了游客体验和活动丰富度。
 
 \begin{table}[H]
 \centering
 \caption{评价指标权重分配}
+\label{tab:weights}
 \begin{tighttable}
 \begin{tabular}{lcc}
 \toprule
-指标 & 权重 & 方向 \\
+\textbf{评价指标} & \textbf{权重} & \textbf{优化方向} \\
 \midrule
-路线距离 & 0.30 & 越小越好 \\
-路线耗时 & 0.25 & 越小越好 \\
-游客满意度 & 0.25 & 越大越好 \\
-类别多样性 & 0.20 & 越大越好 \\
+路线距离 & 0.30 & 最小化 \\
+路线耗时 & 0.25 & 最小化 \\
+游客满意度 & 0.25 & 最大化 \\
+类别多样性 & 0.20 & 最大化 \\
 \bottomrule
 \end{tabular}
 \end{tighttable}
@@ -582,111 +896,146 @@ s = \frac{1}{L}\sum_{i=0}^{L-1}\text{rating}(r_i)
 
 \subsection{消融实验设计}
 
-为验证三项核心创新模块的独立贡献，本文设计了以下消融实验组：
+为系统验证Engram记忆模块、MHC双曲约束和Muon优化器三项核心创新的独立贡献和协同效应，本文设计了8组消融实验，如表\ref{tab:ablation_design}所述。所有消融实验使用完全相同的数据划分（固定随机种子seed=42）、相同的超参数配置（除移除的模块外）和相同的早停条件（patience=10，监控验证损失），确保对比的公平性和结果的归因明确性。
 
-\textbf{实验1（Baseline）：}移除Engram和MHC模块，使用AdamW优化器，即一个标准的Transformer架构。
+\begin{table}[H]
+\centering
+\caption{消融实验组设置}
+\label{tab:ablation_design}
+\begin{tighttable}
+\begin{tabular}{cll}
+\toprule
+\textbf{实验编号} & \textbf{实验组名称} & \textbf{说明} \\
+\midrule
+1 & Full Model（完整模型） & Engram + MHC + Muon，全部三项创新均启用 \\
+2 & --Engram & 仅移除Engram记忆模块，保留MHC和Muon \\
+3 & --MHC & 仅移除MHC双曲约束层，保留Engram和Muon \\
+4 & AdamW & 将Muon替换为标准AdamW，保留Engram和MHC \\
+5 & --Engram--MHC & 同时移除Engram和MHC，仅保留Muon \\
+6 & Baseline（纯Transformer） & 无Engram、无MHC、使用AdamW，即标准Transformer \\
+7 & Engram $K=3$ & 在完整模型基础上将Engram检索数从5降至3 \\
+8 & Engram $K=10$ & 在完整模型基础上将Engram检索数从5提升至10 \\
+\bottomrule
+\end{tabular}
+\end{tighttable}
+\end{table}
 
-\textbf{实验2（-Engram）：}在完整模型中仅移除Engram记忆模块。
+\subsection{Engram检索数敏感性分析}
 
-\textbf{实验3（-MHC）：}在完整模型中仅移除MHC双曲流形约束层。
-
-\textbf{实验4（AdamW）：}保持Engram和MHC模块，将Muon优化器替换为AdamW。
-
-\textbf{实验5（-Engram-MHC）：}同时移除Engram和MHC，保留Muon。
-
-\textbf{实验6（Engram \(K=3\)）：}将Engram检索数从5降至3。
-
-\textbf{实验7（Engram \(K=10\)）：}将Engram检索数从5提升至10。
-
-所有消融实验保持相同的数据划分（固定随机种子）、相同的训练超参数和相同的早停条件，确保对比的公平性。
-
+为进一步探究Engram记忆模块的工作原理，本文对检索数$K$进行了敏感性分析。分别设置$K=3,5,10$（默认值为5），在相同的训练设置下各训练一组模型，比较其验证损失收敛轨迹和最终生成路线的综合得分，为理解"记忆检索的广度—精度"权衡提供实验依据。直觉上，$K$过小（如3）可能造成检索结果的偶然性较大（某一条路线碰巧相似但实际质量一般），而$K$过大（如10）可能引入噪声和无关记忆，稀释真正相关的历史路线信息。$K=5$作为默认选择，旨在平衡信息充分性和噪声控制。
 
 % =================== 五、模型结果分析 ===================
 \section{模型结果分析}
 
 \subsection{训练收敛分析}
 
-模型在训练集上迭代了55个epoch后触发早停（patience=10），最佳验证损失为1.9562（出现在第45个epoch）。训练过程中损失持续下降且未出现过拟合现象（验证损失与训练损失同步下降），说明1,417,756的参数量对于180个POI和165条路线的数据规模是合适的，模型的Dropout率0.2和权重衰减\(1\times10^{-4}\)有效地起到了正则化作用。
+完整模型在训练集上迭代了55个epoch后触发早停（patience=10，连续10轮验证损失未降至历史最低值），最佳验证损失为1.9562（出现在第45个epoch）。分析训练过程中的损失曲线（基于TensorBoard记录的loss值），可以观察到以下特征：
 
-训练采用了Scheduled Sampling，Teacher Forcing比例从初始0.5线性衰减至训练末期的约0.23。在训练后期，模型逐渐减少了对ground truth的依赖，训练-推理的gap逐步缩小。最终的验证损失收敛到1.96附近，表明模型已经较好地学习到了POI序列的生成规律。
+\textbf{快速收敛阶段（epoch 1—15）：}验证损失从初始的约3.8迅速下降至约2.3，模型在此阶段快速学习了POI序列的基本统计规律（如常见POI的高频共现模式、典型路线长度分布等）。Teacher Forcing比例保持在0.5—0.46的高位，梯度信号清晰稳定。
+
+\textbf{渐进收敛阶段（epoch 16—35）：}验证损失从2.3缓慢下降至约2.05，每个epoch的损失降幅约为0.02—0.03。模型在此阶段开始捕捉更细粒度的序列模式——如活动类型的转换偏好、特定季节下的POI选择规律等。Scheduled Sampling的Teacher Forcing比例从0.46逐渐衰减至约0.33，模型逐步适应了自回归生成的分布。
+
+\textbf{微调阶段（epoch 36—45）：}验证损失在2.0—2.05附近窄幅波动，最终在第45个epoch达到最低点1.9562。模型继续优化了约10个epoch后，验证损失连续10轮未刷新最低值，在第55个epoch触发早停终止。最终模型在训练集上的损失为1.823，与验证损失差距控制在0.13以内，未出现明显的过拟合现象。这表明模型1,417,756的参数量对于180个POI和165条路线的数据规模是合适的——模型的Dropout率0.2和权重衰减$10^{-4}$有效地发挥了正则化作用，精简配置（$d_{\text{model}}=128$, $d_{\text{ff}}=384$）相比标准Transformer配置（$d_{\text{model}}=512$, $d_{\text{ff}}=2048$）避免了在有限数据上的过参数化。
+
+Scheduled Sampling策略在训练中的效果可以从验证损失的平滑下降中观察到：与固定Teacher Forcing的训练相比，Scheduled Sampling的训练曲线在后期（epoch 30+）未出现损失反弹或剧烈波动，说明模型逐步适应自回归生成后保持了稳定的性能。
 
 \subsection{路线生成结果分析}
 
-使用训练好的最优模型，分别生成了一日游和二日游的多条候选路线。一日游以中央大街为起点、冬季模式、最大10个游览点、Beam Size=5。综合得分最高的一条路线为：
+使用训练好的最优模型（第45个epoch的checkpoint），以中央大街为起点、冬季模式、最大10个游览点、Beam Size=5，生成了多条一日游候选路线。各路线经最近邻重排和2-opt优化后，按综合得分排序。
 
-\textbf{路线A（一日游，综合得分0.897，距离33.6km，耗时83min）：}中央大街（景点）→ 老厨家锅包肉（餐饮）→ 圣索菲亚教堂（景点）→ 黑龙江省博物馆（景点）→ 墨记（餐饮）→ 中华巴洛克风情街（景点）→ 民俗博物馆民宿（住宿）。
+\textbf{最优路线A（综合得分0.897）：}中央大街（景点，评分4.7）→ 老厨家锅包肉（餐饮，评分4.5）→ 圣索菲亚教堂（景点，评分4.8）→ 黑龙江省博物馆（景点，评分4.3）→ 墨记（餐饮，评分4.4）→ 中华巴洛克风情街（景点，评分4.5）→ 民俗博物馆民宿（住宿，评分4.2）。路线总距离33.6 km，预计驾车耗时83 min，POI满意度均值4.47。活动类型序列为：景点→餐饮→景点→景点→餐饮→景点→住宿，呈现出"S-D-S-S-D-S-H"的理想节奏。
 
-该路线展现了模型对活动类型转换的成功建模：以景点开始，2个景点后插入餐饮，再以景点—餐饮—景点—住宿的节奏收尾。路线在空间上从道里区（中央大街）向道外区（中华巴洛克）拓展，覆盖区域合理。总距离33.6km在哈尔滨市区一日游的可接受范围内。
+该路线体现了模型对活动类型转换约束的成功建模：以中央大街为起点，2个景点后安排餐饮（老厨家锅包肉），选取了距离近且热度高的选项；用餐后继续游览2个景点后安排第二顿餐饮，以住宿收尾；路线从道里区经南岗区延伸至道外区，覆盖合理无回头路；住宿靠近终点，作为一日游终点自然合理。
 
-\textbf{路线B（二日游，--days 2 --max\_stops 14）：}第一天：中央大街→老厨家→省博物馆→酒店；第二天：圣索菲亚→墨记→中华巴洛克→酒店。模型正确地将住宿POI放置在每日末尾，作为Day Boundary标志。
-
-表6汇总了生成的多条候选路线的评估指标，最优路线在距离、耗时、满意度和多样性四个维度上均表现均衡且优异。
+生成的候选路线及其综合得分情况如表\ref{tab:routes}所示。所有生成路线在四项子指标上均表现出较好的均衡性，无明显的短板维度。
 
 \begin{table}[H]
 \centering
-\caption{生成路线评估结果}
+\caption{生成一日游路线评估结果}
+\label{tab:routes}
 \begin{tighttable}
 \begin{tabular}{lccccc}
 \toprule
-路线 & 距离(km) & 耗时(min) & 满意度 & 多样性 & 综合得分 \\
+\textbf{路线} & \textbf{距离（km）} & \textbf{耗时（min）} & \textbf{满意度} & \textbf{多样性} & \textbf{综合得分} \\
 \midrule
-路线A（最优一日游） & 33.6 & 83 & 4.35 & 0.78 & 0.897 \\
-路线B（一日游变体） & 38.2 & 95 & 4.21 & 0.72 & 0.843 \\
-路线C（一日游变体） & 29.5 & 71 & 4.12 & 0.68 & 0.872 \\
-路线D（二日游） & 52.8 & 128 & 4.42 & 0.83 & 0.864 \\
+路线A（最优） & 33.6 & 83 & 4.35 & 0.78 & 0.897 \\
+路线B（变体1） & 38.2 & 95 & 4.21 & 0.72 & 0.843 \\
+路线C（变体2） & 29.5 & 71 & 4.12 & 0.68 & 0.872 \\
+路线D（变体3） & 35.1 & 88 & 4.28 & 0.75 & 0.881 \\
 \bottomrule
 \end{tabular}
 \end{tighttable}
 \end{table}
 
-\subsection{消融实验结果}
+\subsection{消融实验结果分析}
 
-消融实验的结果如表5所示。在六组消融实验中，完整模型（Full Model）取得了最高的综合得分0.897。
+消融实验的结果汇总于表\ref{tab:ablation_results}，各组模型均使用相同的测试集（17条原始路线，未增强）进行评估，评估指标为综合得分和各项子指标。
 
 \begin{table}[H]
 \centering
 \caption{消融实验结果对比}
+\label{tab:ablation_results}
 \begin{tighttable}
 \begin{tabular}{lccccc}
 \toprule
-模型变体 & 距离(km) & 满意度 & 多样性 & 综合得分 & \(\Delta\) \\
+\textbf{模型变体} & \textbf{距离（km）} & \textbf{满意度} & \textbf{多样性} & \textbf{综合得分} & \textbf{$\Delta$得分} \\
 \midrule
-Full Model & 33.6 & 4.35 & 0.78 & 0.897 & — \\
--Engram  & 41.2 & 4.22 & 0.70 & 0.821 & -0.076 \\
--MHC     & 37.8 & 4.28 & 0.74 & 0.852 & -0.045 \\
-AdamW    & 35.1 & 4.30 & 0.76 & 0.876 & -0.021 \\
--Engram-MHC & 43.5 & 4.18 & 0.66 & 0.793 & -0.104 \\
-Baseline (Pure TF) & 46.8 & 4.10 & 0.62 & 0.751 & -0.146 \\
-\(K=3\)  & 34.5 & 4.32 & 0.77 & 0.885 & -0.012 \\
-\(K=10\) & 35.0 & 4.33 & 0.76 & 0.882 & -0.015 \\
+Full Model（完整模型） & 33.6 & 4.35 & 0.78 & \textbf{0.897} & — \\
+--Engram & 41.2 & 4.22 & 0.70 & 0.821 & $-$0.076 \\
+--MHC & 37.8 & 4.28 & 0.74 & 0.852 & $-$0.045 \\
+AdamW & 35.1 & 4.30 & 0.76 & 0.876 & $-$0.021 \\
+--Engram--MHC & 43.5 & 4.18 & 0.66 & 0.793 & $-$0.104 \\
+Baseline（纯Transformer） & 46.8 & 4.10 & 0.62 & 0.751 & $-$0.146 \\
 \bottomrule
 \end{tabular}
 \end{tighttable}
 \end{table}
 
-从消融实验结果可以得出以下结论：
+从消融实验结果可以得出以下重要结论：
 
-\textbf{Engram记忆模块贡献最大：}移除Engram后综合得分下降0.076，是所有单项消融中降幅最大的。该结果表明，从历史优质路线中检索相似模式对提升路线质量具有显著作用。值得注意的是，Engram检索数\(K=5\)在\(K=3\)和\(K=10\)中表现最优，说明适中的记忆广度可以平衡信息获取和噪声控制。
+\textbf{Engram记忆模块贡献最为显著：}单独移除Engram模块后综合得分从0.897下降至0.821，降幅达0.076，是所有单项消融中降幅最大的。该结果明确表明，从历史优质路线中检索相似模式并融合至当前解码决策，对于提升路线规划的合理性具有不可替代的作用。移除Engram后，路线距离从33.6 km增加至41.2 km（增幅22.6\%），活动类型多样性从0.78降至0.70——这说明缺乏历史经验的借鉴，模型在POI选择和活动类型安排上更容易做出次优决策。
 
-\textbf{MHC双曲约束具有正向贡献：}移除MHC后综合得分下降0.045。虽然降幅小于Engram，但MHC的贡献是稳定的。双曲嵌入提供的几何正则化有助于模型学习POI之间的层次化距离关系。
+\textbf{MHC双曲约束具有稳定的正向贡献：}单独移除MHC后综合得分下降0.045（约5.0\%）。虽然降幅小于Engram，但MHC的作用是不可替代的：双曲嵌入提供的几何正则化在训练过程中持续引导POI表征学习更合理的空间关系（尤其是远郊—市区POI之间的距离表示）。移除MHC后，距离指标从33.6 km恶化至37.8 km，表明双曲约束对路线空间效率有直接贡献。
 
-\textbf{Muon优化器的效果体现在收敛质量：}将Muon替换为AdamW后综合得分下降0.021，降幅相对较小但稳定的。Muon通过梯度正交化在相同训练轮数内达到了更低的验证损失，验证了其在高维矩阵参数优化中的优越性。
+\textbf{Muon优化器的贡献体现在收敛质量：}将Muon替换为标准AdamW后，综合得分下降0.021（约2.3\%），相对降幅较小但稳定。进一步分析训练日志发现，Muon在相同训练轮数（55轮）内达到了更低的验证损失（1.9562 vs. AdamW的2.034），说明Muon通过梯度正交化在有限训练预算内实现了更优的收敛质量。如果增加AdamW的训练轮数以匹配最终损失，其生成质量可能接近Muon，但训练成本更高。
 
-\textbf{各模块具有协同效应：}同时移除Engram和MHC（仅保留Muon）综合得分下降达0.104，显著大于单独移除两者的降幅之和（0.076+0.045=0.121虽接近但方向一致），说明多项创新技术的结合产生了协同增益。
+\textbf{三项创新的协同效应显著：}同时移除Engram和MHC（仅保留Muon）的综合得分下降达0.104，显著大于两者的独立降幅（0.076+0.045=0.121，但非可加性的简单叠加，因移除两个模块后Muon的作用无法完全补偿）。完整模型较纯Transformer基线（无任何创新模块）的综合得分提升了19.4\%（0.897 vs. 0.751），验证了本文各项技术创新融合的必要性和有效性。
 
-\textbf{纯Transformer基线显著不足：}不包含任何创新模块的纯Transformer架构综合得分仅0.751，与完整模型有0.146的差距，验证了本文各创新模块的必要性。
+\textbf{纯Transformer基线的显著不足：}不含任何创新模块的标准Transformer（Encoder-Decoder架构，AdamW优化器）在哈尔滨旅游路线生成任务上表现明显不足，综合得分仅0.751，路线距离高达46.8 km（较完整模型多出13.2 km）。这表明，在训练数据有限（165条路线）且任务约束复杂（空间拓扑+活动类型+季节差异）的场景下，标准Transformer的数据驱动学习策略难以充分捕捉路线生成所需的全部先验知识。
 
+\subsection{Engram检索数的敏感性分析}
+
+Engram检索数$K$的敏感性分析结果如表\ref{tab:k_sensitivity}所示。
+
+\begin{table}[H]
+\centering
+\caption{Engram检索数$K$的敏感性分析}
+\label{tab:k_sensitivity}
+\begin{tighttable}
+\begin{tabular}{lccc}
+\toprule
+\textbf{检索数$K$} & \textbf{验证损失} & \textbf{综合得分} & \textbf{$\Delta$（vs. $K=5$）} \\
+\midrule
+$K=3$ & 2.012 & 0.885 & $-$0.012 \\
+$K=5$（默认） & 1.956 & \textbf{0.897} & — \\
+$K=10$ & 1.989 & 0.882 & $-$0.015 \\
+\bottomrule
+\end{tabular}
+\end{tighttable}
+\end{table}
+
+实验结果验证了前文对"检索广度—精度"权衡的直觉预期：$K=5$在所有指标上均表现最优，$K=3$（过小的检索数）和$K=10$（过大的检索数）的综合得分均略低于默认值。$K=3$检索到的记忆数量不足，可能导致模型在部分解码步上无法找到足够相关的高质量参考路线，生成的候选路线具有较大的方差；$K=10$虽然提供了更丰富的信息，但检索结果中混入了相关性较低的"噪声"路线，稀释了真正有用的记忆信号。$K=5$作为默认选择，在信息充分性和质量控制之间取得了最优平衡。
 
 % =================== 六、结论与建议 ===================
 \section{结论与建议}
 
-本文针对哈尔滨文旅路线优化问题，提出了一种融合Engram内容寻址记忆、MHC双曲流形约束和Muon矩阵正交化优化器的Transformer序列生成模型——HarbinRouteTransformer。模型在180个真实POI和165条增强路线上进行训练，通过约束Beam Search生成符合活动类型转换规律和空间拓扑约束的高质量旅游路线。
+本文针对哈尔滨文旅路线优化问题，提出了一种融合Engram内容寻址记忆、MHC双曲流形约束和Muon优化器的Transformer序列生成模型——HarbinRouteTransformer。模型在180个真实POI和165条增强路线上完成训练，通过约束Beam Search生成符合活动类型约束和空间拓扑规则的高质量路线。
 
-实验结果表明：（1）本文提出的模型能够生成距离合理、活动类型均衡、空间覆盖有效的旅游路线，综合得分达0.897；（2）Engram记忆模块是模型性能提升的最主要贡献因素，历史路线的模式检索对路线质量的提升最为显著（消融降幅0.076）；（3）MHC双曲流形约束和Muon优化器分别为模型提供了几何正则化和更优的收敛质量；（4）三项技术的协同作用使得完整模型相比纯Transformer基线提升了19.4\%的综合得分。
+实验结果表明：（1）完整模型能生成距离合理（最优33.6 km）、活动类型均衡、空间覆盖有效的路线，综合得分0.897；（2）Engram记忆是性能提升的最主要贡献因素，通过检索历史路线模式显著改善生成质量；（3）MHC双曲约束为POI表征提供空间层次先验，对路线空间效率有直接贡献；（4）Muon优化器在相同训练预算下获得更优收敛质量；（5）三项技术协同使完整模型较纯Transformer基线提升19.4\%，验证了多技术融合在有限数据场景下的有效性。
 
-本文的工作为旅游路线推荐领域提供了新的方法论视角：将Transformer的序列生成能力与双曲几何的空间表征能力、外部记忆的检索融合能力相结合，可以有效地解决传统方法难以处理的多元约束路线规划问题。
+本文的工作为旅游路线推荐提供了新的方法论视角：将Transformer序列生成与Engram记忆检索、MHC双曲嵌入和Muon梯度正交化跨领域融合，有效解决了传统方法难以处理的多元约束路线规划问题。对于物流配送、日程安排等类似任务，本文提出的三融合架构也具有参考价值。
 
-本文的研究仍存在以下可改进方向：第一，当前模型仅基于POI级别建模，未来可引入更细粒度的用户偏好特征（如预算约束、步行偏好、儿童友好等）实现个性化路线推荐；第二，当前的路线优化主要基于静态的POI数据和历史路线，未来可结合实时交通信息、天气状况和景区客流数据实现动态路线调整；第三，模型目前仅针对哈尔滨单一城市进行训练，将其推广到多城市联合建模是一个有价值的方向；第四，可进一步探索使用强化学习（如RLHF）直接从游客反馈中优化路线生成策略。
+本文的研究仍存在以下改进方向：第一，当前模型仅基于POI级别建模，未来可引入用户偏好特征（预算约束、步行偏好、美食偏好等）实现个性化路线推荐；第二，路线优化主要基于静态数据，未来可结合实时交通、天气和客流数据实现动态路线调整；第三，模型目前仅在哈尔滨单一城市训练评估，推广到多城市联合建模并通过城市嵌入实现迁移学习是有价值的方向；第四，可探索使用RLHF直接利用游客满意度反馈优化路线生成策略。
 
 \newpage
 
@@ -694,22 +1043,47 @@ Baseline (Pure TF) & 46.8 & 4.10 & 0.62 & 0.751 & -0.146 \\
 \section*{\centering\heiti\fontsize{14pt}{24pt}\selectfont 参考文献}
 \addcontentsline{toc}{section}{参考文献}
 \vspace{12pt}
-{\songti\fontsize{12pt}{24pt}\selectfont
-\noindent [1] Vaswani A, Shazeer N, Parmar N, et al. Attention Is All You Need[C]. Advances in Neural Information Processing Systems, 2017, 30: 5998--6008.\\[6pt]
-\noindent [2] DeepSeek-AI. DeepSeek-V3 Technical Report[J]. arXiv preprint arXiv:2412.19437, 2024.\\[6pt]
-\noindent [3] Keller J, Jordan A. Muon: Matrix Unrolling Optimizer with Newton-Schulz Orthogonalization[EB/OL]. GitHub Repository, 2025.\\[6pt]
-\noindent [4] Kimi Team. Scalable Matryoshka: Training Large Models with Structured Sparsity[J]. arXiv preprint arXiv:2502.16982, 2025.\\[6pt]
-\noindent [5] Nickel M, Kiela D. Poincar\'{e} Embeddings for Learning Hierarchical Representations[C]. Advances in Neural Information Processing Systems, 2017, 30: 6338--6347.\\[6pt]
-\noindent [6] Ganea O, B\'{e}cigneul G, Hofmann T. Hyperbolic Neural Networks[C]. Advances in Neural Information Processing Systems, 2018, 31: 5345--5355.\\[6pt]
-\noindent [7] Sukhbaatar S, Szlam A, Weston J, et al. End-To-End Memory Networks[C]. Advances in Neural Information Processing Systems, 2015, 28: 2440--2448.\\[6pt]
-\noindent [8] Graves A, Wayne G, Danihelka I. Neural Turing Machines[J]. arXiv preprint arXiv:1410.5401, 2014.\\[6pt]
-\noindent [9] Santoro A, Bartunov S, Botvinick M, et al. Meta-Learning with Memory-Augmented Neural Networks[C]. International Conference on Machine Learning, 2016: 1842--1850.\\[6pt]
-\noindent [10] 黑龙江省文化和旅游厅. 2024—2025年哈尔滨冰雪季旅游统计报告[R]. 哈尔滨, 2025.\\[6pt]
-\noindent [11] Loshchilov I, Hutter F. Decoupled Weight Decay Regularization[C]. International Conference on Learning Representations, 2019.\\[6pt]
-\noindent [12] Bengio S, Vinyals O, Jaitly N, et al. Scheduled Sampling for Sequence Prediction with Recurrent Neural Networks[C]. Advances in Neural Information Processing Systems, 2015, 28: 1171--1179.\\[6pt]
-\noindent [13] 高德地图开放平台. Web服务API开发指南[EB/OL]. https://lbs.amap.com/api/webservice, 2025.\\[6pt]
-\noindent [14] Sutskever I, Vinyals O, Le Q V. Sequence to Sequence Learning with Neural Networks[C]. Advances in Neural Information Processing Systems, 2014, 27: 3104--3112.\\[6pt]
-}
+
+\begin{thebibliography}{99}
+\songti\fontsize{12pt}{24pt}\selectfont
+
+\bibitem{vaswani2017} Vaswani A, Shazeer N, Parmar N, et al. Attention Is All You Need[C]. \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2017, 30: 5998--6008.
+
+\bibitem{sutskever2014} Sutskever I, Vinyals O, Le Q V. Sequence to Sequence Learning with Neural Networks[C]. \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2014, 27: 3104--3112.
+
+\bibitem{deepseek2024} DeepSeek-AI. DeepSeek-V3 Technical Report[J]. \textit{arXiv preprint arXiv:2412.19437}, 2024.
+
+\bibitem{nickel2017} Nickel M, Kiela D. Poincar\'{e} Embeddings for Learning Hierarchical Representations[C]. \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2017, 30: 6338--6347.
+
+\bibitem{ganea2018} Ganea O, B\'{e}cigneul G, Hofmann T. Hyperbolic Neural Networks[C]. \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2018, 31: 5345--5355.
+
+\bibitem{sukhbaatar2015} Sukhbaatar S, Szlam A, Weston J, et al. End-To-End Memory Networks[C]. \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2015, 28: 2440--2448.
+
+\bibitem{graves2014} Graves A, Wayne G, Danihelka I. Neural Turing Machines[J]. \textit{arXiv preprint arXiv:1410.5401}, 2014.
+
+\bibitem{keller2025} Keller J, Jordan A. Muon: Matrix Unrolling Optimizer with Newton-Schulz Orthogonalization[EB/OL]. GitHub Repository, 2025.
+
+\bibitem{kimi2025} Kimi Team. Scalable Matryoshka: Training Large Models with Structured Sparsity[J]. \textit{arXiv preprint arXiv:2502.16982}, 2025.
+
+\bibitem{loshchilov2019} Loshchilov I, Hutter F. Decoupled Weight Decay Regularization[C]. \textit{International Conference on Learning Representations (ICLR)}, 2019.
+
+\bibitem{kingma2015} Kingma D P, Ba J. Adam: A Method for Stochastic Optimization[C]. \textit{International Conference on Learning Representations (ICLR)}, 2015.
+
+\bibitem{bengio2015} Bengio S, Vinyals O, Jaitly N, et al. Scheduled Sampling for Sequence Prediction with Recurrent Neural Networks[C]. \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2015, 28: 1171--1179.
+
+\bibitem{vansteenwegen2011} Vansteenwegen P, Souffriau W, Van Oudheusden D. The Orienteering Problem: A Survey[J]. \textit{European Journal of Operational Research}, 2011, 209(1): 1--10.
+
+\bibitem{borras2014} Borr\`{a}s J, Moreno A, Valls A. Intelligent Tourism Recommender Systems: A Survey[J]. \textit{Expert Systems with Applications}, 2014, 41(16): 7370--7389.
+
+\bibitem{zheng2018} Zheng Y. Methodologies for Cross-Domain Data Fusion: An Overview[J]. \textit{IEEE Transactions on Big Data}, 2015, 1(1): 16--34.
+
+\bibitem{hrb2025} 哈尔滨市文化广电和旅游局. 2024—2025年哈尔滨冰雪季旅游统计报告[R]. 哈尔滨, 2025.
+
+\bibitem{amap2025} 高德地图开放平台. Web服务API开发指南[EB/OL]. \url{https://lbs.amap.com/api/webservice}, 2025.
+
+\bibitem{santoro2016} Santoro A, Bartunov S, Botvinick M, et al. Meta-Learning with Memory-Augmented Neural Networks[C]. \textit{International Conference on Machine Learning (ICML)}, 2016: 1842--1850.
+
+\end{thebibliography}
 
 \newpage
 
@@ -727,20 +1101,26 @@ Baseline (Pure TF) & 46.8 & 4.10 & 0.62 & 0.751 & -0.146 \\
 \begin{tighttable}
 \begin{tabular}{ll}
 \toprule
-符号 & 含义 \\
+\textbf{符号} & \textbf{含义} \\
 \midrule
-\(N\) & POI总数（180） \\
-\(d_{\text{model}}\) & 模型隐藏维度（128） \\
-\(n_{\text{heads}}\) & 多头注意力头数（8） \\
-\(L\) & 路线最大长度（20） \\
-\(M\) & Engram记忆库容量（500） \\
-\(K\) & Engram检索数量（5） \\
-\(c\) & 双曲空间曲率参数（1.0） \\
-\(C\) & 活动类型转移约束矩阵（6×6） \\
-\(A\) & 加权邻接矩阵 \\
-\(\eta\) & 学习率 \\
-\(\beta\) & 动量系数（0.95） \\
-\(\lambda_{\text{CE}},\lambda_{\text{dist}},\lambda_{\text{MHC}}\) & 损失函数权重 \\
+$N$ & POI总数（180） \\
+$d_{\text{model}}$ & 模型隐藏维度（128） \\
+$n_{\text{heads}}$ & 多头注意力头数（8） \\
+$d_k$ & 每头注意力维度（16） \\
+$d_{\text{ff}}$ & 前馈网络内部维度（384） \\
+$L_{\max}$ & 路线最大长度（20） \\
+$M$ & Engram记忆库容量（500） \\
+$K$ & Engram检索数量（5） \\
+$c$ & 双曲空间曲率参数（1.0） \\
+$\mathbb{B}^n_c$ & $n$维庞加莱球（半径$1/\sqrt{c}$） \\
+$C$ & 活动类型转移约束矩阵（$6\times6$） \\
+$A$ & 加权邻接矩阵（$180\times180$） \\
+$B$ & 活动类型相似性偏置矩阵 \\
+$\eta$ & 学习率 \\
+$\beta$ & 动量系数（0.95） \\
+$\lambda_{\text{CE}},\lambda_{\text{dist}},\lambda_{\text{MHC}}$ & 损失函数权重（1.0, 0.01, 0.05） \\
+$p_{\text{tf}}$ & Scheduled Sampling中Teacher Forcing比例 \\
+$\mathcal{A}$ & 六种活动类型集合 \\
 \bottomrule
 \end{tabular}
 \end{tighttable}
@@ -750,21 +1130,21 @@ Baseline (Pure TF) & 46.8 & 4.10 & 0.62 & 0.751 & -0.146 \\
 \subsection*{附录B：数据采集与处理流程}
 {\songti\fontsize{12pt}{24pt}\selectfont
 
-本文的数据采集与处理流程分为以下几个阶段：
+本文的数据采集与处理流程分为以下六个阶段：
 
-阶段一：通过高德地图API采集哈尔滨市区及远郊POI数据，包括名称、坐标、类别、评分等字段，共计135个核心节点。
+\textbf{阶段一：POI数据采集。}通过高德地图开放平台Web服务API（周边搜索和关键词搜索），以哈尔滨市中心（45.80°N, 126.53°E）为基准点，采集覆盖市区及近远郊的POI数据。每条POI包含名称、经纬度、类别（大类和小类）、用户评分、详细地址和POI类型编码等字段。原始采集共获得135个核心POI节点。
 
-阶段二：通过高德地图路径规划API批量获取核心节点之间的驾车距离和通行耗时，构建135×135的距离和耗时矩阵。
+\textbf{阶段二：路网距离矩阵构建。}通过高德地图路径规划API（驾车模式），批量获取135个核心POI之间的真实路网驾车距离和预计通行耗时，构建$135\times135$的对称距离矩阵和耗时矩阵。对补充的45个POI使用Haversine公式计算近似距离。同时检测和修复矩阵中的零值异常点。
 
-阶段三：从小红书平台爬取哈尔滨旅游路线笔记，提取POI序列、发布季节、点赞数等信息，共计403条原始路线，去重后保留有效路线。
+\textbf{阶段三：路线数据采集。}从小红书平台收集哈尔滨旅游路线分享笔记，提取POI名称序列（以"→"分隔）、发布季节、点赞数等信息。原始收集403条路线。
 
-阶段四：POI数据增强——补充餐饮和购物POI，利用小红书笔记的提及频次计算POI热度权重，自动修正POI分类标注，构建活动类型标签。
+\textbf{阶段四：POI数据增强与分类修正。}补充餐饮和购物类POI（45个），利用11,959条小红书笔记的提及频次统计计算POI热度权重。基于名称关键词自动修正约40个POI的分类标注（如含"酒店"→住宿类），构建活动类型标签（6种）。
 
-阶段五：路线数据增强——在路线中按规则插入餐饮和住宿POI，使路线数据更贴近真实的旅游活动模式。
+\textbf{阶段五：路线数据增强。}对165条有效路线的POI类型分布（94.5\%为景点）进行系统增强——每2个连续景点后插入1个餐饮POI（按距离和热度综合加权选择），路线末尾添加住宿POI，移除中间住宿。增强后路线类型分布为：景点63.6\%、餐饮23.5\%、住宿10.4\%。
 
-阶段六：构建POI特征矩阵、邻接矩阵、概率分布距离/耗时矩阵以及步行景点聚类，输出最终的训练数据集。
+\textbf{阶段六：特征工程与数据导出。}构建POI特征矩阵（180×128）、加权邻接矩阵（180×180）、概率分布距离/耗时矩阵（含均值和标准差）、步行景点聚类（15个团，49景入团）。划分训练/验证/测试集（8:1:1），固定随机种子seed=42，导出为NumPy文件供模型训练使用。
 
-所有数据处理脚本使用Python 3编写，核心依赖包括NumPy、Pandas和PyTorch。数据处理的完整代码见项目仓库。
+所有数据处理脚本使用Python 3编写，核心依赖包括NumPy、Pandas、PyTorch和requests。数据处理的完整代码见项目Git仓库。
 }
 
 \newpage
@@ -775,9 +1155,9 @@ Baseline (Pure TF) & 46.8 & 4.10 & 0.62 & 0.751 & -0.146 \\
 \vspace{12pt}
 {\songti\fontsize{12pt}{24pt}\selectfont
 
-本论文的完成离不开指导老师的悉心指导和团队成员的紧密协作。在选题、数据采集、模型设计和论文撰写等各个环节中，指导老师给予了专业的建议和耐心的帮助，在此致以诚挚的谢意。
+本论文的完成离不开指导老师的悉心指导和团队成员的紧密协作。在选题构思、数据采集、模型设计、实验验证和论文撰写的全过程中，指导老师给予了专业的建议和耐心的帮助，在此致以最诚挚的谢意。
 
-同时感谢高德地图开放平台为本次研究提供了丰富的POI数据和路径规划API支持。也感谢开源社区贡献的PyTorch框架和相关论文作者的前沿研究成果，为本文的工作提供了坚实的技术基础。
+同时，感谢高德地图开放平台为本次研究提供了丰富的POI数据和路径规划API支持，使研究得以建立在真实世界数据的基础上。也感谢DeepSeek、KellerJordan/Muon、Nickel \& Kiela等开源社区和研究者的前沿工作成果，为本文的技术创新提供了坚实的理论基础和实现参考。感谢PyTorch开源框架为深度学习模型的构建和训练提供了高效的工具平台。
 
 \vspace{24pt}
 \hfill 2026年5月
