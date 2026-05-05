@@ -368,6 +368,24 @@ def main():
         print(f"  补充后: {len(pois)} 个")
         print(f"  类别: {pois['category'].value_counts().to_dict()}")
 
+
+    # Fix misclassified POIs (hotels/restaurants labeled as scenic)
+    hotel_kw = ['酒店','民宿','宾馆','旅馆','青旅','度假','山庄','公寓','客栈','温泉','度假村','别墅','庄园']
+    dining_kw = ['烧肉','面馆','餐厅','饭店','火锅','小吃','美食','食堂','牛肉面',
+                 '锅包肉','饺子','砂锅','米粉','串','烤','卤','粥','饼']
+    n_fixed = 0
+    for idx in range(len(pois)):
+        name = str(pois.iloc[idx]['name'])
+        cat = str(pois.iloc[idx]['category'])
+        if cat == '景点':
+            if any(kw in name for kw in hotel_kw):
+                pois.at[idx, 'category'] = '住宿'
+                n_fixed += 1
+            elif any(kw in name for kw in dining_kw):
+                pois.at[idx, 'category'] = '餐饮'
+                n_fixed += 1
+    print(f'  修正误分类POI: {n_fixed} 个')
+    print(f'  修正后类别: {pois["category"].value_counts().to_dict()}')
     n_pois = len(pois)
 
     # 2. 加载并去重路线
