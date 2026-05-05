@@ -42,3 +42,4 @@ Thumbs.db
 wandb/
 .claude/
 uv.lock
+paper/*.aux\npaper/*.out\npaper/*.toc\npaper/*.log\npaper/*.synctex.gz
