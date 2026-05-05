@@ -40,6 +40,11 @@ uv run tensorboard --logdir logs/ --host 0.0.0.0 --port 6006
 ruff check src/ tests/
 ```
 
+```bash
+# 论文编译（paper/目录下，需 xelatex）
+cd paper && xelatex main.tex && xelatex main.tex
+```
+
 ## Architecture
 
 ### 数据流
@@ -178,6 +183,18 @@ HarbinRouteDataset → DataLoader (train/val/test)
 - 测试框架: pytest, testpaths=["tests"]
 - 包管理: uv（唯一推荐）
 
+## 论文排版（paper/main.tex）
+
+- 编译器：xelatex（ctexart 中文支持）
+- 行距：全局 `\setstretch{1.66}`（正文），表格内容用 `tighttable` 环境（`\setstretch{1.0}`）
+- 其他部分（摘要/参考文献/附录/致谢）用 `\setstretch{1.0}` + `\fontsize{...}{24pt}` 显式指定24磅
+- 西文字体：Times New Roman（`\setmainfont` + `\setsansfont`）
+- 中文字体：宋体正文、黑体标题、楷书二级标题、方正小标宋论文题目
+- 封面页已删除，摘要从第1页开始，摘要标题居中
+- 图表编号：3图7表（图1模型架构TikZ、图2训练曲线、图3消融对比）
+- 参考文献标题通过 `\renewcommand{\refname}` 控制格式，避免与 `thebibliography` 重复
+- 临时文件通过 `paper/.gitignore` 忽略（.aux/.log/.toc等）
+
 ## 当前训练结果
 
 - **数据规模：** 180个POI（景点60/住宿64/餐饮37/购物15/交通4），535条路线（165原始+370合成）
@@ -204,8 +221,12 @@ HarbinRouteDataset → DataLoader (train/val/test)
 | 文件 | 内容 |
 |------|------|
 | `output/training_curve.png` | 训练收敛曲线（中文） |
-| `output/ablation_comparison.png` | 消融对比柱状图（中文） |
+| `output/ablation_comparison.png` | 消融对比柱状图（中文，300dpi） |
 | `output/ablation_results.json` | 7组消融完整数据 |
 | `output/routes_result.json` | 最新生成路线详情 |
 | `output/best_route_map.html` | 最优路线交互地图 |
 | `checkpoints/best_model.pt` | K=3最优模型权重 |
+| `paper/main.tex` | 论文LaTeX源码 |
+| `paper/main.pdf` | 论文PDF（40页） |
+| `paper/training_curve.png` | 论文用训练曲线图（复制自output/） |
+| `paper/ablation_comparison.png` | 论文用消融对比图（复制自output/） |
