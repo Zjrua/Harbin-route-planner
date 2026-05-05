@@ -37,11 +37,12 @@
 
 % ============ 行距设置 ============
 % 正文：固定值24磅（小四号12pt × 2）
-\setlength{\baselineskip}{24pt}
-\linespread{1.0}
+% 使用 setspace 包的 \setstretch 设置固定行距
+% 12pt字体默认baselineskip约14.5pt，24pt/14.5pt≈1.66
+\setstretch{1.66}
 % 表格内容：单倍行距
 \newenvironment{tighttable}
-  {\setlength{\baselineskip}{14pt}\small}
+  {\setstretch{1.0}\small}
   {}
 
 % ============ 标题格式 ============
