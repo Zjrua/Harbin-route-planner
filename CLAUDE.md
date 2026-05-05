@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 2026年全国大学生统计建模大赛参赛作品。基于Transformer架构构建哈尔滨文旅线路优化模型，核心创新点为融合DeepSeek论文中的三项技术：Engram内容寻址记忆、MHC双曲流形约束（庞加莱球模型）、Muon矩阵正交化优化器。
 
-**当前状态：模型训练完成，推理功能可用。** 已完成真实数据处理、模型训练、路线生成和优化。
+**当前状态：模型训练完成，推理功能可用。** 已完成真实数据处理、模型训练、路线生成优化、多日游支持。
 
 ## Commands
 
@@ -15,8 +15,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 uv sync
 uv pip install torch --index-url https://download.pytorch.org/whl/cu128
 
-# 数据准备（真实数据处理）
-uv run python scripts/prepare_real_data.py
+# 数据准备（XHS热度 + POI增强）
+uv run python scripts/process_xhs_data.py    # 提取XHS餐饮住宿热度
+uv run python scripts/prepare_real_data.py   # POI增强 + 路线增强
 
 # 训练
 uv run python -m src.train --config configs/default.yaml
@@ -24,6 +25,7 @@ uv run python -m src.train --config configs/default.yaml --resume checkpoints/be
 
 # 推理生成路线
 uv run python -m src.inference --checkpoint checkpoints/best_model.pt --start "中央大街" --season winter --max_stops 10 --n_routes 3
+uv run python -m src.inference --checkpoint checkpoints/best_model.pt --start "中央大街" --season winter --max_stops 14 --days 2
 
 # 评估
 uv run python -m src.evaluate --checkpoint checkpoints/best_model.pt
@@ -48,12 +50,13 @@ ruff check src/ tests/
   - 哈尔滨旅游路线数据.csv      # 403条小红书路线
   - 距离矩阵_公里.csv           # 135x135真实路网距离
   - 耗时矩阵_分钟.csv           # 135x135真实路网耗时
-  - merged_pois.csv             # 合并后的POI数据（用于补充餐饮/购物）
+  - merged_pois.csv             # 合并后的POI数据（补充餐饮/购物）
+  - search_*.jsonl              # 11,959条小红书笔记（餐饮/住宿热度）
 
-  ↓ scripts/prepare_real_data.py
+  ↓ scripts/process_xhs_data.py + scripts/prepare_real_data.py
 
 处理后的数据（data/processed/）：
-  ├── poi_metadata.csv          # 180个POI元信息（含活动类型）
+  ├── poi_metadata.csv          # 180个POI（含XHS热度、活动类型）
   ├── poi_features.npy          # [180, 128] 特征矩阵
   ├── adjacency.npy             # [180, 180] 邻接矩阵
   ├── distance_matrix.npy       # [180, 180] 距离矩阵（km）
@@ -61,20 +64,35 @@ ruff check src/ tests/
   ├── time_matrix.npy           # [180, 180] 时间矩阵（min）
   ├── time_std.npy              # [180, 180] 时间标准差
   ├── poi_activity_types.npy    # [180] 活动类型标签
+  ├── cluster_id.npy            # [180] 景点步行聚类ID
+  ├── clusters.npy              # 15个景点团
   └── routes.npy                # 165条增强路线（含餐饮/住宿）
 
   ↓ src/data/dataset.py
 HarbinRouteDataset → DataLoader (train/val/test)
 ```
 
-**数据增强：** 原始小红书路线全是景点（94.5%），通过 `augment_routes_with_dining_and_hotel()` 每2-3景点插入餐饮、末尾添加住宿。增强后：景点63.6%、餐饮23.0%、住宿12.2%。
+**数据增强：** 原始小红书路线全是景点（94.5%）。`augment_routes_with_dining_and_hotel()` 每2景插入餐饮（用XHS热度加权选择）、末尾加住宿、去掉中间住宿。增强后：景点63.6%、餐饮23.5%、住宿10.4%。
+
+**POI分类自动修正：** `prepare_real_data.py` 自动检测名称含"酒店/民宿/餐厅"等关键字的POI并修正分类（约40个）。
 
 ### 模型架构 (src/models/)
 
-`RouteTransformer` (transformer.py) 是顶层模型，支持活动类型条件生成和约束解码。默认 d_model=128, n_heads=8, 4层encoder/decoder, d_ff=512, max_route_len=20。
+`RouteTransformer` (transformer.py) 是顶层模型。精简配置：d_model=128, n_heads=8, 3层encoder/decoder, d_ff=384, dropout=0.2。
 
-1. **POIEmbedding** (embeddings.py) — POI ID + 类别 + 活动类型 + 评分嵌入 + 正弦位置编码
-2. **PoincareEmbedding** (mhc.py) — 庞加莱球模型双曲嵌入，expmap/logmap映射，测地距离公式
+**参数量：1,417,756（精简27%）**
+
+| 模块 | 参数 | 占比 | 功能 |
+|------|------|------|------|
+| EngramDecoder | ~960K | 68% | 自回归解码 + Cross-Attn + Engram |
+| GraphAwareEncoder | ~300K | 21% | 邻接矩阵 + 活动类型偏置注入SA |
+| EngramMemory | 67K | 5% | 余弦相似度top-k检索 |
+| POIEmbedding | 25K | 2% | POI + 活动类型 + 位置编码 |
+| MHC (Poincare) | 12K | 0.8% | 双曲空间嵌入正则化 |
+| Output | 23K | 2% | 128→180投影 |
+
+1. **POIEmbedding** (embeddings.py) — POI ID + 类别 + 活动类型(6种) + 评分嵌入 + 正弦位置编码
+2. **PoincareEmbedding** (mhc.py) — 庞加莱球模型双曲嵌入，提供几何正则化
 3. **GraphAwareEncoder** (encoder.py) — 邻接矩阵 + 活动类型相似性偏置注入Self-Attention
 4. **EngramDecoder** (decoder.py) — Masked Decoder + Cross-Attention + Engram Attention + 活动类型条件嵌入
 5. **EngramMemory** (engram.py) — 余弦相似度top-k检索，可学习门控融合，季节权重
@@ -82,13 +100,9 @@ HarbinRouteDataset → DataLoader (train/val/test)
 
 ### 活动类型条件生成架构
 
-核心创新：通过活动类型约束解码，生成符合真实旅游节奏的路线。
-
-**活动类型（6种）：**
-- 景点(0)、餐饮(1)、住宿(2)、交通(3)、购物(4)、出发点(5)
+**活动类型（6种）：** 景点(0)、餐饮(1)、住宿(2)、交通(3)、购物(4)、出发点(5)
 
 **转换约束矩阵：**
-鼓励合理的活动类型转换，禁止不合理的连续活动。
 ```
 # 景点  餐饮  住宿  交通  购物  出发点
 [  0.0,  2.0, -inf,  0.0,  1.0,  0.0],  # 景点后：鼓励餐饮/购物，禁止住宿
@@ -100,13 +114,19 @@ HarbinRouteDataset → DataLoader (train/val/test)
 ```
 
 **推理时约束：**
-- 住宿只能在倒数2步出现（禁止中途住宿）
-- 连续3个同类型后鼓励切换（避免全是景点）
-- 连续景点→餐饮加5分鼓励，再选景点减3分
+- 一日游：住宿仅在最后3步出现，选中即终止
+- 多日游：住宿允许在day boundary（每天末尾），选后继续
+- 连续3个同类型后鼓励切换（景点→餐饮+5，再选景点-3）
+- 同团景点不重复访问（cluster masking）
+- 已访问POI不重复
+
+### POI步行聚类
+
+基于连通图的聚类（≤1km步行距离），15个团/49景入团，52景独立。路线生成时访问某团后屏蔽全团，避免走回头路。
 
 ### 优化器 (src/optim/)
 
-**MuonOptimizer** — 继承 `torch.optim.Optimizer`，Newton-Schulze迭代(5步)近似正交化梯度。三组参数：attention_params(lr_attn=1e-4)、ffn_params(lr_ffn=3e-4)、other_params(均值)。仅对≥2D参数做正交化。momentum=0.95, Nesterov=True, weight_decay=1e-4。
+**MuonOptimizer** — Newton-Schulze迭代(5步)近似正交化梯度。attention_params(lr_attn=1e-4)、ffn_params(lr_ffn=3e-4)、other_params(均值)。仅对≥2D参数做正交化。momentum=0.95, Nesterov=True, weight_decay=1e-4。
 
 ### 训练策略 (src/train.py)
 
@@ -115,66 +135,66 @@ HarbinRouteDataset → DataLoader (train/val/test)
 - TensorBoard记录loss和指标
 - 最佳模型保存至 `checkpoints/best_model.pt`
 - batch_size=32, epochs=200, 数据划分 0.8/0.1/0.1
-- 支持活动类型条件生成（7元素batch格式）
 
 ### 推理与路线优化 (src/inference.py)
 
 **路线生成：**
-- 活动类型约束Beam Search
-- 支持指定起点、季节、最大游览点数
-- 生成多条候选路线
+- 活动类型约束Beam Search + 集群感知masking
+- 支持指定起点（景点/酒店/餐饮）、季节、天数
+- 多日游：`--days N`，酒店出现在day boundary
 
 **路线优化：**
-- 最近邻算法：按距离最近原则重排路线顺序，避免走回头路
-- 2-opt优化：消除路线中的交叉，进一步优化路线长度
-- 保持起点不变，优化后续景点顺序
+- 最近邻重排中间景点（保护起点和末尾住宿）
+- 多日游跳过2-opt（保护day boundary酒店位置）
 
 **输出：**
-- JSON路线详情（含活动类型序列）
-- 交互式地图（序号标记、方向箭头、名称标签）
-- 路线对比图
+- JSON路线详情（含活动类型序列和天数分隔）
+- 交互式地图（序号标记、方向箭头、名称标签、路线对比）
 
 ### 可视化 (src/visualize.py)
 
 - `plot_route_on_map()` — 单条路线地图，带序号标记和方向箭头
-- `plot_route_comparison()` — 多条路线对比图，带图例
-- `plot_route_on_map_with_roads()` — 沿实际道路绘制（需要高德地图API key）
-- `plot_training_curves()` — 训练曲线
-- `plot_ablation_results()` — 消融实验结果
+- `plot_route_comparison()` — 多条路线对比图，带图例和标题
+- `plot_route_on_map_with_roads()` — 沿实际道路绘制（需高德API key）
 
-### 配置体系
+### XHS数据集成 (scripts/process_xhs_data.py)
 
-- `configs/default.yaml` — 全部超参（data/model/engram/mhc/loss/optimizer/training/metrics/experiment）
-- `configs/ablation.yaml` — 消融实验配置
-
-### 评估指标 (src/evaluate.py)
-
-四维评价：距离(0.30) + 时间(0.25) + 满意度(0.25) + 多样性(0.20)，各指标先归一化到[0,1]再加权求和。
+从11,959条小红书笔记提取POI热度权重：
+- 餐饮/住宿POI的XHS提及次数和加权热度
+- 热度用于路线增强时选择更受欢迎的餐饮/住宿（综合分 = -距离 + 热度）
+- 输出：`poi_xhs_popularity.npy` 和更新 `poi_metadata.csv`
 
 ## Key Conventions
 
 - 所有配置通过YAML加载，argparse仅传config路径和device/resume
 - 模块必须用 `python -m src.train` 运行（相对导入）
 - 距离矩阵使用Haversine公式（非欧氏距离）
-- 季节分为冬季(11-2月冰雪季)和夏季(6-8月)，影响Engram检索权重
+- 季节分为冬季(11-2月冰雪季)和夏季(6-8月)
 - MHC曲率为负值（默认-1.0），内部 `c = abs(curvature)` 使用
 - 坐标系：哈尔滨中心点 (45.80, 126.53)，max_pois=180
-- 推理使用约束Beam Search（beam_size可配置）
-- 路线优化：最近邻 + 2-opt，避免走回头路
+- 推理使用约束Beam Search（beam_size=5）
 - 活动类型约束：禁止连续餐饮/住宿/交通等不合理序列
 - Linter: ruff, line-length=100, target Python 3.10+
 - 测试框架: pytest, testpaths=["tests"]
-- 包管理: uv（推荐），不要用 pip/python 直接运行
+- 包管理: uv（唯一推荐）
 
 ## 当前训练结果
 
-- **数据规模：** 180个POI，165条增强路线（含餐饮/住宿）
-- **训练轮次：** 63 epochs（早停于 epoch 63）
-- **最佳val_loss：** 2.2709（epoch 52）
-- **模型参数量：** 1,946,524
-- **最优路线示例：** 综合得分 0.873，距离 33.6km，耗时 83min
+- **数据规模：** 180个POI（景点60/住宿64/餐饮37/购物15/交通4），165条增强路线
+- **训练轮次：** 55 epochs（早停）
+- **最佳val_loss：** 1.9562
+- **模型参数量：** 1,417,756（精简配置：3层编解码器, d_ff=384）
+- **15个步行景点团（≤1km），49景入团**
+
+**一日游示例（综合得分0.897）：**
 ```
-中央大街(景点) → 民俗博物馆(景点) → 千代武烧肉(餐饮) → 哈尔滨站(景点) →
-墨记(餐饮) → 圣索菲亚(景点) → 老厨家锅包肉(餐饮) → 中华巴洛克(景点) →
-源兴东(餐饮) → 太阳岛(景点) → 锦江之星(住宿) → 东北虎林园(景点)
+中央大街(景点)→老厨家锅包肉(餐饮)→圣索菲亚(景点)→省博物馆(景点)→
+墨记(餐饮)→中华巴洛克(景点)→民俗博物馆民宿(住宿)
+```
+S→D→S→S→D→S→H
+
+**二日游示例（--days 2 --max_stops 14）：**
+```
+Day1: 中央大街(景点)→老厨家(餐饮)→...→酒店(住宿)
+Day2: 圣索菲亚(景点)→...→酒店(住宿)
 ```
