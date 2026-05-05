@@ -49,7 +49,7 @@
 % 按格式要求：一、；（一）；1.；①
 \ctexset{
   section = {
-    name = {,},
+    name = {,、},
     number = \chinese{section},
     format = \centering\heiti\fontsize{15pt}{24pt}\selectfont,
     aftername = \quad,
@@ -65,8 +65,8 @@
     afterskip = 0pt,
   },
   subsubsection = {
-    name = {,},
-    number = \arabic{subsubsection}.,
+    name = {,、},
+    number = \arabic{subsubsection},
     format = \songti\bfseries\fontsize{12pt}{24pt}\selectfont,
     aftername = \quad,
     beforeskip = 0pt,
@@ -112,8 +112,9 @@
 % ============ 摘要环境 ============
 % 摘要内容用 \fontsize{12pt}{0pt} 让 LaTeX 计算默认 baselineskip，
 % 再由 \setstretch{1.66} 放大到约24pt
+% \sloppy 防止溢出
 \newenvironment{cnabstract}{
-  \par
+  \par\sloppy
   \noindent{\heiti\fontsize{14pt}{0pt}\selectfont 摘\quad 要}\par\vspace{6pt}
   \songti\fontsize{12pt}{0pt}\selectfont
 }{
@@ -142,7 +143,7 @@
 
 \begin{center}
 \renewcommand{\arraystretch}{2.0}
-\begin{tabular}{p{3cm}p{11cm}}
+\begin{tabular}{p{2.8cm}p{10.5cm}}
 \toprule
 {\heiti\fontsize{14pt}{24pt}\selectfont 作品编号：} & {\songti\fontsize{14pt}{24pt}\selectfont TJJM20260000000} \\
 \midrule
@@ -163,9 +164,9 @@
 \begin{cnabstract}
 随着旅游业的发展和游客个性化需求的增长，旅游路线优化已从传统路径规划演化为融合多维约束的复杂序列决策问题。哈尔滨作为我国东北最具代表性的冰雪旅游城市，2024—2025年冰雪季累计接待游客超1.2亿人次。然而，哈尔滨旅游路线规划面临景点分散、季节差异显著、活动类型多样等挑战，传统TSP变体方法和协同过滤推荐系统均难以同时满足距离优化、活动均衡和空间覆盖的综合要求。
 
-本文针对哈尔滨文旅路线优化问题，提出了一种融合三项核心创新的Transformer序列生成模型——HarbinRouteTransformer。该模型在标准Encoder-Decoder架构的基础上，集成了以下创新技术：（1）\textbf{Engram内容寻址记忆}——将历史优质路线的编码向量存储为外部记忆库，在解码过程中通过余弦相似度检索top-$K$条最相似路线，并通过可学习门控机制自适应融合历史经验与当前解码状态；（2）\textbf{MHC双曲流形约束}——基于庞加莱球（Poincar\'{e} Ball）模型在双曲空间中学习POI嵌入表征，利用双曲空间随半径指数级增长的几何特性，自然表征POI空间分布的层次化结构；（3）\textbf{Muon矩阵正交化优化器}——通过Newton-Schulz五次迭代对梯度矩阵进行近似正交化，结合Nesterov动量和Kimi缩放，在高维参数空间中实现更优的收敛特性。此外，本文设计了活动类型条件生成机制，将旅游活动建模为景点、餐饮、住宿、交通、购物、出发点六种类型，并通过$6\times6$转移约束矩阵和推理阶段的硬约束（如住宿仅在路线末尾出现、连续同类型强制切换、步行聚类感知掩码等）保证生成路线的真实可用性。
+本文针对哈尔滨文旅路线优化问题，提出了一种融合三项核心创新的Transformer序列生成模型——HarbinRouteTransformer。该模型在标准Encoder-Decoder架构的基础上集成了：（1）\textbf{Engram内容寻址记忆}——将历史优质路线编码为外部记忆库，通过余弦相似度检索top-$K$条路线并门控融合；（2）\textbf{MHC双曲流形约束}——基于庞加莱球模型在双曲空间中表征POI层次结构；（3）\textbf{Muon正交化优化器}——通过Newton-Schulz迭代正交化梯度矩阵。此外设计了活动类型条件生成机制，通过转移约束矩阵保证路线合理性。
 
-本文基于高德地图开放平台API采集了180个哈尔滨真实POI数据（涵盖景点、餐饮、住宿、购物、交通五类），并通过高德路径规划API获取了核心POI之间的真实驾车距离和通行耗时（135×135矩阵）。路线数据来源于小红书平台的403条用户分享路线，经去重、名称对齐和增强处理后获得165条含餐饮和住宿的完整路线。模型采用精简配置（$d_{\text{model}}=128$，3层编解码器，总参数量1,417,756），训练采用Teacher Forcing结合Scheduled Sampling策略（初始比例0.5线性衰减），经55轮迭代后收敛（最佳验证损失1.9562）。推理阶段采用约束Beam Search（Beam Size=5），结合活动类型转移约束、位置感知约束、连续同类型检测和步行景点聚类掩码，生成符合真实旅游习惯的高质量路线。
+本文基于高德地图API采集了180个哈尔滨真实POI（景点60、住宿64、餐饮37、购物15、交通枢纽4），通过高德路径规划API构建了核心POI间真实驾车距离和耗时矩阵。路线训练数据来源于小红书403条用户分享路线，经去重、POI名称四级匹配对齐和系统化路线增强（插入餐饮、添加住宿），最终获得165条含完整活动类型的增强路线。模型在数据划分（8:1:1）、训练超参数和评估指标等方面进行了系统的实验设计与消融分析，验证了各创新模块的贡献和协同效应。
 
 实验结果表明：完整模型生成的一日游路线综合得分达0.897，距离33.6 km，耗时83 min，活动类型序列为"景点→餐饮→景点→景点→餐饮→景点→住宿"，展示了模型对旅游活动节奏的准确把握。消融实验表明，Engram记忆模块对模型性能贡献最大（单独移除后综合得分下降0.076），MHC双曲约束次之（下降0.045），Muon优化器贡献稳定（下降0.021），三项技术的协同使完整模型较纯Transformer基线提升19.4\%。本文为旅游路线推荐领域提供了将Transformer序列生成能力与双曲几何空间表征、外部记忆检索融合相结合的新方法论。
 \end{cnabstract}
@@ -277,9 +278,11 @@ POI数据是旅游路线生成的基础。本文通过高德地图开放平台We
 \end{tighttable}
 \end{table}
 
-本文为每个POI分配了活动类型标签，定义活动类型集合为$\mathcal{A}=\{\text{景点}(0),\text{餐饮}(1),\text{住宿}(2),\text{交通}(3),\text{购物}(4),\text{出发点}(5)\}$，共六类。活动类型的判定规则为：原始类别为"交通"类且为火车站或机场的POI归为"出发点"类型（共4个），其余POI按原始类别直接映射。
-
-在数据预处理阶段，采用自动分类修正策略：遍历所有POI的名称字段，若名称中包含"酒店""民宿"等关键词则修正为"住宿"，包含"餐厅""小吃"等则修正为"餐饮"。该策略修正了约40个POI的分类标注，有效提升了数据质量。
+本文为每个POI分配了活动类型标签，定义活动类型集合为：
+\begin{equation}
+\mathcal{A}=\{\text{景点},\text{餐饮},\text{住宿},\text{交通},\text{购物},\text{出发点}\}
+\end{equation}
+共六类。原始"交通"类POI归为"出发点"，其余按原始类别映射。
 
 POI特征向量从以下多维属性中提取：
 \begin{itemize}[itemsep=0pt,topsep=0pt]
@@ -397,6 +400,7 @@ S_{\text{candidate}} = -d(i,c) + w_{\text{xhs}}\cdot H_c
 
 \begin{figure}[H]
 \centering
+\resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[
     node distance=1.0cm,
     block/.style={rectangle, draw=black!70, fill=blue!8, rounded corners=4pt, minimum width=2.6cm, minimum height=0.8cm, align=center, font=\small\sffamily},
@@ -470,7 +474,8 @@ S_{\text{candidate}} = -d(i,c) + w_{\text{xhs}}\cdot H_c
     \node[draw=orange!30, fill=orange!3, rounded corners=8pt, inner sep=8pt, fit=(engram_mem)(decoder)] {};
 \end{scope}
 
-\end{tikzpicture}
+\end{tikzpicture}%
+} % end resizebox
 \caption{RouteTransformer模型整体架构：编码器注入图偏置，解码器融合Engram记忆，MHC模块提供双曲正则化}
 \label{fig:architecture}
 \end{figure}
