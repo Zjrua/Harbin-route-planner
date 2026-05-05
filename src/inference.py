@@ -68,13 +68,15 @@ def generate_with_constraints(model: RouteTransformer, encoder_output: torch.Ten
                               start_id: int, beam_size: int, max_len: int,
                               device: torch.device,
                               poi_activity_types: torch.Tensor,
-                              cluster_id: np.ndarray = None) -> list[int]:
-    """Constrained beam search with cluster-aware masking.
+                              cluster_id: np.ndarray = None,
+                              n_days: int = 1) -> list[int]:
+    """Constrained beam search with multi-day support.
 
     Rules:
-    - Hotel masked to -inf until last 3 steps; selected hotel -> immediate break
-    - After 3 consecutive scenic, push dining (max 3 dining total)
-    - Last 2 steps: suppress dining/shopping
+    - Hotel allowed at day boundaries (end of each day) and final end
+    - Selected hotel -> continue next day from hotel (multi-day)
+    - After 3 consecutive scenic, push dining (max ~2 per day)
+    - Last step: hotel required; day boundary: hotel encouraged
     - Once a cluster member is visited, mask the entire cluster
     """
     ATTR_SCENIC, ATTR_DINING, ATTR_HOTEL = 0, 1, 2
@@ -126,15 +128,21 @@ def generate_with_constraints(model: RouteTransformer, encoder_output: torch.Ten
                         logits[0, poi_idx] = float('-inf')
                         continue
 
-                # Hotel: mask to -inf if too early, encourage if near end
+                # Hotel: allowed at day boundaries and end
+                # Calculate current day and stops_per_day
+                stops_per_day = max_len // n_days
+                current_stop_in_day = (current_len - 1) % stops_per_day if stops_per_day > 0 else 0
+
                 if activity == ATTR_HOTEL:
-                    if steps_left > 3:
+                    is_day_end = (current_stop_in_day >= stops_per_day - 2)  # near end of current day
+                    is_final_end = (steps_left <= 2)  # near total end
+                    if not is_day_end and not is_final_end:
                         logits[0, poi_idx] = float('-inf')
                         continue
-                    elif steps_left <= 2:
-                        logits[0, poi_idx] += 10.0
+                    elif is_final_end:
+                        logits[0, poi_idx] += 10.0  # strongly encourage
                     else:
-                        logits[0, poi_idx] += 3.0
+                        logits[0, poi_idx] += 3.0   # day boundary
                     continue
 
                 base_bias = constraints[last_activity, activity].item()
@@ -176,7 +184,9 @@ def generate_with_constraints(model: RouteTransformer, encoder_output: torch.Ten
                 visited_clusters.add(int(cluster_id[best_idx]))
 
             if poi_activity_types[best_idx].item() == ATTR_HOTEL:
-                break
+                # For multi-day: hotel in middle -> continue; only break at absolute end
+                if len(route) >= max_len - 1:
+                    break
 
     return route
 def generate_diverse_routes(model: RouteTransformer, encoder_output: torch.Tensor,
@@ -184,7 +194,8 @@ def generate_diverse_routes(model: RouteTransformer, encoder_output: torch.Tenso
                             start_id: int | None, pois: pd.DataFrame,
                             device: torch.device,
                             poi_activity_types: torch.Tensor,
-                            cluster_id: np.ndarray = None) -> list[list[int]]:
+                            cluster_id: np.ndarray = None,
+                            n_days: int = 1) -> list[list[int]]:
     """Generate diverse routes: different starts + constrained beam search."""
     routes = []
     used_starts = set()
@@ -192,7 +203,7 @@ def generate_diverse_routes(model: RouteTransformer, encoder_output: torch.Tenso
     if start_id is not None:
         route = generate_with_constraints(
             model, encoder_output, start_id, beam_size, max_len, device,
-            poi_activity_types, cluster_id
+            poi_activity_types, cluster_id, n_days
         )
         routes.append(route)
         used_starts.add(start_id)
@@ -210,7 +221,7 @@ def generate_diverse_routes(model: RouteTransformer, encoder_output: torch.Tenso
             continue
         route = generate_with_constraints(
             model, encoder_output, poi_idx, beam_size, max_len, device,
-            poi_activity_types, cluster_id
+            poi_activity_types, cluster_id, n_days
         )
         routes.append(route)
         used_starts.add(poi_idx)
@@ -372,6 +383,7 @@ def main():
     parser.add_argument("--start", type=str, default=None, help="起点 POI 名称")
     parser.add_argument("--start_id", type=int, default=None, help="起点 POI 编号")
     parser.add_argument("--season", type=str, default="winter", choices=["winter", "summer"])
+    parser.add_argument("--days", type=int, default=1, help="游览天数(多日游)")
     parser.add_argument("--max_stops", type=int, default=None)
     parser.add_argument("--max_hours", type=float, default=None)
     parser.add_argument("--beam_size", type=int, default=None)
@@ -456,10 +468,11 @@ def main():
     print(f"\n生成条件: 季节={args.season}, 最大游览点={max_stops}, beam_size={beam_size}")
     print("=" * 60)
 
+    n_days = args.days
     max_minutes = args.max_hours * 60 if args.max_hours else None
     raw_routes = generate_diverse_routes(
         model, encoder_output, beam_size, max_stops, args.n_routes,
-        start_id, pois, device, poi_activity_types, cluster_id
+        start_id, pois, device, poi_activity_types, cluster_id, n_days
     )
 
     all_routes = []

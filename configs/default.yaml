@@ -17,14 +17,14 @@ data:
   use_probabilistic_edges: true  # 训练时对距离/耗时加随机噪声
   distance_noise_scale: 0.1      # 噪声标准差 = mean * scale
 
-# 模型配置
+# 模型配置（精简版：适配165条训练数据，防止过拟合）
 model:
   d_model: 128
   n_heads: 8
-  n_encoder_layers: 4
-  n_decoder_layers: 4
-  d_ff: 512
-  dropout: 0.1
+  n_encoder_layers: 3       # 4→3, 减少encoder参数量
+  n_decoder_layers: 3       # 4→3, decoder仍是主力但更精简
+  d_ff: 384                 # 512→384, FFN维度降低
+  dropout: 0.2              # 0.1→0.2, 增强正则化
   max_route_len: 20
 
 # Engram 记忆模块
