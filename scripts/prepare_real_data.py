@@ -258,6 +258,7 @@ def augment_routes_with_dining_and_hotel(matched_routes: list[dict],
     # 获取餐饮和住宿POI的索引
     dining_pois = pois[pois["category"] == "餐饮"].index.tolist()
     hotel_pois = pois[pois["category"] == "住宿"].index.tolist()
+    has_popularity = "xhs_popularity" in pois.columns
 
     if not dining_pois and not hotel_pois:
         print("  警告：没有餐饮或住宿POI，跳过路线增强")
@@ -294,15 +295,20 @@ def augment_routes_with_dining_and_hotel(matched_routes: list[dict],
 
             # 每2-3个景点后插入餐饮
             if consecutive_scenic >= 2 and dining_pois and i < len(indices) - 1:
-                # 选最近的餐饮POI
+                # 选最佳餐饮：距离分 + 热度分
                 best_dining = None
-                best_dist = float('inf')
+                best_score = float('-inf')
                 for d_idx in dining_pois:
                     if d_idx in new_route or d_idx in indices:
                         continue
                     d = dist_matrix[poi_idx, d_idx]
-                    if d < best_dist and d > 0:
-                        best_dist = d
+                    if d <= 0:
+                        continue
+                    # 综合分 = -距离(km) + 热度*2（近+热更好）
+                    pop = float(pois.iloc[d_idx].get('xhs_popularity', 0)) if has_popularity else 0
+                    score = -d + pop * 2.0
+                    if score > best_score:
+                        best_score = score
                         best_dining = d_idx
                 if best_dining is not None:
                     new_route.append(best_dining)
@@ -314,13 +320,17 @@ def augment_routes_with_dining_and_hotel(matched_routes: list[dict],
             if not last_is_hotel:
                 last_poi = indices[-1]
                 best_hotel = None
-                best_dist = float('inf')
+                best_score = float('-inf')
                 for h_idx in hotel_pois:
                     if h_idx in new_route:
                         continue
                     d = dist_matrix[last_poi, h_idx]
-                    if d < best_dist and d > 0:
-                        best_dist = d
+                    if d <= 0:
+                        continue
+                    pop = float(pois.iloc[h_idx].get('xhs_popularity', 0)) if has_popularity else 0
+                    score = -d + pop * 3.0
+                    if score > best_score:
+                        best_score = score
                         best_hotel = h_idx
                 if best_hotel is not None:
                     new_route.append(best_hotel)
