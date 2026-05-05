@@ -37,7 +37,7 @@
 
 % ============ 行距设置 ============
 % 正文：固定值24磅（小四号12pt × 2）
-% 使用 setspace 包的 \setstretch 设置固定行距
+% 使用 ctexart 的 CJK 字体 baselineskip 机制
 % 12pt字体默认baselineskip约14.5pt，24pt/14.5pt≈1.66
 \setstretch{1.66}
 % 表格内容：单倍行距
@@ -45,24 +45,34 @@
   {\setstretch{1.0}\small}
   {}
 
-% ============ 标题格式 ============
-% 一级标题：黑体 小三号(15pt)，居中，段前段后0
-\titleformat{\section}
-  {\centering\heiti\fontsize{15pt}{24pt}\selectfont}
-  {}{0em}{}
-\titlespacing{\section}{0pt}{0pt}{0pt}
-
-% 二级标题：楷体 四号(14pt)，段前段后0
-\titleformat{\subsection}
-  {\kaishu\fontsize{14pt}{24pt}\selectfont}
-  {}{0em}{}
-\titlespacing{\subsection}{0pt}{0pt}{0pt}
-
-% 三级标题：宋体 小四号(12pt) 加粗，段前段后0
-\titleformat{\subsubsection}
-  {\songti\bfseries\fontsize{12pt}{24pt}\selectfont}
-  {}{0em}{}
-\titlespacing{\subsubsection}{0pt}{0pt}{0pt}
+% ============ 层次序号设置 ============
+% 按格式要求：一、；（一）；1.；①
+\ctexset{
+  section = {
+    name = {,},
+    number = \chinese{section},
+    format = \centering\heiti\fontsize{15pt}{24pt}\selectfont,
+    aftername = \quad,
+    beforeskip = 0pt,
+    afterskip = 0pt,
+  },
+  subsection = {
+    name = {（,）},
+    number = \chinese{subsection},
+    format = \kaishu\fontsize{14pt}{24pt}\selectfont,
+    aftername = \quad,
+    beforeskip = 0pt,
+    afterskip = 0pt,
+  },
+  subsubsection = {
+    name = {,},
+    number = \arabic{subsubsection}.,
+    format = \songti\bfseries\fontsize{12pt}{24pt}\selectfont,
+    aftername = \quad,
+    beforeskip = 0pt,
+    afterskip = 0pt,
+  }
+}
 
 % ============ 目录格式设置 ============
 \setcounter{tocdepth}{3}
@@ -100,17 +110,19 @@
 \setlength{\parindent}{2em}
 
 % ============ 摘要环境 ============
+% 摘要内容用 \fontsize{12pt}{0pt} 让 LaTeX 计算默认 baselineskip，
+% 再由 \setstretch{1.66} 放大到约24pt
 \newenvironment{cnabstract}{
   \par
-  \noindent{\heiti\fontsize{14pt}{24pt}\selectfont 摘\quad 要}\par\vspace{6pt}
-  \songti\fontsize{12pt}{24pt}\selectfont
+  \noindent{\heiti\fontsize{14pt}{0pt}\selectfont 摘\quad 要}\par\vspace{6pt}
+  \songti\fontsize{12pt}{0pt}\selectfont
 }{
   \par
 }
 
 \newcommand{\cnkeywords}[1]{
   \par\vspace{6pt}
-  \noindent{\heiti\fontsize{12pt}{24pt}\selectfont 关键词：}{\songti\fontsize{12pt}{24pt}\selectfont #1}
+  \noindent{\heiti\fontsize{12pt}{0pt}\selectfont 关键词：}{\songti\fontsize{12pt}{0pt}\selectfont #1}
 }
 
 % ============ 正文 ============
@@ -265,7 +277,9 @@ POI数据是旅游路线生成的基础。本文通过高德地图开放平台We
 \end{tighttable}
 \end{table}
 
-本文为每个POI分配了活动类型标签，定义活动类型集合为$\mathcal{A}=\{\text{景点}(0),\text{餐饮}(1),\text{住宿}(2),\text{交通}(3),\text{购物}(4),\text{出发点}(5)\}$，共六类。活动类型的判定规则为：原始类别为"交通"类且为火车站或机场的POI归为"出发点"类型（共4个），其余POI按原始类别直接映射。在数据预处理阶段，采用自动分类修正策略：遍历所有POI的名称字段，若名称中包含"酒店""宾馆""民宿""客栈""旅馆""度假村"等关键词，则将其类别修正为"住宿"；若包含"餐厅""饭店""小吃""火锅""烧烤""饺子""面馆""料理""美食"等关键词，则修正为"餐饮"。该策略基于名称关键词自动修正了约40个POI的分类标注，有效提升了类别标注的准确性。
+本文为每个POI分配了活动类型标签，定义活动类型集合为$\mathcal{A}=\{\text{景点}(0),\text{餐饮}(1),\text{住宿}(2),\text{交通}(3),\text{购物}(4),\text{出发点}(5)\}$，共六类。活动类型的判定规则为：原始类别为"交通"类且为火车站或机场的POI归为"出发点"类型（共4个），其余POI按原始类别直接映射。
+
+在数据预处理阶段，采用自动分类修正策略：遍历所有POI的名称字段，若名称中包含"酒店""民宿"等关键词则修正为"住宿"，包含"餐厅""小吃"等则修正为"餐饮"。该策略修正了约40个POI的分类标注，有效提升了数据质量。
 
 POI特征向量从以下多维属性中提取：
 \begin{itemize}[itemsep=0pt,topsep=0pt]
@@ -457,7 +471,7 @@ S_{\text{candidate}} = -d(i,c) + w_{\text{xhs}}\cdot H_c
 \end{scope}
 
 \end{tikzpicture}
-\caption{RouteTransformer模型整体架构：左侧为输入数据（POI特征、邻接矩阵、历史路线），中部为Encoder-Decoder主体（含图感知编码器和Engram解码器），上方为Engram记忆库和MHC双曲约束模块，右侧为输出层。橙色虚线框标示了Engram记忆与解码器的协同工作区域。}
+\caption{RouteTransformer模型整体架构：编码器注入图偏置，解码器融合Engram记忆，MHC模块提供双曲正则化}
 \label{fig:architecture}
 \end{figure}
 
@@ -502,7 +516,7 @@ X_i = E_{\text{poi}}(i) + E_{\text{cat}}(c_i) + E_{\text{act}}(a_i) + \text{Proj
 \label{eq:graph_attn}
 \end{equation}
 
-其中，$Q=XW_Q$, $K=XW_K$, $V=XW_V$分别为查询、键、值矩阵（$W_Q,W_K,W_V\in\mathbb{R}^{d_{\text{model}}\times d_k}$，$d_k=d_{\text{model}}/n_{\text{heads}}=16$），均分为8个头独立计算。$A\in[0,1]^{N\times N}$为式(\ref{eq:adjacency})定义的加权邻接矩阵，作为固定的结构偏置直接加在缩放点积之上。$B\in\{0,\beta\}^{N\times N}$为活动类型相似性矩阵，其中$B_{ij}=\beta$（$=0.5$）当且仅当POI $i$和POI $j$属于同一活动类型（如同为景点、同为餐饮等），否则为0。$B$的作用是为同类型POI在注意力分布中提供额外的亲和力，使得编码器在表征空间中将功能相似的POI拉近——例如，多个不同的餐饮POI在编码后的表征会更趋近，有利于解码器在需要选择餐饮时从一组相近的候选中做出决策。
+其中，$Q=XW_Q$, $K=XW_K$, $V=XW_V$为查询、键、值矩阵，$d_k=d_{\text{model}}/n_{\text{heads}}=16$，均分为8个头独立计算。$A\in[0,1]^{N\times N}$为邻接矩阵偏置，$B\in\{0,\beta\}^{N\times N}$为活动类型相似性偏置（$\beta=0.5$），使同类型POI在表征空间中更趋近，有利于解码器从相似候选中做出决策。
 
 每个图感知注意力层后接残差连接和LayerNorm归一化：
 
@@ -906,16 +920,16 @@ s = \frac{1}{L}\sum_{i=0}^{L-1} \text{rating}(r_i)
 \begin{tighttable}
 \begin{tabular}{cll}
 \toprule
-\textbf{实验编号} & \textbf{实验组名称} & \textbf{说明} \\
+\textbf{编号} & \textbf{实验组} & \textbf{说明} \\
 \midrule
-1 & Full Model（完整模型） & Engram + MHC + Muon，全部三项创新均启用 \\
-2 & --Engram & 仅移除Engram记忆模块，保留MHC和Muon \\
-3 & --MHC & 仅移除MHC双曲约束层，保留Engram和Muon \\
-4 & AdamW & 将Muon替换为标准AdamW，保留Engram和MHC \\
-5 & --Engram--MHC & 同时移除Engram和MHC，仅保留Muon \\
-6 & Baseline（纯Transformer） & 无Engram、无MHC、使用AdamW，即标准Transformer \\
-7 & Engram $K=3$ & 在完整模型基础上将Engram检索数从5降至3 \\
-8 & Engram $K=10$ & 在完整模型基础上将Engram检索数从5提升至10 \\
+1 & Full Model & Engram + MHC + Muon全部启用 \\
+2 & --Engram & 移除Engram，保留MHC和Muon \\
+3 & --MHC & 移除MHC，保留Engram和Muon \\
+4 & AdamW & Muon替换为AdamW，保留Engram和MHC \\
+5 & --Engram--MHC & 同时移除Engram和MHC \\
+6 & Baseline & 无Engram、无MHC、用AdamW \\
+7 & $K=3$ & Engram检索数从5降至3 \\
+8 & $K=10$ & Engram检索数从5提升至10 \\
 \bottomrule
 \end{tabular}
 \end{tighttable}
