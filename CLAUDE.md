@@ -186,12 +186,15 @@ HarbinRouteDataset → DataLoader (train/val/test)
 ## 论文排版（paper/main.tex）
 
 - 编译器：xelatex（ctexart 中文支持）
-- 行距：全局 `\setstretch{1.66}`（正文），表格内容用 `tighttable` 环境（`\setstretch{1.0}`）
-- 其他部分（摘要/参考文献/附录/致谢）用 `\setstretch{1.0}` + `\fontsize{...}{24pt}` 显式指定24磅
+- 行距：正文全局 `\setstretch{1.66}`；附录/致谢用 `\setstretch{1.0}` + `\fontsize{12pt}{24pt}` 实现24磅行距
+- 表格内容用 `tighttable` 环境（`\setstretch{1.0}`）
 - 西文字体：Times New Roman（`\setmainfont` + `\setsansfont`）
 - 中文字体：宋体正文、黑体标题、楷书二级标题、方正小标宋论文题目
 - 封面页已删除，摘要从第1页开始，摘要标题居中
-- 图表编号：3图7表（图1模型架构TikZ、图2训练曲线、图3消融对比）
+- 图表编号：3图8表（图1模型架构TikZ、图2训练曲线、图3消融对比；表1~表8含消融实验组设置）
+- 参考文献引用格式：上标 `$^{\cite{...}}$`（如 [1] 显示为上标）
+- 表格与插图清单：保留清单页但不加入目录（无 `\addcontentsline`）
+- 清单中编号和标题须与实际 `\caption` 一致
 - 参考文献标题通过 `\renewcommand{\refname}` 控制格式，避免与 `thebibliography` 重复
 - 临时文件通过 `paper/.gitignore` 忽略（.aux/.log/.toc等）
 
@@ -227,6 +230,6 @@ HarbinRouteDataset → DataLoader (train/val/test)
 | `output/best_route_map.html` | 最优路线交互地图 |
 | `checkpoints/best_model.pt` | K=3最优模型权重 |
 | `paper/main.tex` | 论文LaTeX源码 |
-| `paper/main.pdf` | 论文PDF（40页） |
+| `paper/main.pdf` | 论文PDF（41页） |
 | `paper/training_curve.png` | 论文用训练曲线图（复制自output/） |
 | `paper/ablation_comparison.png` | 论文用消融对比图（复制自output/） |
