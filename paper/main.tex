@@ -121,7 +121,9 @@
   \par\sloppy\setstretch{1.0}
   {\centering\heiti\fontsize{14pt}{24pt}\selectfont 摘\quad 要\par}\vspace{6pt}
   \songti\fontsize{12pt}{24pt}\selectfont
-  \setlength{\parindent}{2em}
+  \setlength{\parindent}{2em}%
+  \csname @afterindenttrue\endcsname
+  \everypar{}%
 }{
   \par\setstretch{1.66}
 }
