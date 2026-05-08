@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 2026年全国大学生统计建模大赛参赛作品。基于Transformer架构构建哈尔滨文旅线路优化模型，核心创新点为融合DeepSeek论文中的三项技术：Engram内容寻址记忆、MHC双曲流形约束（庞加莱球模型）、Muon矩阵正交化优化器。
 
-**当前状态：10K POI规模训练完成，消融实验待跑。** 已完成POI规模扩展（180→10,000）、共享数据加载重构（节省25GB+显存）、AMP混合精度训练。
+**当前状态：10K POI规模训练完成，消融实验已完成，论文图表已更新。** 已完成POI规模扩展（180→10,000）、共享数据加载重构（节省25GB+显存）、AMP混合精度训练、7组消融实验、论文图表生成。
 
 ## Commands
 
@@ -259,9 +259,9 @@ HarbinRouteDataset → get_shared_data() (shared tensors on GPU)
 
 > 完整loss数据保存于 `output/training_loss.csv`（121条记录）
 
-### 消融实验结果（待跑）
+### 消融实验结果（已完成）
 
-7组实验配置（10K POI规模）：
+7组实验配置（180 POI规模，AdamW优化器）：
 1. K=3 Engram（预期最优）
 2. 完整模型 K=5
 3. K=10
@@ -275,8 +275,8 @@ HarbinRouteDataset → get_shared_data() (shared tensors on GPU)
 | 文件 | 内容 |
 |------|------|
 | `output/training_loss.csv` | 121 epoch完整loss记录 |
-| `output/ablation_results.json` | 7组消融完整数据（待跑） |
-| `output/ablation_results.csv` | 消融结果CSV（待跑） |
+| `output/ablation_results.json` | 7组消融完整数据 |
+| `output/ablation_results.csv` | 消融结果CSV |
 | `output/routes_result.json` | 最新生成路线详情 |
 | `output/best_route_map.html` | 最优路线交互地图 |
 | `checkpoints/best_model.pt` | epoch 106最优模型权重（52MB） |
