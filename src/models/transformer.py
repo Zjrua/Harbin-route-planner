@@ -115,14 +115,21 @@ class RouteTransformer(nn.Module):
                 - activity_types: [batch, max_route_len] 活动类型序列（可选）
                 - scores: [batch, n_pois] POI 评分（可选）
         """
-        poi_features = batch["poi_features"]
-        adjacency = batch["adjacency"]
         route_seq = batch["route_sequence"]
         activity_types = batch.get("activity_types", None)
 
-        # 1. 编码（如果有活动类型偏置，可以在这里注入）
-        activity_bias = batch.get("activity_bias", None)
-        encoder_output = self.encode(poi_features, adjacency, activity_bias)
+        # 1. 编码（支持预计算encoder_output以节省显存）
+        if "_encoder_output" in batch:
+            encoder_output = batch["_encoder_output"]
+        else:
+            poi_features = batch["poi_features"]
+            adjacency = batch["adjacency"]
+            activity_bias = batch.get("activity_bias", None)
+            encoder_output = self.encode(poi_features, adjacency, activity_bias)
+
+        # Expand encoder output to match batch size for cross-attention
+        if encoder_output.size(0) != route_seq.size(0):
+            encoder_output = encoder_output.expand(route_seq.size(0), -1, -1).contiguous()
 
         # 2. 构建 Engram 记忆（可选）
         engram_memory = None

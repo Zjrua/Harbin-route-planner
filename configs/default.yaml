@@ -10,7 +10,7 @@ data:
   center_lng: 126.53
   poi_source: "amap"  # 高德地图
   min_rating: 3.5
-  max_pois: 180
+  max_pois: 10000
   seasons:
     winter: [11, 12, 1, 2]  # 冰雪季
     summer: [6, 7, 8]
@@ -49,7 +49,7 @@ loss:
 
 # 优化器配置
 optimizer:
-  name: "adamw"  # muon / adam / adamw
+  name: "muon"  # muon / adam / adamw
   lr_attn: 1.0e-4
   lr_ffn: 3.0e-4
   weight_decay: 1.0e-4
@@ -57,9 +57,9 @@ optimizer:
 
 # 训练配置
 training:
-  batch_size: 32
+  batch_size: 256
   epochs: 200
-  patience: 10
+  patience: 15
   teacher_forcing_ratio: 0.5
   beam_size: 5
   seed: 42
