@@ -1,0 +1,15 @@
+{
+  "total_notes": 11959,
+  "classified": {
+    "route": 493,
+    "dining": 794,
+    "hotel": 355,
+    "other": 10317
+  },
+  "extracted_routes": 153,
+  "route_breakdown": {
+    "from_route_notes": 135,
+    "from_dining_notes": 18,
+    "from_hotel_notes": 0
+  }
+}

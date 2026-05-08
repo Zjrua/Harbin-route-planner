@@ -1,12 +1,10 @@
-# Data
+# Data — 原始数据不提交，处理后数据提交
 data/raw/
-data/processed/
 !data/README.md
 
 # Model artifacts
 checkpoints/
 logs/
-output/
 
 # Python
 __pycache__/

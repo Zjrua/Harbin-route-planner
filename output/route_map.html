@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_ed4a7ad0a42cbc1733726aabc853643e {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+</head>
+<body>
+    
+    
+            <div class="folium-map" id="map_ed4a7ad0a42cbc1733726aabc853643e" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_ed4a7ad0a42cbc1733726aabc853643e = L.map(
+                "map_ed4a7ad0a42cbc1733726aabc853643e",
+                {
+                    center: [45.8, 126.53],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 12,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_86ebba7367ef20ce820b2c209e0b4144 = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 19,
+  "maxNativeZoom": 19,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_86ebba7367ef20ce820b2c209e0b4144.addTo(map_ed4a7ad0a42cbc1733726aabc853643e);
+        
+    
+            var marker_f64f7fbb2175a45bc4419572640398e0 = L.marker(
+                [45.777005, 126.562459],
+                {
+}
+            ).addTo(map_ed4a7ad0a42cbc1733726aabc853643e);
+        
+    
+            var icon_1694128526e638845f987edd40926b3c = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "blue",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_ed71445a7fbc5453b0ff544f85e1a95d = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_9c671cb67c2a1d5c5371d052b61d8309 = $(`<div id="html_9c671cb67c2a1d5c5371d052b61d8309" style="width: 100.0%; height: 100.0%;">哈尔滨冰雪大世界 (#0)</div>`)[0];
+                popup_ed71445a7fbc5453b0ff544f85e1a95d.setContent(html_9c671cb67c2a1d5c5371d052b61d8309);
+            
+        
+
+        marker_f64f7fbb2175a45bc4419572640398e0.bindPopup(popup_ed71445a7fbc5453b0ff544f85e1a95d)
+        ;
+
+        
+    
+    
+                marker_f64f7fbb2175a45bc4419572640398e0.setIcon(icon_1694128526e638845f987edd40926b3c);
+            
+    
+            var marker_57db44055cf305bb8bed4ea2035c4442 = L.marker(
+                [45.774835, 126.617682],
+                {
+}
+            ).addTo(map_ed4a7ad0a42cbc1733726aabc853643e);
+        
+    
+            var icon_5e23b83e17043e435da07133b640ae67 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "blue",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_5524ed1f26f11eb98165d1b1d76648e1 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_8b39a545aa940db98b9acabbcbb2bbc0 = $(`<div id="html_8b39a545aa940db98b9acabbcbb2bbc0" style="width: 100.0%; height: 100.0%;">哈尔滨中央大街 (#2)</div>`)[0];
+                popup_5524ed1f26f11eb98165d1b1d76648e1.setContent(html_8b39a545aa940db98b9acabbcbb2bbc0);
+            
+        
+
+        marker_57db44055cf305bb8bed4ea2035c4442.bindPopup(popup_5524ed1f26f11eb98165d1b1d76648e1)
+        ;
+
+        
+    
+    
+                marker_57db44055cf305bb8bed4ea2035c4442.setIcon(icon_5e23b83e17043e435da07133b640ae67);
+            
+    
+            var marker_1748d0e0a609d3989b9bda5587c05650 = L.marker(
+                [45.770125, 126.627215],
+                {
+}
+            ).addTo(map_ed4a7ad0a42cbc1733726aabc853643e);
+        
+    
+            var icon_25dcb44f64d567c9599b49e0c2fbdb02 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "blue",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_2bbfe891da42b29fcbe87e8a912861ea = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_ff558bfa48952f94138cde1c49ce97b8 = $(`<div id="html_ff558bfa48952f94138cde1c49ce97b8" style="width: 100.0%; height: 100.0%;">圣·索菲亚教堂 (#11)</div>`)[0];
+                popup_2bbfe891da42b29fcbe87e8a912861ea.setContent(html_ff558bfa48952f94138cde1c49ce97b8);
+            
+        
+
+        marker_1748d0e0a609d3989b9bda5587c05650.bindPopup(popup_2bbfe891da42b29fcbe87e8a912861ea)
+        ;
+
+        
+    
+    
+                marker_1748d0e0a609d3989b9bda5587c05650.setIcon(icon_25dcb44f64d567c9599b49e0c2fbdb02);
+            
+    
+            var marker_b6770953b11fec13fe534f2545528aa3 = L.marker(
+                [45.757569, 126.640934],
+                {
+}
+            ).addTo(map_ed4a7ad0a42cbc1733726aabc853643e);
+        
+    
+            var icon_1da9c8c700ca242c1b51a9b3e281124b = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "blue",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_28a08592d38be667bf6e980aef948777 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_75ed2eeabced2896ac42868deafd7d90 = $(`<div id="html_75ed2eeabced2896ac42868deafd7d90" style="width: 100.0%; height: 100.0%;">黑龙江省博物馆 (#19)</div>`)[0];
+                popup_28a08592d38be667bf6e980aef948777.setContent(html_75ed2eeabced2896ac42868deafd7d90);
+            
+        
+
+        marker_b6770953b11fec13fe534f2545528aa3.bindPopup(popup_28a08592d38be667bf6e980aef948777)
+        ;
+
+        
+    
+    
+                marker_b6770953b11fec13fe534f2545528aa3.setIcon(icon_1da9c8c700ca242c1b51a9b3e281124b);
+            
+    
+            var marker_ee90f6d92cf7094517553f73b760cfd1 = L.marker(
+                [45.780655, 126.617118],
+                {
+}
+            ).addTo(map_ed4a7ad0a42cbc1733726aabc853643e);
+        
+    
+            var icon_6d7787bc46ef4e236c910a386d4017bb = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "blue",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_b689a359c63f6cde46c95cd7060a609a = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_9334534903c06374bb6d6dab7bb32280 = $(`<div id="html_9334534903c06374bb6d6dab7bb32280" style="width: 100.0%; height: 100.0%;">哈尔滨防洪纪念塔广场 (#7)</div>`)[0];
+                popup_b689a359c63f6cde46c95cd7060a609a.setContent(html_9334534903c06374bb6d6dab7bb32280);
+            
+        
+
+        marker_ee90f6d92cf7094517553f73b760cfd1.bindPopup(popup_b689a359c63f6cde46c95cd7060a609a)
+        ;
+
+        
+    
+    
+                marker_ee90f6d92cf7094517553f73b760cfd1.setIcon(icon_6d7787bc46ef4e236c910a386d4017bb);
+            
+    
+            var marker_2da64e5e84f233e22eaff45b14bf1c27 = L.marker(
+                [45.757875, 126.606775],
+                {
+}
+            ).addTo(map_ed4a7ad0a42cbc1733726aabc853643e);
+        
+    
+            var icon_c6ac15494dc70b6249ca4daa69042703 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "blue",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_8d82c6ee5a6d20779846a73daef4c5d6 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_bdf701703556bad5833d2741f6771903 = $(`<div id="html_bdf701703556bad5833d2741f6771903" style="width: 100.0%; height: 100.0%;">哈尔滨民俗博物馆民宿(松花江店) (#58)</div>`)[0];
+                popup_8d82c6ee5a6d20779846a73daef4c5d6.setContent(html_bdf701703556bad5833d2741f6771903);
+            
+        
+
+        marker_2da64e5e84f233e22eaff45b14bf1c27.bindPopup(popup_8d82c6ee5a6d20779846a73daef4c5d6)
+        ;
+
+        
+    
+    
+                marker_2da64e5e84f233e22eaff45b14bf1c27.setIcon(icon_c6ac15494dc70b6249ca4daa69042703);
+            
+    
+            var marker_1ecac25e86fbc46ac458d216727ab236 = L.marker(
+                [45.781791, 126.640729],
+                {
+}
+            ).addTo(map_ed4a7ad0a42cbc1733726aabc853643e);
+        
+    
+            var icon_14ae7a0960fd4b1f7cd593f1ae86c013 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "blue",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_3242184c45535e13a3a888de8a8defa2 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_ad0a537dea22fc03221145f5d0a372ac = $(`<div id="html_ad0a537dea22fc03221145f5d0a372ac" style="width: 100.0%; height: 100.0%;">中华巴洛克历史文化街区 (#12)</div>`)[0];
+                popup_3242184c45535e13a3a888de8a8defa2.setContent(html_ad0a537dea22fc03221145f5d0a372ac);
+            
+        
+
+        marker_1ecac25e86fbc46ac458d216727ab236.bindPopup(popup_3242184c45535e13a3a888de8a8defa2)
+        ;
+
+        
+    
+    
+                marker_1ecac25e86fbc46ac458d216727ab236.setIcon(icon_14ae7a0960fd4b1f7cd593f1ae86c013);
+            
+    
+            var marker_7c7e1919a0f3461d96819dd52f3e4268 = L.marker(
+                [45.785251, 126.586479],
+                {
+}
+            ).addTo(map_ed4a7ad0a42cbc1733726aabc853643e);
+        
+    
+            var icon_68d56d8927d63f6ef106a207b8cc9e3f = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "blue",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_d3a6ac834cbce335b8a1f21b20037bfe = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_6e6f11db0ec03cf4f30a7d40e92ecc0d = $(`<div id="html_6e6f11db0ec03cf4f30a7d40e92ecc0d" style="width: 100.0%; height: 100.0%;">哈尔滨极地公园 (#4)</div>`)[0];
+                popup_d3a6ac834cbce335b8a1f21b20037bfe.setContent(html_6e6f11db0ec03cf4f30a7d40e92ecc0d);
+            
+        
+
+        marker_7c7e1919a0f3461d96819dd52f3e4268.bindPopup(popup_d3a6ac834cbce335b8a1f21b20037bfe)
+        ;
+
+        
+    
+    
+                marker_7c7e1919a0f3461d96819dd52f3e4268.setIcon(icon_68d56d8927d63f6ef106a207b8cc9e3f);
+            
+    
+            var poly_line_c405e8ed1231b90dbd545775086a68d6 = L.polyline(
+                [[45.777005, 126.562459], [45.774835, 126.617682], [45.770125, 126.627215], [45.757569, 126.640934], [45.780655, 126.617118], [45.757875, 126.606775], [45.781791, 126.640729], [45.785251, 126.586479]],
+                {"bubblingMouseEvents": true, "color": "red", "dashArray": null, "dashOffset": null, "fill": false, "fillColor": "red", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.8, "smoothFactor": 1.0, "stroke": true, "weight": 3}
+            ).addTo(map_ed4a7ad0a42cbc1733726aabc853643e);
+        
+</script>
+</html>
