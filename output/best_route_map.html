@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_f07c70601e65d3fb9ff0af673b8f24d1 {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+</head>
+<body>
+    
+    
+    <div style="position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+                z-index: 1000; background: white; padding: 10px 20px;
+                border-radius: 5px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                font-size: 16px; font-weight: bold;">
+        最优路线 (winter)
+    </div>
+    
+    
+            <div class="folium-map" id="map_f07c70601e65d3fb9ff0af673b8f24d1" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_f07c70601e65d3fb9ff0af673b8f24d1 = L.map(
+                "map_f07c70601e65d3fb9ff0af673b8f24d1",
+                {
+                    center: [45.8, 126.53],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 12,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_78d4f6aca69dd1be9d7efe9af7f21c88 = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 19,
+  "maxNativeZoom": 19,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_78d4f6aca69dd1be9d7efe9af7f21c88.addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var marker_f56917425ebe9fb96ca005b5c89bfa27 = L.marker(
+                [45.774835, 126.617682],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_3d6f1c8355187bc5d12f20b5d64901e6 = L.divIcon({
+  "html": "\u003cdiv style=\"background: green; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);\"\u003e\u8d77\u003c/div\u003e",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "className": "empty",
+});
+        
+    
+        var popup_6bcd0fad986222f38e275295f9987621 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_6e97af0a95568bc92b13d073cc70683a = $(`<div id="html_6e97af0a95568bc92b13d073cc70683a" style="width: 100.0%; height: 100.0%;"><b>第1站</b><br>哈尔滨中央大街<br>类别: 景点</div>`)[0];
+                popup_6bcd0fad986222f38e275295f9987621.setContent(html_6e97af0a95568bc92b13d073cc70683a);
+            
+        
+
+        marker_f56917425ebe9fb96ca005b5c89bfa27.bindPopup(popup_6bcd0fad986222f38e275295f9987621)
+        ;
+
+        
+    
+    
+                marker_f56917425ebe9fb96ca005b5c89bfa27.setIcon(div_icon_3d6f1c8355187bc5d12f20b5d64901e6);
+            
+    
+            var marker_2754cdf1f216526a0bfa52a0b7559aef = L.marker(
+                [45.775835, 126.617682],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_90f366bde0c89c7494f0caf36e7fe98a = L.divIcon({
+  "html": "\u003cdiv style=\"background: white; padding: 2px 6px; border-radius: 3px; font-size: 11px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;\"\u003e\u54c8\u5c14\u6ee8\u4e2d\u592e\u5927\u8857\u003c/div\u003e",
+  "iconSize": [150, 20],
+  "iconAnchor": [75, 0],
+  "className": "empty",
+});
+        
+    
+                marker_2754cdf1f216526a0bfa52a0b7559aef.setIcon(div_icon_90f366bde0c89c7494f0caf36e7fe98a);
+            
+    
+            var marker_ea8543d3835dd5d0baa305e9a53b7451 = L.marker(
+                [45.770893, 126.6421977],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_16b3cc4753331a9a24aeb9d7a3cf56b4 = L.divIcon({
+  "html": "\u003cdiv style=\"background: blue; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);\"\u003e2\u003c/div\u003e",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "className": "empty",
+});
+        
+    
+        var popup_4d5a07a70efdf6dc7939be256b4d33c9 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_6a7233ad2a28b8848f03003636fab699 = $(`<div id="html_6a7233ad2a28b8848f03003636fab699" style="width: 100.0%; height: 100.0%;"><b>第2站</b><br>瑞利时西餐烘焙原料(名优城店)<br>类别: 餐饮</div>`)[0];
+                popup_4d5a07a70efdf6dc7939be256b4d33c9.setContent(html_6a7233ad2a28b8848f03003636fab699);
+            
+        
+
+        marker_ea8543d3835dd5d0baa305e9a53b7451.bindPopup(popup_4d5a07a70efdf6dc7939be256b4d33c9)
+        ;
+
+        
+    
+    
+                marker_ea8543d3835dd5d0baa305e9a53b7451.setIcon(div_icon_16b3cc4753331a9a24aeb9d7a3cf56b4);
+            
+    
+            var marker_89e339e4a03b0d680fd221fd5b047ad4 = L.marker(
+                [45.771893, 126.6421977],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_dee301f7c9d3aff03d6667357943108c = L.divIcon({
+  "html": "\u003cdiv style=\"background: white; padding: 2px 6px; border-radius: 3px; font-size: 11px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;\"\u003e\u745e\u5229\u65f6\u897f\u9910\u70d8\u7119\u539f\u6599(\u540d\u4f18\u57ce\u5e97)\u003c/div\u003e",
+  "iconSize": [150, 20],
+  "iconAnchor": [75, 0],
+  "className": "empty",
+});
+        
+    
+                marker_89e339e4a03b0d680fd221fd5b047ad4.setIcon(div_icon_dee301f7c9d3aff03d6667357943108c);
+            
+    
+            var marker_73a0b32d3647e10b4daeeafb5d4bc613 = L.marker(
+                [45.770125, 126.627215],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_45f9e09a329e2fa261267b101d73656b = L.divIcon({
+  "html": "\u003cdiv style=\"background: blue; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);\"\u003e3\u003c/div\u003e",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "className": "empty",
+});
+        
+    
+        var popup_a57d16476c846ac35c2429fcf44f0659 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_2f6a61ee3e6b15cd1beed54b482e2402 = $(`<div id="html_2f6a61ee3e6b15cd1beed54b482e2402" style="width: 100.0%; height: 100.0%;"><b>第3站</b><br>圣·索菲亚教堂<br>类别: 景点</div>`)[0];
+                popup_a57d16476c846ac35c2429fcf44f0659.setContent(html_2f6a61ee3e6b15cd1beed54b482e2402);
+            
+        
+
+        marker_73a0b32d3647e10b4daeeafb5d4bc613.bindPopup(popup_a57d16476c846ac35c2429fcf44f0659)
+        ;
+
+        
+    
+    
+                marker_73a0b32d3647e10b4daeeafb5d4bc613.setIcon(div_icon_45f9e09a329e2fa261267b101d73656b);
+            
+    
+            var marker_1904c63540baad9cb9fc5754adf0b5da = L.marker(
+                [45.771125, 126.627215],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_282a982e04be42abaf92d82dc90c0e9d = L.divIcon({
+  "html": "\u003cdiv style=\"background: white; padding: 2px 6px; border-radius: 3px; font-size: 11px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;\"\u003e\u5723\u00b7\u7d22\u83f2\u4e9a\u6559\u5802\u003c/div\u003e",
+  "iconSize": [150, 20],
+  "iconAnchor": [75, 0],
+  "className": "empty",
+});
+        
+    
+                marker_1904c63540baad9cb9fc5754adf0b5da.setIcon(div_icon_282a982e04be42abaf92d82dc90c0e9d);
+            
+    
+            var marker_925c970f124cd5a4f63f17a2e7cf3b15 = L.marker(
+                [45.764167, 126.625505],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_77fffa4439e3f27c989657fc0b51188c = L.divIcon({
+  "html": "\u003cdiv style=\"background: blue; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);\"\u003e4\u003c/div\u003e",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "className": "empty",
+});
+        
+    
+        var popup_7cf2025251459d78ea9290e60e8a4383 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_04e88e0e8c3816cde6283f9a067f693e = $(`<div id="html_04e88e0e8c3816cde6283f9a067f693e" style="width: 100.0%; height: 100.0%;"><b>第4站</b><br>哈尔滨尚志旅社<br>类别: 住宿</div>`)[0];
+                popup_7cf2025251459d78ea9290e60e8a4383.setContent(html_04e88e0e8c3816cde6283f9a067f693e);
+            
+        
+
+        marker_925c970f124cd5a4f63f17a2e7cf3b15.bindPopup(popup_7cf2025251459d78ea9290e60e8a4383)
+        ;
+
+        
+    
+    
+                marker_925c970f124cd5a4f63f17a2e7cf3b15.setIcon(div_icon_77fffa4439e3f27c989657fc0b51188c);
+            
+    
+            var marker_81b998194a0dd2d5e98c50cc29ba0aab = L.marker(
+                [45.765167, 126.625505],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_7b13559eb40f3da170cb6dcb8303a170 = L.divIcon({
+  "html": "\u003cdiv style=\"background: white; padding: 2px 6px; border-radius: 3px; font-size: 11px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;\"\u003e\u54c8\u5c14\u6ee8\u5c1a\u5fd7\u65c5\u793e\u003c/div\u003e",
+  "iconSize": [150, 20],
+  "iconAnchor": [75, 0],
+  "className": "empty",
+});
+        
+    
+                marker_81b998194a0dd2d5e98c50cc29ba0aab.setIcon(div_icon_7b13559eb40f3da170cb6dcb8303a170);
+            
+    
+            var marker_b57a2cd3732cd15b7b6994143cf592d9 = L.marker(
+                [45.761621, 126.63269],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_a87924b473caa4deeff791ec0b4e9e4b = L.divIcon({
+  "html": "\u003cdiv style=\"background: blue; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);\"\u003e5\u003c/div\u003e",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "className": "empty",
+});
+        
+    
+        var popup_fede40d82cdfd7c4d1b61bfd376a530b = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_3605b10745dc388f4e578f91c95ddf99 = $(`<div id="html_3605b10745dc388f4e578f91c95ddf99" style="width: 100.0%; height: 100.0%;"><b>第5站</b><br>哈尔滨站<br>类别: 景点</div>`)[0];
+                popup_fede40d82cdfd7c4d1b61bfd376a530b.setContent(html_3605b10745dc388f4e578f91c95ddf99);
+            
+        
+
+        marker_b57a2cd3732cd15b7b6994143cf592d9.bindPopup(popup_fede40d82cdfd7c4d1b61bfd376a530b)
+        ;
+
+        
+    
+    
+                marker_b57a2cd3732cd15b7b6994143cf592d9.setIcon(div_icon_a87924b473caa4deeff791ec0b4e9e4b);
+            
+    
+            var marker_d301cfba0b4906482d3105bee7e5024b = L.marker(
+                [45.762620999999996, 126.63269],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_c34677cea5b4b97d1a399cefb866f822 = L.divIcon({
+  "html": "\u003cdiv style=\"background: white; padding: 2px 6px; border-radius: 3px; font-size: 11px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;\"\u003e\u54c8\u5c14\u6ee8\u7ad9\u003c/div\u003e",
+  "iconSize": [150, 20],
+  "iconAnchor": [75, 0],
+  "className": "empty",
+});
+        
+    
+                marker_d301cfba0b4906482d3105bee7e5024b.setIcon(div_icon_c34677cea5b4b97d1a399cefb866f822);
+            
+    
+            var marker_2ea7eeb8b04597432dba98d7f99a95b2 = L.marker(
+                [45.7532986, 126.6449395],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_dad9c346e8ded1adb5cde1979874cbef = L.divIcon({
+  "html": "\u003cdiv style=\"background: blue; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);\"\u003e6\u003c/div\u003e",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "className": "empty",
+});
+        
+    
+        var popup_3e198bdfd1cb67398e0315c75ed43b56 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_fdd81558a4c2289848b7abefa31b4258 = $(`<div id="html_fdd81558a4c2289848b7abefa31b4258" style="width: 100.0%; height: 100.0%;"><b>第6站</b><br>翰墨茗茶<br>类别: 餐饮</div>`)[0];
+                popup_3e198bdfd1cb67398e0315c75ed43b56.setContent(html_fdd81558a4c2289848b7abefa31b4258);
+            
+        
+
+        marker_2ea7eeb8b04597432dba98d7f99a95b2.bindPopup(popup_3e198bdfd1cb67398e0315c75ed43b56)
+        ;
+
+        
+    
+    
+                marker_2ea7eeb8b04597432dba98d7f99a95b2.setIcon(div_icon_dad9c346e8ded1adb5cde1979874cbef);
+            
+    
+            var marker_dd9cef12932a7542fc9db3f474fcf062 = L.marker(
+                [45.7542986, 126.6449395],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_90a9a960fc7510b540c0d8900f5039a1 = L.divIcon({
+  "html": "\u003cdiv style=\"background: white; padding: 2px 6px; border-radius: 3px; font-size: 11px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;\"\u003e\u7ff0\u58a8\u8317\u8336\u003c/div\u003e",
+  "iconSize": [150, 20],
+  "iconAnchor": [75, 0],
+  "className": "empty",
+});
+        
+    
+                marker_dd9cef12932a7542fc9db3f474fcf062.setIcon(div_icon_90a9a960fc7510b540c0d8900f5039a1);
+            
+    
+            var marker_956ba401abda59de1424c15276def423 = L.marker(
+                [45.757569, 126.640934],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_4cf2dc4c7b1fc3d4d7e961e5fd6628e8 = L.divIcon({
+  "html": "\u003cdiv style=\"background: blue; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);\"\u003e7\u003c/div\u003e",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "className": "empty",
+});
+        
+    
+        var popup_c16f3a35b2c761795f663b3a87581733 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_cab9945dfca34e36ac610696cd5bdfd6 = $(`<div id="html_cab9945dfca34e36ac610696cd5bdfd6" style="width: 100.0%; height: 100.0%;"><b>第7站</b><br>黑龙江省博物馆<br>类别: 景点</div>`)[0];
+                popup_c16f3a35b2c761795f663b3a87581733.setContent(html_cab9945dfca34e36ac610696cd5bdfd6);
+            
+        
+
+        marker_956ba401abda59de1424c15276def423.bindPopup(popup_c16f3a35b2c761795f663b3a87581733)
+        ;
+
+        
+    
+    
+                marker_956ba401abda59de1424c15276def423.setIcon(div_icon_4cf2dc4c7b1fc3d4d7e961e5fd6628e8);
+            
+    
+            var marker_8b588303dd6ef5b5f0b5b9939fa7a97a = L.marker(
+                [45.758568999999994, 126.640934],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_646c579fcbbb03c6aa6e557c8592900c = L.divIcon({
+  "html": "\u003cdiv style=\"background: white; padding: 2px 6px; border-radius: 3px; font-size: 11px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;\"\u003e\u9ed1\u9f99\u6c5f\u7701\u535a\u7269\u9986\u003c/div\u003e",
+  "iconSize": [150, 20],
+  "iconAnchor": [75, 0],
+  "className": "empty",
+});
+        
+    
+                marker_8b588303dd6ef5b5f0b5b9939fa7a97a.setIcon(div_icon_646c579fcbbb03c6aa6e557c8592900c);
+            
+    
+            var marker_979799ae6561fb1e4fa436d544786016 = L.marker(
+                [45.781791, 126.640729],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_58c67a5e81c27b048805958627582fd2 = L.divIcon({
+  "html": "\u003cdiv style=\"background: blue; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);\"\u003e8\u003c/div\u003e",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "className": "empty",
+});
+        
+    
+        var popup_28b058a4178d7bff1d707fe220cce3a5 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_b43ffb3262ccbf5dc9c8e2f2b447fee9 = $(`<div id="html_b43ffb3262ccbf5dc9c8e2f2b447fee9" style="width: 100.0%; height: 100.0%;"><b>第8站</b><br>中华巴洛克历史文化街区<br>类别: 景点</div>`)[0];
+                popup_28b058a4178d7bff1d707fe220cce3a5.setContent(html_b43ffb3262ccbf5dc9c8e2f2b447fee9);
+            
+        
+
+        marker_979799ae6561fb1e4fa436d544786016.bindPopup(popup_28b058a4178d7bff1d707fe220cce3a5)
+        ;
+
+        
+    
+    
+                marker_979799ae6561fb1e4fa436d544786016.setIcon(div_icon_58c67a5e81c27b048805958627582fd2);
+            
+    
+            var marker_d40b120e62e6ba59e539778c779461ca = L.marker(
+                [45.782790999999996, 126.640729],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_5920142654cb07edc9ef4c8b13276717 = L.divIcon({
+  "html": "\u003cdiv style=\"background: white; padding: 2px 6px; border-radius: 3px; font-size: 11px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;\"\u003e\u4e2d\u534e\u5df4\u6d1b\u514b\u5386\u53f2\u6587\u5316\u8857\u533a\u003c/div\u003e",
+  "iconSize": [150, 20],
+  "iconAnchor": [75, 0],
+  "className": "empty",
+});
+        
+    
+                marker_d40b120e62e6ba59e539778c779461ca.setIcon(div_icon_5920142654cb07edc9ef4c8b13276717);
+            
+    
+            var marker_4a224f732bcb6480f61f4c207cc1d2bb = L.marker(
+                [45.817483, 126.60065],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_299470aab8f615358d9b03445702df73 = L.divIcon({
+  "html": "\u003cdiv style=\"background: blue; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);\"\u003e9\u003c/div\u003e",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "className": "empty",
+});
+        
+    
+        var popup_94f7a2a2118ea692a911a15da2164ae4 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_533d7c19fd59fd9940223c6db57f409e = $(`<div id="html_533d7c19fd59fd9940223c6db57f409e" style="width: 100.0%; height: 100.0%;"><b>第9站</b><br>东北虎林园<br>类别: 景点</div>`)[0];
+                popup_94f7a2a2118ea692a911a15da2164ae4.setContent(html_533d7c19fd59fd9940223c6db57f409e);
+            
+        
+
+        marker_4a224f732bcb6480f61f4c207cc1d2bb.bindPopup(popup_94f7a2a2118ea692a911a15da2164ae4)
+        ;
+
+        
+    
+    
+                marker_4a224f732bcb6480f61f4c207cc1d2bb.setIcon(div_icon_299470aab8f615358d9b03445702df73);
+            
+    
+            var marker_af5b72dd8cb0b12bbabe4c6990ba7133 = L.marker(
+                [45.818483, 126.60065],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_d9d15484364073411056118df5a2b885 = L.divIcon({
+  "html": "\u003cdiv style=\"background: white; padding: 2px 6px; border-radius: 3px; font-size: 11px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;\"\u003e\u4e1c\u5317\u864e\u6797\u56ed\u003c/div\u003e",
+  "iconSize": [150, 20],
+  "iconAnchor": [75, 0],
+  "className": "empty",
+});
+        
+    
+                marker_af5b72dd8cb0b12bbabe4c6990ba7133.setIcon(div_icon_d9d15484364073411056118df5a2b885);
+            
+    
+            var marker_8724a34c889648ae1896f6e2dbcf753e = L.marker(
+                [45.820457, 126.582384],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_5e1ee36d2dc9e252930e8c97a85f8db1 = L.divIcon({
+  "html": "\u003cdiv style=\"background: red; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);\"\u003e\u7ec8\u003c/div\u003e",
+  "iconSize": [30, 30],
+  "iconAnchor": [15, 15],
+  "className": "empty",
+});
+        
+    
+        var popup_9998e23caf292442f13731380b99e053 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_857a513aa98420134bcfb1c3b5157bee = $(`<div id="html_857a513aa98420134bcfb1c3b5157bee" style="width: 100.0%; height: 100.0%;"><b>第10站</b><br>花筑·西柚度假民宿(哈尔滨冰雪大世界店)<br>类别: 住宿</div>`)[0];
+                popup_9998e23caf292442f13731380b99e053.setContent(html_857a513aa98420134bcfb1c3b5157bee);
+            
+        
+
+        marker_8724a34c889648ae1896f6e2dbcf753e.bindPopup(popup_9998e23caf292442f13731380b99e053)
+        ;
+
+        
+    
+    
+                marker_8724a34c889648ae1896f6e2dbcf753e.setIcon(div_icon_5e1ee36d2dc9e252930e8c97a85f8db1);
+            
+    
+            var marker_63e9067dd8cde931dda154f14db846ef = L.marker(
+                [45.821456999999995, 126.582384],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_0447056f3e2bb34f3d4a9d1469149f54 = L.divIcon({
+  "html": "\u003cdiv style=\"background: white; padding: 2px 6px; border-radius: 3px; font-size: 11px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;\"\u003e\u82b1\u7b51\u00b7\u897f\u67da\u5ea6\u5047\u6c11\u5bbf(\u54c8\u5c14\u6ee8\u51b0\u96ea\u5927\u4e16\u754c\u5e97)\u003c/div\u003e",
+  "iconSize": [150, 20],
+  "iconAnchor": [75, 0],
+  "className": "empty",
+});
+        
+    
+                marker_63e9067dd8cde931dda154f14db846ef.setIcon(div_icon_0447056f3e2bb34f3d4a9d1469149f54);
+            
+    
+            var poly_line_d25c92726faa2dded1083a3ab8dcb3f2 = L.polyline(
+                [[45.774835, 126.617682], [45.770893, 126.6421977], [45.770125, 126.627215], [45.764167, 126.625505], [45.761621, 126.63269], [45.7532986, 126.6449395], [45.757569, 126.640934], [45.781791, 126.640729], [45.817483, 126.60065], [45.820457, 126.582384]],
+                {"bubblingMouseEvents": true, "color": "red", "dashArray": "10", "dashOffset": null, "fill": false, "fillColor": "red", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.8, "smoothFactor": 1.0, "stroke": true, "weight": 4}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var marker_4de6a61972fb52c1bc8efec05b4a7ec2 = L.marker(
+                [45.772864, 126.62993985],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_8a131bc61e834f13e8c0601bd864bce2 = L.divIcon({
+  "html": "\u003cdiv style=\"color: red; font-size: 16px; font-weight: bold;\"\u003e\u2192\u003c/div\u003e",
+  "iconSize": [20, 20],
+  "iconAnchor": [10, 10],
+  "className": "empty",
+});
+        
+    
+                marker_4de6a61972fb52c1bc8efec05b4a7ec2.setIcon(div_icon_8a131bc61e834f13e8c0601bd864bce2);
+            
+    
+            var marker_a6bd9d549c7ab8cfc4cd108d97329258 = L.marker(
+                [45.767146, 126.62636],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_9302dea4b9fb17a767528c67626b0a35 = L.divIcon({
+  "html": "\u003cdiv style=\"color: red; font-size: 16px; font-weight: bold;\"\u003e\u2192\u003c/div\u003e",
+  "iconSize": [20, 20],
+  "iconAnchor": [10, 10],
+  "className": "empty",
+});
+        
+    
+                marker_a6bd9d549c7ab8cfc4cd108d97329258.setIcon(div_icon_9302dea4b9fb17a767528c67626b0a35);
+            
+    
+            var marker_af19b94454db2eea654c6f597d37bf71 = L.marker(
+                [45.7574598, 126.63881475],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_d47c67527746de936ae068e11a5d623e = L.divIcon({
+  "html": "\u003cdiv style=\"color: red; font-size: 16px; font-weight: bold;\"\u003e\u2192\u003c/div\u003e",
+  "iconSize": [20, 20],
+  "iconAnchor": [10, 10],
+  "className": "empty",
+});
+        
+    
+                marker_af19b94454db2eea654c6f597d37bf71.setIcon(div_icon_d47c67527746de936ae068e11a5d623e);
+            
+    
+            var marker_d33502d28ceacaeee66d0641511c76aa = L.marker(
+                [45.769679999999994, 126.64083149999999],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_4a0c1ff34eacb7121ec2454dc92ea9c9 = L.divIcon({
+  "html": "\u003cdiv style=\"color: red; font-size: 16px; font-weight: bold;\"\u003e\u2192\u003c/div\u003e",
+  "iconSize": [20, 20],
+  "iconAnchor": [10, 10],
+  "className": "empty",
+});
+        
+    
+                marker_d33502d28ceacaeee66d0641511c76aa.setIcon(div_icon_4a0c1ff34eacb7121ec2454dc92ea9c9);
+            
+    
+            var marker_e37fae43153e024f146506358940c1e3 = L.marker(
+                [45.81897, 126.59151700000001],
+                {
+}
+            ).addTo(map_f07c70601e65d3fb9ff0af673b8f24d1);
+        
+    
+            var div_icon_2d3d3f8748e964aa2659f5e0519818ad = L.divIcon({
+  "html": "\u003cdiv style=\"color: red; font-size: 16px; font-weight: bold;\"\u003e\u2192\u003c/div\u003e",
+  "iconSize": [20, 20],
+  "iconAnchor": [10, 10],
+  "className": "empty",
+});
+        
+    
+                marker_e37fae43153e024f146506358940c1e3.setIcon(div_icon_2d3d3f8748e964aa2659f5e0519818ad);
+            
+</script>
+</html>

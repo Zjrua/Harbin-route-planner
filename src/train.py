@@ -88,9 +88,7 @@ def train_one_epoch(model: RouteTransformer, dataloader, optimizer,
                     epoch: int, config: dict,
                     shared_data: dict,
                     encoder_output: torch.Tensor,
-                    scaler: torch.amp.GradScaler = None,
-                    non_blocking: bool = True,
-                    amp_device: str = "cuda") -> dict:
+                    scaler: torch.amp.GradScaler = None) -> dict:
     """训练一个 epoch.
 
     编码器已预先运行一次，encoder_output 在所有 batch 间共享。
@@ -126,16 +124,16 @@ def train_one_epoch(model: RouteTransformer, dataloader, optimizer,
         batch_device = {
             "poi_features": shared_data["poi_features"].unsqueeze(0),
             "adjacency": shared_data["adjacency"].unsqueeze(0),
-            "route_sequence": route_seq.to(device, non_blocking=non_blocking),
+            "route_sequence": route_seq.to(device, non_blocking=True),
             "distances": distances,
-            "scores": scores.to(device, non_blocking=non_blocking),
-            "activity_types": route_activity.to(device, non_blocking=non_blocking),
+            "scores": scores.to(device, non_blocking=True),
+            "activity_types": route_activity.to(device, non_blocking=True),
             "_encoder_output": encoder_output,
         }
 
         optimizer.zero_grad()
 
-        with torch.amp.autocast(amp_device, enabled=use_amp):
+        with torch.amp.autocast("cuda", enabled=use_amp):
             output = model(batch_device)
 
             logits = output["logits"]
@@ -172,9 +170,7 @@ def validate(model: RouteTransformer, dataloader, criterion: RouteLoss,
              device: torch.device, epoch: int = 0,
              shared_data: dict = None,
              encoder_output: torch.Tensor = None,
-             use_amp: bool = False,
-             non_blocking: bool = True,
-             amp_device: str = "cuda") -> dict:
+             use_amp: bool = False) -> dict:
     """验证集评估."""
     model.eval()
     total_loss = 0.0
@@ -188,14 +184,14 @@ def validate(model: RouteTransformer, dataloader, criterion: RouteLoss,
         batch_device = {
             "poi_features": shared_data["poi_features"].unsqueeze(0),
             "adjacency": shared_data["adjacency"].unsqueeze(0),
-            "route_sequence": route_seq.to(device, non_blocking=non_blocking),
+            "route_sequence": route_seq.to(device, non_blocking=True),
             "distances": shared_data["distances"],
-            "scores": scores.to(device, non_blocking=non_blocking),
-            "activity_types": route_activity.to(device, non_blocking=non_blocking),
+            "scores": scores.to(device, non_blocking=True),
+            "activity_types": route_activity.to(device, non_blocking=True),
             "_encoder_output": encoder_output,
         }
 
-        with torch.amp.autocast(amp_device, enabled=use_amp):
+        with torch.amp.autocast("cuda", enabled=use_amp):
             output = model(batch_device)
 
             logits = output["logits"]
@@ -234,11 +230,8 @@ def main():
     total_epochs = config["training"]["epochs"]
     patience_limit = config["training"]["patience"]
 
-    # MPS 不支持 fp16 autocast，仅在 CUDA 上启用 AMP
     use_amp = device.type == "cuda"
-    amp_device = device.type if use_amp else "cuda"
-    scaler = torch.amp.GradScaler(amp_device, enabled=use_amp) if use_amp else None
-    non_blocking = device.type == "cuda"
+    scaler = torch.amp.GradScaler("cuda", enabled=use_amp) if use_amp else None
 
     print("=" * 60)
     print("  哈尔滨文旅线路优化模型 — 训练")
@@ -273,7 +266,7 @@ def main():
     # 运行编码器一次（POI特征和邻接矩阵不变，encoder_output可共享）
     print("  运行编码器...")
     model.eval()
-    with torch.no_grad(), torch.amp.autocast(amp_device, enabled=use_amp):
+    with torch.no_grad(), torch.amp.autocast("cuda", enabled=use_amp):
         encoder_output = model.encode(
             shared_data["poi_features"].unsqueeze(0),
             shared_data["adjacency"].unsqueeze(0),
@@ -291,7 +284,7 @@ def main():
         best_val_loss = ckpt.get("best_val_loss", float("inf"))
         # Recompute encoder output with loaded weights
         model.eval()
-        with torch.no_grad(), torch.amp.autocast(amp_device, enabled=use_amp):
+        with torch.no_grad(), torch.amp.autocast("cuda", enabled=use_amp):
             encoder_output = model.encode(
                 shared_data["poi_features"].unsqueeze(0),
                 shared_data["adjacency"].unsqueeze(0),
@@ -314,11 +307,9 @@ def main():
     for epoch in range(start_epoch, total_epochs):
         train_metrics = train_one_epoch(model, train_loader, optimizer,
                                         criterion, device, epoch, config,
-                                        shared_data, encoder_output, scaler,
-                                        non_blocking, amp_device)
+                                        shared_data, encoder_output, scaler)
         val_metrics = validate(model, val_loader, criterion, device, epoch,
-                               shared_data, encoder_output, use_amp,
-                               non_blocking, amp_device)
+                               shared_data, encoder_output, use_amp)
 
         for k, v in train_metrics.items():
             writer.add_scalar(f"train/{k}", v, epoch)

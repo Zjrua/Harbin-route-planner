@@ -8,35 +8,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **当前状态：10K POI规模训练完成，消融实验已完成，论文图表已更新。** 已完成POI规模扩展（180→10,000）、共享数据加载重构（节省25GB+显存）、AMP混合精度训练、7组消融实验、论文图表生成。
 
-## 分支策略（多平台训练）
-
-| 分支 | 设备 | 用途 |
-|------|------|------|
-| `main` | RTX 4090 (Windows, CUDA) | 主训练分支，AMP混合精度 |
-| `mps-training` | Mac (Apple Silicon, MPS) | MPS适配训练，无AMP |
-
-### 跨设备继续训练流程
-
-Checkpoint 是设备无关的（纯 tensor 权重），可跨平台直接加载：
-
-1. Mac 训练完后，将 `checkpoints/best_model.pt` push 到远程或直接传输
-2. 4090 上 `git merge mps-training` 合并代码变更，或切到 `mps-training` 分支
-3. `uv run python -m src.train --config configs/default.yaml --resume checkpoints/best_model.pt` 继续训练
-4. 4090 上自动使用 CUDA + AMP，无需手动切换
-
-### 训练命令
-
-```bash
-# Mac (MPS，自动检测)
-uv run python -m src.train --config configs/default.yaml
-
-# 4090 (CUDA，自动检测，或手动指定)
-uv run python -m src.train --config configs/default.yaml --device cuda
-uv run python -m src.train --config configs/default.yaml --resume checkpoints/best_model.pt
-```
-
-> **注意：** MPS 不支持 fp16 autocast，Mac 训练时 AMP 自动关闭，速度约为 CUDA 的 1/2~1/4。
-
 ## Commands
 
 ```bash
@@ -191,7 +162,7 @@ HarbinRouteDataset → get_shared_data() (shared tensors on GPU)
 ### 训练策略 (src/train.py)
 
 - **10K POI优化：** 编码器预计算一次，输出在所有batch共享；距离矩阵2D索引避免batch展开
-- **AMP混合精度训练**（CUDA: `torch.amp.autocast("cuda")` + GradScaler；MPS: 自动关闭AMP）
+- **AMP混合精度训练**（`torch.amp.autocast("cuda")` + GradScaler）
 - Teacher Forcing + Scheduled Sampling（ratio从0.5线性衰减）
 - Early Stopping（patience=15, 监控val_loss）
 - TensorBoard记录loss和指标

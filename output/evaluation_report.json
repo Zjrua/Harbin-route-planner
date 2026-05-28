@@ -1,0 +1,28 @@
+{
+  "data_summary": {
+    "n_pois": 135,
+    "category_dist": {
+      "景点": 101,
+      "住宿": 30,
+      "交通": 4
+    },
+    "n_routes": 165,
+    "avg_route_length": 5.715151515151515,
+    "avg_rating": 4.745185185185185
+  },
+  "evaluation_metrics": {
+    "distance": 54.3104,
+    "time": 125.6714,
+    "satisfaction": 4.7914,
+    "diversity": 0.2873,
+    "max_distance": 704.1199,
+    "max_time": 805.2,
+    "composite": 0.7849
+  },
+  "weights": {
+    "distance": 0.3,
+    "time": 0.25,
+    "satisfaction": 0.25,
+    "diversity": 0.2
+  }
+}

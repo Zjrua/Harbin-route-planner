@@ -32,15 +32,20 @@ class RouteLoss(nn.Module):
 
     def distance_loss(self, pred_route: torch.Tensor,
                       distances: torch.Tensor) -> torch.Tensor:
-        """路线总距离惩罚：沿路线累加相邻 POI 距离，归一化到 [0, 1]."""
+        """路线总距离惩罚：沿路线累加相邻 POI 距离，归一化到 [0, 1].
+
+        distances can be [n_pois, n_pois] (shared) or [batch, n_pois, n_pois].
+        """
         batch_size, route_len = pred_route.shape
         n_pois = distances.size(-1)
         total_dist = torch.zeros(batch_size, device=pred_route.device)
         for t in range(route_len - 1):
             src = pred_route[:, t].clamp(0, n_pois - 1)
             dst = pred_route[:, t + 1].clamp(0, n_pois - 1)
-            total_dist = total_dist + distances[torch.arange(batch_size, device=pred_route.device), src, dst]
-        # 归一化：除以最大距离 * 路线长度，避免远郊景点导致 loss 爆炸
+            if distances.dim() == 2:
+                total_dist = total_dist + distances[src, dst]
+            else:
+                total_dist = total_dist + distances[torch.arange(batch_size, device=pred_route.device), src, dst]
         max_dist = distances.max() + 1e-8
         return (total_dist / (max_dist * route_len)).mean()
 

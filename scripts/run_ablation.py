@@ -32,6 +32,16 @@ def train_quick(config, name, device):
 
     train_loader, val_loader, _ = create_dataloaders("data/processed", config)
 
+    shared = train_loader.dataset.get_shared_data(device)
+
+    # Run encoder once
+    model.eval()
+    with torch.no_grad():
+        encoder_output = model.encode(
+            shared["poi_features"].unsqueeze(0),
+            shared["adjacency"].unsqueeze(0),
+        )
+
     criterion = RouteLoss(
         ce_weight=config["loss"]["ce_weight"],
         distance_weight=config["loss"]["distance_weight"],
@@ -57,12 +67,13 @@ def train_quick(config, name, device):
 
     for epoch in range(total_epochs):
         model.train()
+        model.encoder.eval()  # encoder output is shared, no dropout
         tf_ratio = base_tf * max(0.0, 1.0 - epoch / total_epochs)
         train_loss = 0.0
         n_batches = 0
 
         for batch in train_loader:
-            batch_device = _build_batch(batch, device)
+            batch_device = _build_batch(batch, device, shared, encoder_output)
             optimizer.zero_grad()
             output = model(batch_device)
             logits, target, distances = _align_logits(output, batch_device)
@@ -76,13 +87,12 @@ def train_quick(config, name, device):
 
         train_loss /= max(n_batches, 1)
 
-        # Validate
         model.eval()
         val_loss = 0.0
         n_val = 0
         with torch.no_grad():
             for batch in val_loader:
-                batch_device = _build_batch(batch, device)
+                batch_device = _build_batch(batch, device, shared, encoder_output)
                 output = model(batch_device)
                 logits, target, distances = _align_logits(output, batch_device)
                 loss = criterion(logits, target, distances, output.get("embeddings"))
@@ -113,16 +123,18 @@ def train_quick(config, name, device):
     return {"name": name, "epochs": best_epoch, "best_val_loss": float(best_val_loss), "params": n_params}, model
 
 
-def _build_batch(batch, device):
-    if len(batch) == 7:
-        poi_feat, adj, route_seq, dist, scores, route_act, poi_act = batch
-        return {"poi_features": poi_feat.to(device), "adjacency": adj.to(device),
-                "route_sequence": route_seq.to(device), "distances": dist.to(device),
-                "scores": scores.to(device), "activity_types": route_act.to(device)}
-    poi_feat, adj, route_seq, dist, scores = batch
-    return {"poi_features": poi_feat.to(device), "adjacency": adj.to(device),
-            "route_sequence": route_seq.to(device), "distances": dist.to(device),
-            "scores": scores.to(device)}
+def _build_batch(batch, device, shared, encoder_output):
+    """Build batch dict with pre-computed encoder output."""
+    route_seq, scores, route_activity = batch
+    return {
+        "poi_features": shared["poi_features"].unsqueeze(0),
+        "adjacency": shared["adjacency"].unsqueeze(0),
+        "route_sequence": route_seq.to(device),
+        "distances": shared["distances"],
+        "scores": scores.to(device),
+        "activity_types": route_activity.to(device),
+        "_encoder_output": encoder_output,
+    }
 
 
 def _align_logits(output, batch_device):
@@ -162,7 +174,10 @@ def evaluate_route(model, device, config):
     with torch.no_grad():
         encoder_output = model.encode(poi_feat_dev, adj_dev)
 
-    starts = [2, 0, 35]
+    # Pick diverse scenic starts (top-rated + spread across indices)
+    scenic_idx = pois[pois["category"] == "景点"].sort_values("rating", ascending=False).index.tolist()
+    starts = scenic_idx[:5] if len(scenic_idx) >= 5 else scenic_idx[:3]
+
     all_metrics = {"distance": [], "time": [], "satisfaction": [], "diversity": []}
 
     for start_id in starts:
