@@ -5,6 +5,7 @@
 - 早停策略
 - Checkpoint 保存与加载
 - 终端 tqdm 实时输出 + TensorBoard 日志记录
+- 编码器一次运行 + 共享矩阵（适配大规模POI）
 """
 
 import argparse
@@ -23,13 +24,11 @@ from src.optim.muon import MuonOptimizer
 
 
 def load_config(config_path: str) -> dict:
-    """加载 YAML 配置文件."""
     with open(config_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
 def set_seed(seed: int) -> None:
-    """设置全局随机种子."""
     import random
     import numpy as np
     random.seed(seed)
@@ -41,7 +40,6 @@ def set_seed(seed: int) -> None:
 
 
 def build_optimizer(model: RouteTransformer, config: dict) -> torch.optim.Optimizer:
-    """根据配置构建优化器，对注意力层和 FFN 层分组设置学习率."""
     opt_cfg = config["optimizer"]
     name = opt_cfg["name"]
 
@@ -87,64 +85,79 @@ def build_optimizer(model: RouteTransformer, config: dict) -> torch.optim.Optimi
 
 def train_one_epoch(model: RouteTransformer, dataloader, optimizer,
                     criterion: RouteLoss, device: torch.device,
-                    epoch: int, config: dict) -> dict:
-    """训练一个 epoch，含 Teacher Forcing + Scheduled Sampling."""
+                    epoch: int, config: dict,
+                    shared_data: dict,
+                    encoder_output: torch.Tensor,
+                    scaler: torch.amp.GradScaler = None,
+                    non_blocking: bool = True,
+                    amp_device: str = "cuda") -> dict:
+    """训练一个 epoch.
+
+    编码器已预先运行一次，encoder_output 在所有 batch 间共享。
+    每个 batch 只运行解码器（前向+反向），大幅节省显存。
+    支持 AMP 混合精度训练。
+    """
     model.train()
+    # Keep encoder in eval to avoid dropout on shared encoder output
+    model.encoder.eval()
+
     total_loss = 0.0
     n_batches = 0
     grad_clip = config["optimizer"].get("grad_clip", 1.0)
 
-    # Scheduled Sampling：随训练进行线性衰减 teacher forcing ratio
     base_ratio = config["training"]["teacher_forcing_ratio"]
     total_epochs = config["training"]["epochs"]
     tf_ratio = base_ratio * max(0.0, 1.0 - epoch / total_epochs)
 
+    use_prob = config.get("data", {}).get("use_probabilistic_edges", False)
+    dataset = dataloader.dataset
+    use_amp = scaler is not None
+
     pbar = tqdm(dataloader, desc=f"Epoch {epoch+1} [Train]", leave=False,
                 ncols=120, unit="batch")
     for batch in pbar:
-        # 支持5元素（旧格式）和7元素（新格式，含活动类型）的batch
-        if len(batch) == 7:
-            poi_feat, adj, route_seq, dist, scores, route_activity, poi_activity = batch
-            batch_device = {
-                "poi_features": poi_feat.to(device),
-                "adjacency": adj.to(device),
-                "route_sequence": route_seq.to(device),
-                "distances": dist.to(device),
-                "scores": scores.to(device),
-                "activity_types": route_activity.to(device),
-            }
+        route_seq, scores, route_activity = batch
+
+        if use_prob:
+            distances = dataset.sample_noisy_distances(device)
         else:
-            poi_feat, adj, route_seq, dist, scores = batch
-            batch_device = {
-                "poi_features": poi_feat.to(device),
-                "adjacency": adj.to(device),
-                "route_sequence": route_seq.to(device),
-                "distances": dist.to(device),
-                "scores": scores.to(device),
-            }
+            distances = shared_data["distances"]
+
+        batch_device = {
+            "poi_features": shared_data["poi_features"].unsqueeze(0),
+            "adjacency": shared_data["adjacency"].unsqueeze(0),
+            "route_sequence": route_seq.to(device, non_blocking=non_blocking),
+            "distances": distances,
+            "scores": scores.to(device, non_blocking=non_blocking),
+            "activity_types": route_activity.to(device, non_blocking=non_blocking),
+            "_encoder_output": encoder_output,
+        }
 
         optimizer.zero_grad()
-        output = model(batch_device)
 
-        logits = output["logits"]
-        target = batch_device["route_sequence"][:, 1:]
-        min_len = min(logits.size(1), target.size(1))
-        logits = logits[:, :min_len]
-        target = target[:, :min_len]
+        with torch.amp.autocast(amp_device, enabled=use_amp):
+            output = model(batch_device)
 
-        distances = batch_device["distances"]
-        if distances.dim() == 2:
-            distances = distances.unsqueeze(0).expand(logits.size(0), -1, -1)
-        elif distances.dim() == 3 and distances.size(0) == 1:
-            distances = distances.expand(logits.size(0), -1, -1)
+            logits = output["logits"]
+            target = batch_device["route_sequence"][:, 1:]
+            min_len = min(logits.size(1), target.size(1))
+            logits = logits[:, :min_len]
+            target = target[:, :min_len]
 
-        loss = criterion(logits, target, distances, output.get("embeddings"))
-        loss.backward()
+            loss = criterion(logits, target, batch_device["distances"], output.get("embeddings"))
 
-        if grad_clip > 0:
-            torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
-
-        optimizer.step()
+        if use_amp:
+            scaler.scale(loss).backward()
+            if grad_clip > 0:
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+            scaler.step(optimizer)
+            scaler.update()
+        else:
+            loss.backward()
+            if grad_clip > 0:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+            optimizer.step()
 
         total_loss += loss.item()
         n_batches += 1
@@ -156,7 +169,12 @@ def train_one_epoch(model: RouteTransformer, dataloader, optimizer,
 
 @torch.no_grad()
 def validate(model: RouteTransformer, dataloader, criterion: RouteLoss,
-             device: torch.device, epoch: int = 0) -> dict:
+             device: torch.device, epoch: int = 0,
+             shared_data: dict = None,
+             encoder_output: torch.Tensor = None,
+             use_amp: bool = False,
+             non_blocking: bool = True,
+             amp_device: str = "cuda") -> dict:
     """验证集评估."""
     model.eval()
     total_loss = 0.0
@@ -165,41 +183,28 @@ def validate(model: RouteTransformer, dataloader, criterion: RouteLoss,
     pbar = tqdm(dataloader, desc=f"Epoch {epoch+1} [Val]  ", leave=False,
                 ncols=120, unit="batch")
     for batch in pbar:
-        # 支持5元素（旧格式）和7元素（新格式，含活动类型）的batch
-        if len(batch) == 7:
-            poi_feat, adj, route_seq, dist, scores, route_activity, poi_activity = batch
-            batch_device = {
-                "poi_features": poi_feat.to(device),
-                "adjacency": adj.to(device),
-                "route_sequence": route_seq.to(device),
-                "distances": dist.to(device),
-                "scores": scores.to(device),
-                "activity_types": route_activity.to(device),
-            }
-        else:
-            poi_feat, adj, route_seq, dist, scores = batch
-            batch_device = {
-                "poi_features": poi_feat.to(device),
-                "adjacency": adj.to(device),
-                "route_sequence": route_seq.to(device),
-                "distances": dist.to(device),
-                "scores": scores.to(device),
-            }
-        output = model(batch_device)
+        route_seq, scores, route_activity = batch
 
-        logits = output["logits"]
-        target = batch_device["route_sequence"][:, 1:]
-        min_len = min(logits.size(1), target.size(1))
-        logits = logits[:, :min_len]
-        target = target[:, :min_len]
+        batch_device = {
+            "poi_features": shared_data["poi_features"].unsqueeze(0),
+            "adjacency": shared_data["adjacency"].unsqueeze(0),
+            "route_sequence": route_seq.to(device, non_blocking=non_blocking),
+            "distances": shared_data["distances"],
+            "scores": scores.to(device, non_blocking=non_blocking),
+            "activity_types": route_activity.to(device, non_blocking=non_blocking),
+            "_encoder_output": encoder_output,
+        }
 
-        distances = batch_device["distances"]
-        if distances.dim() == 2:
-            distances = distances.unsqueeze(0).expand(logits.size(0), -1, -1)
-        elif distances.dim() == 3 and distances.size(0) == 1:
-            distances = distances.expand(logits.size(0), -1, -1)
+        with torch.amp.autocast(amp_device, enabled=use_amp):
+            output = model(batch_device)
 
-        loss = criterion(logits, target, distances, output.get("embeddings"))
+            logits = output["logits"]
+            target = batch_device["route_sequence"][:, 1:]
+            min_len = min(logits.size(1), target.size(1))
+            logits = logits[:, :min_len]
+            target = target[:, :min_len]
+
+            loss = criterion(logits, target, batch_device["distances"], output.get("embeddings"))
         total_loss += loss.item()
         n_batches += 1
 
@@ -210,24 +215,34 @@ def validate(model: RouteTransformer, dataloader, criterion: RouteLoss,
 
 def main():
     parser = argparse.ArgumentParser(description="训练哈尔滨文旅路线模型")
-    parser.add_argument("--config", type=str, default="configs/default.yaml",
-                        help="配置文件路径")
-    parser.add_argument("--resume", type=str, default=None,
-                        help="从 checkpoint 恢复训练")
-    parser.add_argument("--device", type=str, default=None,
-                        help="计算设备 (cuda/cpu)")
+    parser.add_argument("--config", type=str, default="configs/default.yaml")
+    parser.add_argument("--resume", type=str, default=None)
+    parser.add_argument("--device", type=str, default=None)
     args = parser.parse_args()
 
     config = load_config(args.config)
-    device = torch.device(args.device or ("cuda" if torch.cuda.is_available() else "cpu"))
+    if args.device:
+        device = torch.device(args.device)
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
     set_seed(config["training"]["seed"])
 
     total_epochs = config["training"]["epochs"]
     patience_limit = config["training"]["patience"]
 
+    # MPS 不支持 fp16 autocast，仅在 CUDA 上启用 AMP
+    use_amp = device.type == "cuda"
+    amp_device = device.type if use_amp else "cuda"
+    scaler = torch.amp.GradScaler(amp_device, enabled=use_amp) if use_amp else None
+    non_blocking = device.type == "cuda"
+
     print("=" * 60)
     print("  哈尔滨文旅线路优化模型 — 训练")
-    print(f"  Device: {device}")
+    print(f"  Device: {device}  |  AMP: {use_amp}")
     print(f"  Epochs: {total_epochs}  |  Patience: {patience_limit}")
     print(f"  Optimizer: {config['optimizer']['name']}")
     print("=" * 60)
@@ -235,6 +250,13 @@ def main():
     # 数据加载
     train_loader, val_loader, test_loader = create_dataloaders("data/processed", config)
     print(f"  数据: train={len(train_loader.dataset)} val={len(val_loader.dataset)} test={len(test_loader.dataset)}")
+
+    # 加载共享数据到GPU
+    print("  加载共享矩阵到GPU...")
+    shared_data = train_loader.dataset.get_shared_data(device)
+    for k, v in shared_data.items():
+        if isinstance(v, torch.Tensor):
+            print(f"    {k}: {v.shape}")
 
     # 模型初始化
     model = RouteTransformer(config).to(device)
@@ -248,6 +270,16 @@ def main():
     )
     optimizer = build_optimizer(model, config)
 
+    # 运行编码器一次（POI特征和邻接矩阵不变，encoder_output可共享）
+    print("  运行编码器...")
+    model.eval()
+    with torch.no_grad(), torch.amp.autocast(amp_device, enabled=use_amp):
+        encoder_output = model.encode(
+            shared_data["poi_features"].unsqueeze(0),
+            shared_data["adjacency"].unsqueeze(0),
+        )
+    print(f"  编码器输出: {encoder_output.shape}")
+
     # 恢复训练
     start_epoch = 0
     best_val_loss = float("inf")
@@ -257,6 +289,13 @@ def main():
         optimizer.load_state_dict(ckpt["optimizer_state_dict"])
         start_epoch = ckpt.get("epoch", 0) + 1
         best_val_loss = ckpt.get("best_val_loss", float("inf"))
+        # Recompute encoder output with loaded weights
+        model.eval()
+        with torch.no_grad(), torch.amp.autocast(amp_device, enabled=use_amp):
+            encoder_output = model.encode(
+                shared_data["poi_features"].unsqueeze(0),
+                shared_data["adjacency"].unsqueeze(0),
+            )
         print(f"  从 epoch {start_epoch} 恢复训练")
 
     # 日志
@@ -274,10 +313,13 @@ def main():
 
     for epoch in range(start_epoch, total_epochs):
         train_metrics = train_one_epoch(model, train_loader, optimizer,
-                                        criterion, device, epoch, config)
-        val_metrics = validate(model, val_loader, criterion, device, epoch)
+                                        criterion, device, epoch, config,
+                                        shared_data, encoder_output, scaler,
+                                        non_blocking, amp_device)
+        val_metrics = validate(model, val_loader, criterion, device, epoch,
+                               shared_data, encoder_output, use_amp,
+                               non_blocking, amp_device)
 
-        # TensorBoard 记录
         for k, v in train_metrics.items():
             writer.add_scalar(f"train/{k}", v, epoch)
         for k, v in val_metrics.items():
@@ -286,7 +328,6 @@ def main():
         train_loss = train_metrics["loss"]
         val_loss = val_metrics["val_loss"]
 
-        # Checkpoint 保存 & 早停
         improved = val_loss < best_val_loss
         if improved:
             best_val_loss = val_loss
@@ -300,7 +341,6 @@ def main():
         else:
             patience_counter += 1
 
-        # 终端日志
         marker = " *" if improved else ""
         print(f"[Epoch {epoch+1:>3d}/{total_epochs}]  "
               f"train_loss={train_loss:.4f}  "
