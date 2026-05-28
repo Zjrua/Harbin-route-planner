@@ -6,7 +6,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 2026年全国大学生统计建模大赛参赛作品。基于Transformer架构构建哈尔滨文旅线路优化模型，核心创新点为融合DeepSeek论文中的三项技术：Engram内容寻址记忆、MHC双曲流形约束（庞加莱球模型）、Muon矩阵正交化优化器。
 
-**当前状态：模型训练完成，推理功能可用。** 已完成真实数据处理、模型训练、路线生成优化、多日游支持。
+**当前状态：10K POI规模训练完成，消融实验已完成，论文图表已更新。** 已完成POI规模扩展（180→10,000）、共享数据加载重构（节省25GB+显存）、AMP混合精度训练、7组消融实验、论文图表生成。
+
+## 分支策略（多平台训练）
+
+| 分支 | 设备 | 用途 |
+|------|------|------|
+| `main` | RTX 4090 (Windows, CUDA) | 主训练分支，AMP混合精度 |
+| `mps-training` | Mac (Apple Silicon, MPS) | MPS适配训练，无AMP |
+
+### 跨设备继续训练流程
+
+Checkpoint 是设备无关的（纯 tensor 权重），可跨平台直接加载：
+
+1. Mac 训练完后，将 `checkpoints/best_model.pt` push 到远程或直接传输
+2. 4090 上 `git merge mps-training` 合并代码变更，或切到 `mps-training` 分支
+3. `uv run python -m src.train --config configs/default.yaml --resume checkpoints/best_model.pt` 继续训练
+4. 4090 上自动使用 CUDA + AMP，无需手动切换
+
+### 训练命令
+
+```bash
+# Mac (MPS，自动检测)
+uv run python -m src.train --config configs/default.yaml
+
+# 4090 (CUDA，自动检测，或手动指定)
+uv run python -m src.train --config configs/default.yaml --device cuda
+uv run python -m src.train --config configs/default.yaml --resume checkpoints/best_model.pt
+```
+
+> **注意：** MPS 不支持 fp16 autocast，Mac 训练时 AMP 自动关闭，速度约为 CUDA 的 1/2~1/4。
 
 ## Commands
 
@@ -15,9 +44,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 uv sync
 uv pip install torch --index-url https://download.pytorch.org/whl/cu128
 
-# 数据准备（XHS热度 + POI增强）
+# 数据准备
+uv run python scripts/prepare_10k_data.py  # 10K POI筛选 + 合成路线生成
 uv run python scripts/process_xhs_data.py    # 提取XHS餐饮住宿热度
-uv run python scripts/prepare_real_data.py   # POI增强 + 路线增强
+uv run python scripts/prepare_real_data.py   # POI增强 + 路线增强（180-POI旧管线）
 
 # 训练
 uv run python -m src.train --config configs/default.yaml
@@ -26,6 +56,9 @@ uv run python -m src.train --config configs/default.yaml --resume checkpoints/be
 # 推理生成路线
 uv run python -m src.inference --checkpoint checkpoints/best_model.pt --start "中央大街" --season winter --max_stops 10 --n_routes 3
 uv run python -m src.inference --checkpoint checkpoints/best_model.pt --start "中央大街" --season winter --max_stops 14 --days 2
+
+# 消融实验
+uv run python scripts/run_ablation.py
 
 # 评估
 uv run python -m src.evaluate --checkpoint checkpoints/best_model.pt
@@ -51,50 +84,72 @@ cd paper && xelatex main.tex && xelatex main.tex
 
 ```
 原始数据（data/raw/）：
+  - merged_pois.csv             # 48,961个POI（景点28K/餐饮10.7K/住宿7.4K/购物2.3K/交通538）
   - 哈尔滨POI_核心节点.csv      # 135个核心POI
   - 哈尔滨旅游路线数据.csv      # 403条小红书路线
   - 距离矩阵_公里.csv           # 135x135真实路网距离
   - 耗时矩阵_分钟.csv           # 135x135真实路网耗时
-  - merged_pois.csv             # 合并后的POI数据（补充餐饮/购物）
   - search_*.jsonl              # 11,959条小红书笔记（餐饮/住宿热度）
 
-  ↓ scripts/process_xhs_data.py + scripts/prepare_real_data.py
+  ↓ scripts/prepare_10k_data.py（10K POI管线）
 
 处理后的数据（data/processed/）：
-  ├── poi_metadata.csv          # 180个POI（含XHS热度、活动类型）
-  ├── poi_features.npy          # [180, 128] 特征矩阵
-  ├── adjacency.npy             # [180, 180] 邻接矩阵
-  ├── distance_matrix.npy       # [180, 180] 距离矩阵（km）
-  ├── distance_std.npy          # [180, 180] 距离标准差
-  ├── time_matrix.npy           # [180, 180] 时间矩阵（min）
-  ├── time_std.npy              # [180, 180] 时间标准差
-  ├── poi_activity_types.npy    # [180] 活动类型标签
-  ├── cluster_id.npy            # [180] 景点步行聚类ID
-  ├── clusters.npy              # 15个景点团
-  └── routes.npy                # 165条增强路线（含餐饮/住宿）
+  ├── poi_metadata.csv          # 10,000个POI（含XHS热度、活动类型）
+  ├── poi_features.npy          # [10000, 128] 特征矩阵
+  ├── adjacency.npy             # [10000, 10000] 邻接矩阵
+  ├── distance_matrix.npy       # [10000, 10000] Haversine距离矩阵（km）
+  ├── distance_std.npy          # [10000, 10000] 距离标准差
+  ├── poi_activity_types.npy    # [10000] 活动类型标签
+  ├── cluster_id.npy            # [10000] 景点步行聚类ID
+  ├── clusters.npy              # 步行景点聚类
+  └── routes.npy                # 5,168条路线（168 XHS + 5000合成）
 
   ↓ src/data/dataset.py
-HarbinRouteDataset → DataLoader (train/val/test)
+HarbinRouteDataset → get_shared_data() (shared tensors on GPU)
+  └─ __getitem__ 只返回 (route, score, route_activity) 三个per-sample数据
 ```
 
-**数据增强：** 原始小红书路线全是景点（94.5%）。`augment_routes_with_dining_and_hotel()` 每2景插入餐饮（用XHS热度加权选择）、末尾加住宿、去掉中间住宿。增强后：景点63.6%、餐饮23.5%、住宿10.4%。
+### 10K POI 数据准备 (`scripts/prepare_10k_data.py`)
 
-**POI分类自动修正：** `prepare_real_data.py` 自动检测名称含"酒店/民宿/餐厅"等关键字的POI并修正分类（约40个）。
+1. **POI筛选**：从merged_pois.csv(49K)经`clean_poi_data(max_pois=10000)`筛选
+   - 基于quality_score（评分+评论数+类别）选择top 10K
+   - 类别分布：景点4091, 住宿2000, 餐饮1923, 购物1500, 交通486
+
+2. **矩阵计算**：Haversine球面距离 + 速度因子估算时间，邻接矩阵<30km连通
+
+3. **合成路线生成**（~5000条）：
+   - 类别感知近邻随机游走（80%景点/15%购物/5%餐饮）
+   - 距离^-2 × 评分加权选择下一个POI
+   - 餐饮/住宿增强插入（每2-3景插入餐饮，末尾加住宿）
+
+4. **步行聚类**：Union-Find on scenic POIs within 1km → 90 clusters
+
+### 共享数据加载（GPU显存优化）
+
+面向10K POI的关键重构。原方案DataLoader每样本返回完整[n_pois, n_pois]矩阵，10K POI时每样本800MB × batch=32 → 25.6GB不可行。
+
+优化后：
+- `get_shared_data(device)` 一次性加载共享矩阵到GPU（~1.4GB）
+- `__getitem__` 只返回per-sample数据（route, score, route_activity_types）
+- 编码器运行一次，encoder_output在所有batch间共享（省~12.8GB/batch）
+- 距离矩阵用2D索引（`distances[src, dst]`），避免expand到batch维度
+- 训练峰值显存：~3.27 GB（RTX 4090 24GB充裕）
 
 ### 模型架构 (src/models/)
 
 `RouteTransformer` (transformer.py) 是顶层模型。精简配置：d_model=128, n_heads=8, 3层encoder/decoder, d_ff=384, dropout=0.2。
 
-**参数量：1,417,756（精简27%）**
+**参数量：4,569,976（10K词表输出层占用~1.28M）**
 
 | 模块 | 参数 | 占比 | 功能 |
 |------|------|------|------|
-| EngramDecoder | ~960K | 68% | 自回归解码 + Cross-Attn + Engram |
-| GraphAwareEncoder | ~300K | 21% | 邻接矩阵 + 活动类型偏置注入SA |
-| EngramMemory | 67K | 5% | 余弦相似度top-k检索 |
-| POIEmbedding | 25K | 2% | POI + 活动类型 + 位置编码 |
-| MHC (Poincare) | 12K | 0.8% | 双曲空间嵌入正则化 |
-| Output | 23K | 2% | 128→180投影 |
+| EngramDecoder | ~960K | 21% | 自回归解码 + Cross-Attn + Engram |
+| GraphAwareEncoder | ~300K | 7% | 邻接矩阵 + 活动类型偏置注入SA |
+| Output | ~1,280K | 28% | 128→10000投影（最大单模块） |
+| POIEmbedding | ~1,350K | 30% | 10K POI嵌入表 + 活动类型 + 位置编码 |
+| EngramMemory | 67K | 1.5% | 余弦相似度top-k检索 |
+| MHC (Poincare) | 12K | 0.3% | 双曲空间嵌入正则化 |
+| 其他 | ~600K | 13% | FFN, LayerNorm等 |
 
 1. **POIEmbedding** (embeddings.py) — POI ID + 类别 + 活动类型(6种) + 评分嵌入 + 正弦位置编码
 2. **PoincareEmbedding** (mhc.py) — 庞加莱球模型双曲嵌入，提供几何正则化
@@ -127,7 +182,7 @@ HarbinRouteDataset → DataLoader (train/val/test)
 
 ### POI步行聚类
 
-基于连通图的聚类（≤1km步行距离），15个团/49景入团，52景独立。路线生成时访问某团后屏蔽全团，避免走回头路。
+基于连通图的聚类（≤1km步行距离），90个团（10K POI下距离更稀疏）。路线生成时访问某团后屏蔽全团，避免走回头路。
 
 ### 优化器 (src/optim/)
 
@@ -135,11 +190,13 @@ HarbinRouteDataset → DataLoader (train/val/test)
 
 ### 训练策略 (src/train.py)
 
+- **10K POI优化：** 编码器预计算一次，输出在所有batch共享；距离矩阵2D索引避免batch展开
+- **AMP混合精度训练**（CUDA: `torch.amp.autocast("cuda")` + GradScaler；MPS: 自动关闭AMP）
 - Teacher Forcing + Scheduled Sampling（ratio从0.5线性衰减）
-- Early Stopping（patience=10, 监控val_loss）
+- Early Stopping（patience=15, 监控val_loss）
 - TensorBoard记录loss和指标
 - 最佳模型保存至 `checkpoints/best_model.pt`
-- batch_size=32, epochs=200, 数据划分 0.8/0.1/0.1
+- batch_size=256, epochs=200, 数据划分 0.8/0.1/0.1, num_workers=4, pin_memory=True
 
 ### 推理与路线优化 (src/inference.py)
 
@@ -169,6 +226,13 @@ HarbinRouteDataset → DataLoader (train/val/test)
 - 热度用于路线增强时选择更受欢迎的餐饮/住宿（综合分 = -距离 + 热度）
 - 输出：`poi_xhs_popularity.npy` 和更新 `poi_metadata.csv`
 
+### 强化学习微调计划
+
+已完成监督预训练（CE loss），下一步RL微调提升路线质量：
+- **算法：** Self-Critical Seq2Seq 或 DPO
+- **奖励函数：** composite_score（距离+时间+满意度+多样性）
+- **动机：** 绕过合成数据质量限制，直接优化最终目标
+
 ## Key Conventions
 
 - 所有配置通过YAML加载，argparse仅传config路径和device/resume
@@ -176,7 +240,7 @@ HarbinRouteDataset → DataLoader (train/val/test)
 - 距离矩阵使用Haversine公式（非欧氏距离）
 - 季节分为冬季(11-2月冰雪季)和夏季(6-8月)
 - MHC曲率为负值（默认-1.0），内部 `c = abs(curvature)` 使用
-- 坐标系：哈尔滨中心点 (45.80, 126.53)，max_pois=180
+- 坐标系：哈尔滨中心点 (45.80, 126.53)，max_pois=10000
 - 推理使用约束Beam Search（beam_size=5）
 - 活动类型约束：禁止连续餐饮/住宿/交通等不合理序列
 - Linter: ruff, line-length=100, target Python 3.10+
@@ -186,47 +250,66 @@ HarbinRouteDataset → DataLoader (train/val/test)
 ## 论文排版（paper/main.tex）
 
 - 编译器：xelatex（ctexart 中文支持）
-- 行距：全局 `\setstretch{1.66}`（正文），表格内容用 `tighttable` 环境（`\setstretch{1.0}`）
-- 其他部分（摘要/参考文献/附录/致谢）用 `\setstretch{1.0}` + `\fontsize{...}{24pt}` 显式指定24磅
+- 行距：正文全局 `\setstretch{1.66}`；附录/致谢用 `\setstretch{1.0}` + `\fontsize{12pt}{24pt}` 实现24磅行距
+- 表格内容用 `tighttable` 环境（`\setstretch{1.0}`）
 - 西文字体：Times New Roman（`\setmainfont` + `\setsansfont`）
 - 中文字体：宋体正文、黑体标题、楷书二级标题、方正小标宋论文题目
 - 封面页已删除，摘要从第1页开始，摘要标题居中
-- 图表编号：3图7表（图1模型架构TikZ、图2训练曲线、图3消融对比）
+- 参考文献引用格式：上标 `$^{\cite{...}}$`（如 [1] 显示为上标）
+- 表格与插图清单：保留清单页但不加入目录（无 `\addcontentsline`）
+- 清单中编号和标题须与实际 `\caption` 一致
 - 参考文献标题通过 `\renewcommand{\refname}` 控制格式，避免与 `thebibliography` 重复
 - 临时文件通过 `paper/.gitignore` 忽略（.aux/.log/.toc等）
 
-## 当前训练结果
+## 当前训练结果（10K POI规模）
 
-- **数据规模：** 180个POI（景点60/住宿64/餐饮37/购物15/交通4），535条路线（165原始+370合成）
-- **最佳模型：** Engram K=3（消融最优），57 epochs，val_loss=2.5338，综合得分0.8802
-- **模型参数量：** 1,417,756（精简配置：3层编解码器, d_ff=384）
-- **15个步行景点团（≤1km），49景入团**
+- **数据规模：** 10,000个POI（景点4091/住宿2000/餐饮1923/购物1500/交通486），5,168条路线（168 XHS + 5000合成）
+- **训练划分：** train=4134 / val=517 / test=517（0.8/0.1/0.1）
+- **最佳模型：** epoch 106，val_loss=4.9041（早停于epoch 121）
+- **模型参数量：** 4,569,976
+- **训练配置：** batch_size=256, AMP混合精度, patience=15, AdamW
+- **训练耗时：** 121 epochs，每epoch ~40秒
+- **GPU显存峰值：** ~3.27 GB（RTX 4090 24GB，大量余量）
+- **loss曲线：** train 9.06→2.79, val 8.76→4.90
+- **90个步行景点团（≤1km）**
 
-### 消融实验结果（535路线/7组，真实数据）
+### Loss详细记录
 
-| 实验 | 距离(km) | 满意度 | 多样性 | 综合得分 | Δ |
-|------|----------|--------|--------|----------|-----|
-| **K=3（最优）** | 27.3 | 4.85 | 0.50 | **0.8802** | +0.0055 |
-| 移除MHC | 27.2 | 4.84 | 0.48 | 0.8753 | +0.0006 |
-| 完整模型(K=5) | 32.3 | 4.81 | 0.49 | 0.8747 | — |
-| 移除Engram | 35.6 | 4.85 | 0.48 | 0.8735 | -0.0012 |
-| 移除Engram+MHC | 34.5 | 4.84 | 0.48 | 0.8735 | -0.0012 |
-| K=10 | 38.2 | 4.83 | 0.49 | 0.8714 | -0.0033 |
-| 纯Transformer基线 | 63.0 | 4.84 | 0.49 | 0.8676 | -0.0071 |
+| 阶段 | epoch | train_loss | val_loss |
+|------|-------|-----------|----------|
+| 初始 | 1 | 9.0631 | 8.7592 |
+| 快速下降 | 10 | 7.5619 | 7.6832 |
+| 稳步下降 | 20 | 6.4710 | 6.7723 |
+| 中期 | 40 | 4.9528 | 5.6041 |
+| 放缓 | 60 | 3.9077 | 5.2011 |
+| 接近收敛 | 80 | 3.5609 | 5.0148 |
+| 最佳 | 106 | 3.0382 | 4.9041 |
+| 早停 | 121 | 2.7903 | 4.9474 |
 
-**结论：** K=3最优，完整模型>基线+0.0071，核心差异在路线距离而非满意度/多样性。
+> 完整loss数据保存于 `output/training_loss.csv`（121条记录）
+
+### 消融实验结果（已完成）
+
+7组实验配置（180 POI规模，AdamW优化器）：
+1. K=3 Engram（预期最优）
+2. 完整模型 K=5
+3. K=10
+4. 移除Engram（-Engram）
+5. 移除MHC（-MHC）
+6. 移除Engram+MHC（-Engram-MHC）
+7. 纯Transformer基线
 
 ### 输出文件
 
 | 文件 | 内容 |
 |------|------|
-| `output/training_curve.png` | 训练收敛曲线（中文） |
-| `output/ablation_comparison.png` | 消融对比柱状图（中文，300dpi） |
+| `output/training_loss.csv` | 121 epoch完整loss记录 |
 | `output/ablation_results.json` | 7组消融完整数据 |
+| `output/ablation_results.csv` | 消融结果CSV |
 | `output/routes_result.json` | 最新生成路线详情 |
 | `output/best_route_map.html` | 最优路线交互地图 |
-| `checkpoints/best_model.pt` | K=3最优模型权重 |
+| `checkpoints/best_model.pt` | epoch 106最优模型权重（52MB） |
 | `paper/main.tex` | 论文LaTeX源码 |
-| `paper/main.pdf` | 论文PDF（40页） |
-| `paper/training_curve.png` | 论文用训练曲线图（复制自output/） |
-| `paper/ablation_comparison.png` | 论文用消融对比图（复制自output/） |
+| `paper/main.pdf` | 论文PDF |
+| `paper/training_curve.png` | 论文用训练曲线图 |
+| `paper/ablation_comparison.png` | 论文用消融对比图 |
