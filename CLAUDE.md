@@ -84,7 +84,7 @@ HarbinRouteDataset → get_shared_data() (shared tensors on GPU)
 
 1. **POI筛选**：从merged_pois.csv(49K)经`clean_poi_data(max_pois=10000)`筛选
    - 基于quality_score（评分+评论数+类别）选择top 10K
-   - 类别分布：景点4091, 住宿2000, 餐饮1923, 购物1500, 交通486
+   - 类别分布：餐饮4091, 住宿2000, 景点1923, 购物1500, 交通486
 
 2. **矩阵计算**：Haversine球面距离 + 速度因子估算时间，邻接矩阵<30km连通
 
@@ -234,7 +234,7 @@ HarbinRouteDataset → get_shared_data() (shared tensors on GPU)
 
 ## 当前训练结果（10K POI规模）
 
-- **数据规模：** 10,000个POI（景点4091/住宿2000/餐饮1923/购物1500/交通486），5,168条路线（168 XHS + 5000合成）
+- **数据规模：** 10,000个POI（餐饮4091/住宿2000/景点1923/购物1500/交通486），5,168条路线（168 XHS + 5000合成）
 - **训练划分：** train=4134 / val=517 / test=517（0.8/0.1/0.1）
 - **最佳模型：** epoch 106，val_loss=4.9041（早停于epoch 121）
 - **模型参数量：** 4,569,976
