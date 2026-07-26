@@ -438,6 +438,22 @@ def main():
     route_arrays = [np.array(r["indices"]) for r in all_routes]
     np.save(out_dir / "routes.npy", np.array(route_arrays, dtype=object))
 
+    # 保存 source 标签（区分 xhs 真实 / synthetic 合成），供方向B独立评估用
+    route_sources = np.array([r.get("source", "unknown") for r in all_routes])
+    np.save(out_dir / "routes_source.npy", route_sources)
+
+    # 单独保存 XHS 真实路线作为 holdout 测试集（不参与 train/val）
+    # 注：xhs_routes 是匹配成功但未增强的原始版本，这里用增强后的（与训练数据同分布）
+    xhs_holdout = [np.array(r["indices"]) for r in all_routes if r.get("source") == "xhs"]
+    if xhs_holdout:
+        np.save(out_dir / "routes_xhs_holdout.npy", np.array(xhs_holdout, dtype=object))
+        print(f"  routes_xhs_holdout.npy — {len(xhs_holdout)} 条真实 XHS 路线（holdout test）")
+
+    n_xhs = (route_sources == "xhs").sum()
+    n_syn = (route_sources == "synthetic").sum()
+    print(f"  routes.npy         — {len(all_routes)} 条（XHS {n_xhs} + 合成 {n_syn}）")
+    print(f"  routes_source.npy  — source 标签")
+
     print(f"  poi_metadata.csv   — {n_pois} POI")
     print(f"  poi_features.npy   — {features.shape}")
     print(f"  adjacency.npy      — {adj.shape}")

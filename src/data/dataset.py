@@ -64,6 +64,14 @@ class ItineraryDataset(Dataset):
 
         routes_data = np.load(data_path / "routes.npy", allow_pickle=True)
 
+        # 可选：加载 source 标签（区分 xhs 真实 / synthetic 合成）
+        source_path = data_path / "routes_source.npy"
+        routes_source = np.load(source_path, allow_pickle=True) if source_path.exists() else None
+
+        # 可选 holdout 测试集（真实 XHS 路线，不参与 train/val，打破数据循环论证）
+        holdout_path = data_path / "routes_xhs_holdout.npy"
+        use_holdout_for_test = (self.split == "test" and holdout_path.exists())
+
         import pandas as pd
         metadata_path = data_path / "poi_metadata.csv"
         if metadata_path.exists():
@@ -73,26 +81,32 @@ class ItineraryDataset(Dataset):
         else:
             poi_scores = np.ones(self.poi_features.shape[0])
 
-        n_routes = len(routes_data)
-        indices = np.arange(n_routes)
-        np.random.seed(42)
-        np.random.shuffle(indices)
-
-        train_end = int(n_routes * train_ratio)
-        val_end = int(n_routes * (train_ratio + val_ratio))
-
-        if self.split == "train":
-            split_indices = indices[:train_end]
-        elif self.split == "val":
-            split_indices = indices[train_end:val_end]
+        if use_holdout_for_test:
+            # 方向B：test split 直接用真实 XHS holdout，不参与 shuffle
+            holdout_data = np.load(holdout_path, allow_pickle=True)
+            split_routes = [holdout_data[i] for i in range(len(holdout_data))]
         else:
-            split_indices = indices[val_end:]
+            # 原逻辑：全部 routes 一起 shuffle 后按比例切
+            n_routes = len(routes_data)
+            indices = np.arange(n_routes)
+            np.random.seed(42)
+            np.random.shuffle(indices)
 
-        self.routes = [routes_data[i] for i in split_indices]
+            train_end = int(n_routes * train_ratio)
+            val_end = int(n_routes * (train_ratio + val_ratio))
+
+            if self.split == "train":
+                split_indices = indices[:train_end]
+            elif self.split == "val":
+                split_indices = indices[train_end:val_end]
+            else:
+                split_indices = indices[val_end:]
+            split_routes = [routes_data[i] for i in split_indices]
+
+        self.routes = split_routes
         self.route_scores = []
-        for idx in split_indices:
-            route = routes_data[idx]
-            if len(route) > 0 and route.max() < len(poi_scores):
+        for route in split_routes:
+            if len(route) > 0 and np.max(route) < len(poi_scores):
                 self.route_scores.append(float(poi_scores[route].mean()))
             else:
                 self.route_scores.append(1.0)

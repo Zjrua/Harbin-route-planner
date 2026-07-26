@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import torch
+from pathlib import Path
 
 from src.data.dataset import ItineraryDataset, create_dataloaders
 
@@ -104,3 +105,20 @@ class TestItineraryDataset:
         route_seq, scores, activity = batch
         assert route_seq.shape[0] <= 4   # batch_size
         assert route_seq.dtype == torch.long
+
+    def test_holdout_split_used_for_test(self, fake_data_dir):
+        """方向B：当 routes_xhs_holdout.npy 存在时，test split 优先用它（不参与 shuffle）."""
+        # 构造一个 holdout 文件（3 条路线，与主 routes 不重叠）
+        holdout_path = Path(fake_data_dir) / "routes_xhs_holdout.npy"
+        holdout_routes = [np.array([1, 2, 3]), np.array([4, 5, 6, 7]), np.array([8, 9, 10])]
+        np.save(holdout_path, np.array(holdout_routes, dtype=object))
+
+        # test split 应使用 holdout（3 条），而非主 routes 的 10%
+        test = ItineraryDataset(fake_data_dir, split="test")
+        assert len(test) == 3, f"test 应用 holdout（3条），实际 {len(test)}"
+
+        # train/val 不受影响，仍从主 routes 切（8 + 1）
+        train = ItineraryDataset(fake_data_dir, split="train")
+        val = ItineraryDataset(fake_data_dir, split="val")
+        assert len(train) == 8
+        assert len(val) == 1
