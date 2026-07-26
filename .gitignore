@@ -53,3 +53,8 @@ paper/*.bbl
 paper/*.blg
 .zcode/
 __pycache__/
+
+# External datasets — 数据文件不提交，只保留 README 和下载脚本
+data/external/**/
+!data/external/**/README.md
+!data/external/**/*.py
