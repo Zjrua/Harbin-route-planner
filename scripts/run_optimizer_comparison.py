@@ -24,6 +24,7 @@ from pathlib import Path
 import numpy as np
 import torch
 import yaml
+from torch.utils.tensorboard import SummaryWriter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -75,13 +76,16 @@ def train_one_run(config, optimizer_name, device, max_epochs=None):
     dataset = train_loader.dataset
     scaler = torch.amp.GradScaler("cuda", enabled=use_amp) if use_amp else None
 
+    # TensorBoard：每组写到独立子目录，便于按优化器名对比曲线
+    writer = SummaryWriter(f"logs/optimizer_comparison/{optimizer_name}")
+
     best_val_loss = float("inf")
     best_epoch = 0
     patience_counter = 0
     history = []  # [{epoch, train_loss, val_loss}]
 
     print(f"  [{optimizer_name}] 参数={n_params:,}, 优化器={type(optimizer).__name__}, "
-          f"epochs≤{total_epochs}, patience={patience_limit}")
+          f"epochs≤{total_epochs}, patience={patience_limit}", flush=True)
 
     t0 = time.time()
     for epoch in range(total_epochs):
@@ -163,17 +167,22 @@ def train_one_run(config, optimizer_name, device, max_epochs=None):
 
         history.append({"epoch": epoch + 1, "train_loss": round(train_loss, 4),
                         "val_loss": round(val_loss, 4)})
+        # 写 TensorBoard（tag 不带优化器名前缀，靠子目录区分，TensorBoard 会自动按 run 分色）
+        writer.add_scalar("train/loss", train_loss, epoch + 1)
+        writer.add_scalar("val/loss", val_loss, epoch + 1)
+        writer.flush()
 
         if (epoch + 1) % 10 == 0 or improved or patience_counter >= patience_limit:
             elapsed = time.time() - t0
             print(f"    [{optimizer_name}] ep{epoch+1:>3d} train={train_loss:.4f} "
                   f"val={val_loss:.4f} best={best_val_loss:.4f}@{best_epoch} "
-                  f"pat={patience_counter}/{patience_limit} ({elapsed:.0f}s)")
+                  f"pat={patience_counter}/{patience_limit} ({elapsed:.0f}s)", flush=True)
 
         if patience_counter >= patience_limit:
-            print(f"    [{optimizer_name}] 早停于 epoch {epoch+1}")
+            print(f"    [{optimizer_name}] 早停于 epoch {epoch+1}", flush=True)
             break
 
+    writer.close()
     return {
         "optimizer": optimizer_name,
         "optimizer_class": type(optimizer).__name__,
