@@ -57,25 +57,28 @@ def predict_next_poi(model, route_prefix, device, encoder_output, poi_activity_t
     return logits.squeeze(0)  # [n_pois]
 
 
-def evaluate_next_poi_accuracy(model, routes, device, encoder_output, poi_activity_types, top_k=5):
+def evaluate_next_poi_accuracy(model, routes, device, encoder_output, poi_activity_types,
+                               top_k=5, max_route_len=20):
     """在真实路线上评估 next-POI 预测准确率.
 
     对每条路线的每个位置 t（从1开始），给定前 t 个 POI，预测第 t+1 个。
+    注：前缀超过 max_route_len 时取最后 max_route_len 个（位置编码上限）。
     """
     top1_correct, top5_correct, total = 0, 0, 0
 
     for route in routes:
         for t in range(1, len(route)):
-            prefix = route[:t + 1]  # 含当前位置
-            actual_next = route[t] if t < len(route) else None
-            if actual_next is None:
-                continue
+            actual_next = route[t]
+            prefix = route[:t]  # 已访问的 POI（不含当前位置）
+            # 超过位置编码上限时，取最后 max_route_len-1 个（留一个位置给预测）
+            if len(prefix) >= max_route_len:
+                prefix = prefix[-(max_route_len - 1):]
 
             with torch.no_grad():
-                logits = predict_next_poi(model, prefix[:-1], device,
+                logits = predict_next_poi(model, prefix, device,
                                           encoder_output, poi_activity_types)
-            # 排除已在 prefix 中的 POI（路线不重复访问）
-            visited = set(prefix[:-1])
+            # 排除已访问的 POI（路线不重复访问）
+            visited = set(route[:t])
             for v in visited:
                 if v < len(logits):
                     logits[v] = -float("inf")

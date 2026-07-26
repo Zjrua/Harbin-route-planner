@@ -1,0 +1,21 @@
+{
+  "holdout_routes": 168,
+  "checkpoint": "checkpoints/best_model.pt",
+  "results": {
+    "most_popular": {
+      "top1_accuracy": 0.0,
+      "top5_accuracy": 0.0,
+      "total_predictions": 1660
+    },
+    "nearest_neighbor": {
+      "top1_accuracy": 0.0193,
+      "top5_accuracy": 0.0867,
+      "total_predictions": 1660
+    },
+    "transformer": {
+      "top1_accuracy": 0.4777,
+      "top5_accuracy": 0.7873,
+      "total_predictions": 1660
+    }
+  }
+}

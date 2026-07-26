@@ -442,16 +442,17 @@ def main():
     route_sources = np.array([r.get("source", "unknown") for r in all_routes])
     np.save(out_dir / "routes_source.npy", route_sources)
 
-    # 单独保存 XHS 真实路线作为 holdout 测试集（不参与 train/val）
-    # 注：xhs_routes 是匹配成功但未增强的原始版本，这里用增强后的（与训练数据同分布）
-    xhs_holdout = [np.array(r["indices"]) for r in all_routes if r.get("source") == "xhs"]
+    # 单独保存真实路线（XHS 等，非合成）作为 holdout 测试集（不参与 train/val）
+    # 用"不是 synthetic"判断，兼容 source 字段为"小红书"/"xhs"等各种取值
+    xhs_holdout = [np.array(r["indices"]) for r in all_routes
+                   if r.get("source") != "synthetic"]
     if xhs_holdout:
         np.save(out_dir / "routes_xhs_holdout.npy", np.array(xhs_holdout, dtype=object))
-        print(f"  routes_xhs_holdout.npy — {len(xhs_holdout)} 条真实 XHS 路线（holdout test）")
+        print(f"  routes_xhs_holdout.npy — {len(xhs_holdout)} 条真实路线（holdout test）")
 
-    n_xhs = (route_sources == "xhs").sum()
+    n_real = sum(1 for s in route_sources if s != "synthetic")
     n_syn = (route_sources == "synthetic").sum()
-    print(f"  routes.npy         — {len(all_routes)} 条（XHS {n_xhs} + 合成 {n_syn}）")
+    print(f"  routes.npy         — {len(all_routes)} 条（真实 {n_real} + 合成 {n_syn}）")
     print(f"  routes_source.npy  — source 标签")
 
     print(f"  poi_metadata.csv   — {n_pois} POI")
