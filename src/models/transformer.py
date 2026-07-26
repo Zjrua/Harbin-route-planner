@@ -1,4 +1,4 @@
-"""RouteTransformer: 基于 Transformer 的旅游路线生成模型.
+"""ItineraryTransformer: 基于 Transformer 的旅游路线生成模型.
 
 完整模型架构:
 1. Encoder: Graph-aware Transformer Encoder，融合 POI 特征、路网拓扑和活动类型相似性
@@ -18,8 +18,8 @@ from .encoder import GraphAwareEncoder
 from .decoder import EngramDecoder, ACTIVITY_TRANSITION_CONSTRAINTS
 
 
-class RouteTransformer(nn.Module):
-    """基于 Transformer 的哈尔滨文旅路线生成模型.
+class ItineraryTransformer(nn.Module):
+    """基于 Transformer 的旅游路线生成模型.
 
     工作流程:
     1. encode(): 将 POI 特征 + 路网邻接矩阵 + 活动类型偏置编码为上下文表征

@@ -1,4 +1,4 @@
-"""PyTorch Dataset & DataLoader for Harbin tourism route data.
+"""PyTorch Dataset & DataLoader for tourism route data.
 
 Optimized for large POI sets: shared matrices (features, adjacency, distances)
 are loaded once and accessed via get_shared_data(), NOT returned per sample.
@@ -12,8 +12,8 @@ import numpy as np
 from pathlib import Path
 
 
-class HarbinRouteDataset(Dataset):
-    """哈尔滨旅游路线数据集.
+class ItineraryDataset(Dataset):
+    """旅游路线数据集.
 
     __getitem__ 只返回per-sample数据（路线序列、评分、活动类型）。
     共享矩阵（poi_features, adjacency, distances等）通过
@@ -180,9 +180,9 @@ def create_dataloaders(data_dir: str, config: dict) -> Tuple[DataLoader, DataLoa
         noise_scale=noise_scale,
     )
 
-    train_ds = HarbinRouteDataset(**common, split="train")
-    val_ds = HarbinRouteDataset(**common, split="val")
-    test_ds = HarbinRouteDataset(**common, split="test")
+    train_ds = ItineraryDataset(**common, split="train")
+    val_ds = ItineraryDataset(**common, split="val")
+    test_ds = ItineraryDataset(**common, split="test")
 
     num_workers = exp_cfg.get("num_workers", 0)
     pw = num_workers > 0

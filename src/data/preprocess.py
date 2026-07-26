@@ -93,10 +93,11 @@ def load_raw_poi_data(path: str) -> pd.DataFrame:
     return raw
 
 
-def clean_poi_data(raw_pois: pd.DataFrame, max_pois: int = 150) -> pd.DataFrame:
+def clean_poi_data(raw_pois: pd.DataFrame, max_pois: Optional[int] = None) -> pd.DataFrame:
     """清洗 POI 原始数据：去重、缺失值处理、按质量筛选.
 
-    保留哈尔滨大区域范围（含远郊），按评分+类别均衡筛选到 max_pois.
+    保留哈尔滨大区域范围（含远郊），按评分+类别均衡筛选。
+    max_pois=None 时使用全部合格 POI（不截断），max_pois 为正整数时按配额筛选。
     """
     df = raw_pois.copy()
 
@@ -167,7 +168,10 @@ def clean_poi_data(raw_pois: pd.DataFrame, max_pois: int = 150) -> pd.DataFrame:
     )
 
     # 按质量筛选到 max_pois：旅游导向的类别配额
-    if len(df) > max_pois:
+    # max_pois=None 时仅做质量过滤（评分>=min_rating），保留全部合格 POI
+    if max_pois is None:
+        df = df[df["rating"] >= 3.5].reset_index(drop=True)
+    elif len(df) > max_pois:
         # 过滤评分低于 3.5 的低质量 POI
         df_high = df[df["rating"] >= 3.5]
 

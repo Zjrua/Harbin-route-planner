@@ -1,11 +1,12 @@
-"""Prepare ~10K POI data for training.
+"""Prepare POI data for training.
 
-Filters merged_pois.csv to ~10K quality POIs, computes Haversine distance/time
-matrices, generates synthetic routes with category-aware walks, and applies
-dining/hotel augmentation.
+Filters merged_pois.csv to quality POIs (configurable count via max_pois,
+defaults to all qualifying POIs when max_pois=None), computes Haversine
+distance/time matrices, generates synthetic routes with category-aware walks,
+and applies dining/hotel augmentation.
 
 Usage:
-    uv run python scripts/prepare_10k_data.py
+    uv run python scripts/prepare_data.py [--max-pois N]
 """
 
 import sys
@@ -329,6 +330,12 @@ def augment_routes(routes_list: list, pois: pd.DataFrame, dist_matrix: np.ndarra
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="准备 POI 数据与训练路线")
+    parser.add_argument("--max-pois", type=int, default=None,
+                        help="POI 数量上限（默认 None=用全部合格 POI）")
+    args = parser.parse_args()
+
     raw_dir = Path("data/raw")
     out_dir = Path("data/processed")
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -338,7 +345,7 @@ def main():
     raw = load_raw_poi_data(str(raw_dir / "merged_pois.csv"))
     print(f"  原始POI: {len(raw)}")
 
-    pois = clean_poi_data(raw, max_pois=10000)
+    pois = clean_poi_data(raw, max_pois=args.max_pois)
     n_pois = len(pois)
     print(f"  筛选后: {n_pois} POIs")
     print(f"  类别分布: {pois['category'].value_counts().to_dict()}")

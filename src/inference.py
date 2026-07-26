@@ -18,7 +18,7 @@ import pandas as pd
 import torch
 from pathlib import Path
 
-from src.models.transformer import RouteTransformer
+from src.models.transformer import ItineraryTransformer
 from src.evaluate import (
     route_distance, route_time, satisfaction_score,
     diversity_score, composite_score,
@@ -74,7 +74,7 @@ def print_route_detail(route: list[int], pois: pd.DataFrame,
     print(f"  总计: {len(route)} 个游览点 | {total_dist:.1f}km | {total_time:.0f}分钟 ({total_time/60:.1f}小时)")
 
 
-def generate_with_constraints(model: RouteTransformer, encoder_output: torch.Tensor,
+def generate_with_constraints(model: ItineraryTransformer, encoder_output: torch.Tensor,
                               start_id: int, beam_size: int, max_len: int,
                               device: torch.device,
                               poi_activity_types: torch.Tensor,
@@ -212,7 +212,7 @@ def generate_with_constraints(model: RouteTransformer, encoder_output: torch.Ten
                     break
 
     return route
-def generate_diverse_routes(model: RouteTransformer, encoder_output: torch.Tensor,
+def generate_diverse_routes(model: ItineraryTransformer, encoder_output: torch.Tensor,
                             beam_size: int, max_len: int, n_routes: int,
                             start_id: int | None, pois: pd.DataFrame,
                             device: torch.device,
@@ -467,7 +467,7 @@ def main():
             print(f"起点: #{start_id} {poi_name}")
 
     # 加载模型
-    model = RouteTransformer(config).to(device)
+    model = ItineraryTransformer(config).to(device)
     ckpt = torch.load(args.checkpoint, map_location=device, weights_only=True)
     model.load_state_dict(ckpt["model_state_dict"])
     model.eval()

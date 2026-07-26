@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 2026年全国大学生统计建模大赛参赛作品。基于Transformer架构构建哈尔滨文旅线路优化模型，核心创新点为融合DeepSeek论文中的三项技术：Engram内容寻址记忆、MHC双曲流形约束（庞加莱球模型）、Muon矩阵正交化优化器。
 
-**当前状态：10K POI规模训练完成，消融实验已完成，论文图表已更新。** 已完成POI规模扩展（180→10,000）、共享数据加载重构（节省25GB+显存）、AMP混合精度训练、7组消融实验、论文图表生成。
+**当前状态：POI 规模 10,000 训练完成，消融实验已完成，论文图表已更新。** 已完成POI规模扩展（180→10,000（可配置））、共享数据加载重构（节省25GB+显存）、AMP混合精度训练、7组消融实验、论文图表生成。
 
 ## Commands
 
@@ -16,7 +16,7 @@ uv sync
 uv pip install torch --index-url https://download.pytorch.org/whl/cu128
 
 # 数据准备
-uv run python scripts/prepare_10k_data.py  # 10K POI筛选 + 合成路线生成
+uv run python scripts/prepare_data.py  # POI 筛选 + 合成路线生成（默认用全部合格 POI）
 uv run python scripts/process_xhs_data.py    # 提取XHS餐饮住宿热度
 uv run python scripts/prepare_real_data.py   # POI增强 + 路线增强（180-POI旧管线）
 
@@ -62,7 +62,7 @@ cd paper && xelatex main.tex && xelatex main.tex
   - 耗时矩阵_分钟.csv           # 135x135真实路网耗时
   - search_*.jsonl              # 11,959条小红书笔记（餐饮/住宿热度）
 
-  ↓ scripts/prepare_10k_data.py（10K POI管线）
+  ↓ scripts/prepare_data.py（POI 数据管线）
 
 处理后的数据（data/processed/）：
   ├── poi_metadata.csv          # 10,000个POI（含XHS热度、活动类型）
@@ -76,14 +76,14 @@ cd paper && xelatex main.tex && xelatex main.tex
   └── routes.npy                # 5,168条路线（168 XHS + 5000合成）
 
   ↓ src/data/dataset.py
-HarbinRouteDataset → get_shared_data() (shared tensors on GPU)
+ItineraryDataset → get_shared_data() (shared tensors on GPU)
   └─ __getitem__ 只返回 (route, score, route_activity) 三个per-sample数据
 ```
 
-### 10K POI 数据准备 (`scripts/prepare_10k_data.py`)
+### POI 数据准备 (`scripts/prepare_data.py`)
 
 1. **POI筛选**：从merged_pois.csv(49K)经`clean_poi_data(max_pois=10000)`筛选
-   - 基于quality_score（评分+评论数+类别）选择top 10K
+   - 基于quality_score（评分+评论数+类别）选择 top 10,000
    - 类别分布：餐饮4091, 住宿2000, 景点1923, 购物1500, 交通486
 
 2. **矩阵计算**：Haversine球面距离 + 速度因子估算时间，邻接矩阵<30km连通
@@ -97,7 +97,7 @@ HarbinRouteDataset → get_shared_data() (shared tensors on GPU)
 
 ### 共享数据加载（GPU显存优化）
 
-面向10K POI的关键重构。原方案DataLoader每样本返回完整[n_pois, n_pois]矩阵，10K POI时每样本800MB × batch=32 → 25.6GB不可行。
+面向大规模 POI 的关键重构。原方案DataLoader每样本返回完整[n_pois, n_pois]矩阵，大规模 POI 时每样本800MB × batch=32 → 25.6GB不可行。
 
 优化后：
 - `get_shared_data(device)` 一次性加载共享矩阵到GPU（~1.4GB）
@@ -108,16 +108,16 @@ HarbinRouteDataset → get_shared_data() (shared tensors on GPU)
 
 ### 模型架构 (src/models/)
 
-`RouteTransformer` (transformer.py) 是顶层模型。精简配置：d_model=128, n_heads=8, 3层encoder/decoder, d_ff=384, dropout=0.2。
+`ItineraryTransformer` (transformer.py) 是顶层模型。精简配置：d_model=128, n_heads=8, 3层encoder/decoder, d_ff=384, dropout=0.2。
 
-**参数量：4,569,976（10K词表输出层占用~1.28M）**
+**参数量：4,569,976（POI 词表输出层占用~1.28M）**
 
 | 模块 | 参数 | 占比 | 功能 |
 |------|------|------|------|
 | EngramDecoder | ~960K | 21% | 自回归解码 + Cross-Attn + Engram |
 | GraphAwareEncoder | ~300K | 7% | 邻接矩阵 + 活动类型偏置注入SA |
 | Output | ~1,280K | 28% | 128→10000投影（最大单模块） |
-| POIEmbedding | ~1,350K | 30% | 10K POI嵌入表 + 活动类型 + 位置编码 |
+| POIEmbedding | ~1,350K | 30% | POI 嵌入表 + 活动类型 + 位置编码 |
 | EngramMemory | 67K | 1.5% | 余弦相似度top-k检索 |
 | MHC (Poincare) | 12K | 0.3% | 双曲空间嵌入正则化 |
 | 其他 | ~600K | 13% | FFN, LayerNorm等 |
@@ -153,7 +153,7 @@ HarbinRouteDataset → get_shared_data() (shared tensors on GPU)
 
 ### POI步行聚类
 
-基于连通图的聚类（≤1km步行距离），90个团（10K POI下距离更稀疏）。路线生成时访问某团后屏蔽全团，避免走回头路。
+基于连通图的聚类（≤1km步行距离），90个团（当前规模下距离更稀疏）。路线生成时访问某团后屏蔽全团，避免走回头路。
 
 ### 优化器 (src/optim/)
 
@@ -161,7 +161,7 @@ HarbinRouteDataset → get_shared_data() (shared tensors on GPU)
 
 ### 训练策略 (src/train.py)
 
-- **10K POI优化：** 编码器预计算一次，输出在所有batch共享；距离矩阵2D索引避免batch展开
+- **大规模 POI 优化：** 编码器预计算一次，输出在所有batch共享；距离矩阵2D索引避免batch展开
 - **AMP混合精度训练**（`torch.amp.autocast("cuda")` + GradScaler）
 - Teacher Forcing + Scheduled Sampling（ratio从0.5线性衰减）
 - Early Stopping（patience=15, 监控val_loss）
@@ -232,7 +232,7 @@ HarbinRouteDataset → get_shared_data() (shared tensors on GPU)
 - 参考文献标题通过 `\renewcommand{\refname}` 控制格式，避免与 `thebibliography` 重复
 - 临时文件通过 `paper/.gitignore` 忽略（.aux/.log/.toc等）
 
-## 当前训练结果（10K POI规模）
+## 当前训练结果（POI 规模 10,000）
 
 - **数据规模：** 10,000个POI（餐饮4091/住宿2000/景点1923/购物1500/交通486），5,168条路线（168 XHS + 5000合成）
 - **训练划分：** train=4134 / val=517 / test=517（0.8/0.1/0.1）
