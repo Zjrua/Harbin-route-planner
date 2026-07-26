@@ -1,0 +1,51 @@
+{
+  "config": {
+    "length": 10,
+    "n_starts": 5,
+    "starts": [
+      0,
+      1,
+      695,
+      696,
+      697
+    ],
+    "ortools_time_sec": 5.0
+  },
+  "results": {
+    "random": {
+      "avg_distance_km": 214.02,
+      "avg_time_min": 272.19,
+      "avg_satisfaction": 4.518,
+      "avg_diversity": 0.579,
+      "composite": 0.8509
+    },
+    "NN": {
+      "avg_distance_km": 1.28,
+      "avg_time_min": 2.57,
+      "avg_satisfaction": 4.454,
+      "avg_diversity": 0.48,
+      "composite": 0.8685
+    },
+    "2-opt": {
+      "avg_distance_km": 1.28,
+      "avg_time_min": 2.57,
+      "avg_satisfaction": 4.454,
+      "avg_diversity": 0.48,
+      "composite": 0.8685
+    },
+    "OR-Tools": {
+      "avg_distance_km": 1.28,
+      "avg_time_min": 2.57,
+      "avg_satisfaction": 4.454,
+      "avg_diversity": 0.48,
+      "composite": 0.8685
+    },
+    "Transformer": {
+      "avg_distance_km": 164.41,
+      "avg_time_min": 226.94,
+      "avg_satisfaction": 4.52,
+      "avg_diversity": 0.587,
+      "composite": 0.8606
+    }
+  }
+}
