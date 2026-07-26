@@ -1,6 +1,6 @@
 % !TEX program = xelatex
 % 2026年（第十二届）全国大学生统计建模大赛参赛作品
-% 基于Transformer架构的哈尔滨文旅线路优化研究
+% 基于Transformer的文旅线路优化研究
 
 \documentclass[12pt,a4paper]{ctexart}
 
@@ -144,7 +144,7 @@
 \begin{cnabstract}
 随着旅游业的快速发展，旅游路线优化已从传统路径规划演化为融合多维约束的序列决策问题。哈尔滨作为冰雪旅游名城，2024—2025年冰雪季接待游客超1.2亿人次，但景点空间分散、季节差异显著、活动类型多样等现实挑战使传统旅行商问题（TSP）变体和协同过滤方法难以满足综合优化需求。标准Transformer直接应用于旅游路线生成亦面临三个核心不足：自注意力机制无法利用路网空间拓扑先验、训练数据有限导致纯数据驱动策略面临样本不足、传统优化器忽略参数矩阵结构信息。
 
-为此，本文提出融合三项核心创新的Transformer序列生成模型RouteTransformer：（1）Engram内容寻址记忆——将历史优质路线编码为外部记忆库，通过余弦相似度检索top-$K$条路线并门控融合，弥补训练数据不足；（2）MHC双曲流形约束——基于庞加莱球模型在双曲空间中表征POI层次结构，为模型提供几何先验；（3）Muon正交化优化器——通过Newton-Schulz迭代正交化梯度矩阵，改善高维参数的优化几何性质。此外，设计了活动类型条件生成机制，通过$6\times6$转移约束矩阵和约束Beam Search保证路线的活动节奏与空间覆盖合理性。
+为此，本文提出融合三项核心创新的Transformer序列生成模型ItineraryTransformer：（1）Engram内容寻址记忆——将历史优质路线编码为外部记忆库，通过余弦相似度检索top-$K$条路线并门控融合，弥补训练数据不足；（2）MHC双曲流形约束——基于庞加莱球模型在双曲空间中表征POI层次结构，为模型提供几何先验；（3）Muon正交化优化器——通过Newton-Schulz迭代正交化梯度矩阵，改善高维参数的优化几何性质。此外，设计了活动类型条件生成机制，通过$6\times6$转移约束矩阵和约束Beam Search保证路线的活动节奏与空间覆盖合理性。
 
 基于高德地图API与天地图POI数据，通过类别平衡质量评分从49,000个候选中筛选10,000个POI，构建Haversine球面距离矩阵。从小红书403条用户路线经四级名称匹配与系统化路线增强（餐饮住宿插入）后保留168条XHS路线，配合类别感知近邻随机游走生成5,000条合成路线，总计5,168条训练样本（train 4134 / val 517 / test 517）。模型在RTX 4090 GPU上训练，采用AdamW优化器（batch\_size=256, AMP混合精度），epoch 106达最佳验证损失4.9041，121 epoch早停。消融实验表明Engram记忆模块对路线空间效率具有显著改善（$K=3$最优综合得分0.8802，较纯Transformer基线提升0.0126），MHC双曲约束的独立贡献在有限数据规模下较温和但方向一致。
 \end{cnabstract}
@@ -173,7 +173,7 @@
 \noindent 表6\quad 生成路线评估结果\dotfill 16\\[3pt]
 \noindent 表7\quad 消融实验结果对比\dotfill 16\\[3pt]
 \noindent 表8\quad Engram检索数$K$的敏感性分析\dotfill 17\\[9pt]
-\noindent 图1\quad RouteTransformer 旅游路线生成模型架构图\dotfill 4\\[3pt]
+\noindent 图1\quad ItineraryTransformer 旅游路线生成模型架构图\dotfill 4\\[3pt]
 \noindent 图2\quad 训练损失收敛曲线\dotfill 15\\[3pt]
 \noindent 图3\quad 消融实验综合得分对比\dotfill 16\\
 }
@@ -186,7 +186,7 @@
 
 % 论文题目：方正小标宋 三号(16pt)
 \begin{center}
-{\xiaobiao\fontsize{16pt}{24pt}\selectfont 基于Transformer架构的哈尔滨文旅线路优化研究}
+{\xiaobiao\fontsize{16pt}{24pt}\selectfont 基于Transformer的文旅线路优化研究——以哈尔滨为例}
 \end{center}
 
 % =================== 一、引言 ===================
@@ -204,7 +204,7 @@
 
 \subsection{研究内容与创新点}
 
-针对上述问题与挑战，本文提出了一种融合多源创新技术的Transformer路线生成模型——RouteTransformer，该模型在标准Encoder-Decoder框架的基础上，集成了三项核心技术创新：
+针对上述问题与挑战，本文提出了一种融合多源创新技术的Transformer路线生成模型——ItineraryTransformer，该模型在标准Encoder-Decoder框架的基础上，集成了三项核心技术创新：
 
 （1）Engram内容寻址记忆机制：受神经图灵机$^{\cite{graves2014}}$和记忆网络$^{\cite{sukhbaatar2015}}$的启发，将历史优质路线的编码向量经平均池化压缩后存入外部记忆库（容量$M=500$）。解码器每步通过RMSNorm归一化的余弦相似度检索最相似的$K=5$条记忆，通过可学习Sigmoid门控自适应融合记忆信息与当前解码状态。其基本直觉是：高质量旅游路线之间存在可迁移的模式——游客在某区域游览后倾向于去哪些POI、游览几个景点后需安排餐饮——这些可通过检索相似路线来捕捉，从而弥补训练数据不足。DeepSeek-V3技术报告$^{\cite{deepseek2024}}$中外部记忆增强的设计理念为本文提供了方法论参考。
 
@@ -218,14 +218,14 @@
 
 \subsection{论文结构安排}
 
-本文的后续章节安排如下：第二节详细阐述RouteTransformer模型架构，包括POI嵌入层、图感知编码器、Engram记忆模块、MHC双曲约束、活动类型条件生成、Muon优化器和损失函数的设计；第三节介绍数据来源与预处理方法，包括POI采集与特征构建、路网距离矩阵、路线数据增强和步行聚类；第四节描述模型训练策略、约束Beam Search推理和综合评价指标体系；第五节分析模型实验结果，涵盖训练收敛、路线生成质量和消融实验；第六节给出结论与未来展望。
+本文的后续章节安排如下：第二节详细阐述ItineraryTransformer模型架构，包括POI嵌入层、图感知编码器、Engram记忆模块、MHC双曲约束、活动类型条件生成、Muon优化器和损失函数的设计；第三节介绍数据来源与预处理方法，包括POI采集与特征构建、路网距离矩阵、路线数据增强和步行聚类；第四节描述模型训练策略、约束Beam Search推理和综合评价指标体系；第五节分析模型实验结果，涵盖训练收敛、路线生成质量和消融实验；第六节给出结论与未来展望。
 
 % =================== 二、模型建立 ===================
-\section{RouteTransformer模型建立}
+\section{ItineraryTransformer模型建立}
 
 \subsection{整体架构}
 
-本文提出的RouteTransformer模型采用标准的Transformer Encoder-Decoder架构$^{\cite{vaswani2017}}$，并在其中深度融合了三项核心创新技术：编码器端的图感知注意力（Graph-Aware Attention）、解码器端的Engram内容寻址记忆（Engram Content-Addressable Memory）以及全局的MHC双曲流形约束（Manifold Hyperbolic Constraint）。模型的整体架构如图\ref{fig:routetransformer}所示。
+本文提出的ItineraryTransformer模型采用标准的Transformer Encoder-Decoder架构$^{\cite{vaswani2017}}$，并在其中深度融合了三项核心创新技术：编码器端的图感知注意力（Graph-Aware Attention）、解码器端的Engram内容寻址记忆（Engram Content-Addressable Memory）以及全局的MHC双曲流形约束（Manifold Hyperbolic Constraint）。模型的整体架构如图\ref{fig:itinerarytransformer}所示。
 
 \begin{figure}[htbp]
     \centering
@@ -412,8 +412,8 @@
 
         \end{tikzpicture}
     }
-    \caption{RouteTransformer 旅游路线生成模型架构图}
-    \label{fig:routetransformer}
+    \caption{ItineraryTransformer 旅游路线生成模型架构图}
+    \label{fig:itinerarytransformer}
 \end{figure}
 
 模型的基本工作流程如下：
@@ -830,7 +830,7 @@ S_{\text{candidate}} = -d(i,c) + w_{\text{xhs}}\cdot H_c
 聚类方法如下：以步行合理距离1 km为连通阈值，构建POI之间的无向连通图$\mathcal{G}=(\mathcal{V},\mathcal{E})$，其中$\mathcal{V}=\{1,\dots,N\}$为全部10000个POI节点，边$\mathcal{E}=\{(i,j): d_{ij}\leq 1\text{ km}, i\neq j\}$。在该连通图上提取所有连通分量（Connected Components），采用Union-Find算法，每个连通分量即为一个”步行景点团”。聚类结果：共形成90个步行景点团（如中央大街—防洪纪念塔—斯大林公园—兆麟公园为一团），共含入团景点；余下景点为独立节点（即该景点1 km范围内无其他景点）。在推理阶段，一旦生成的路线访问了某个团内的任一景点，该团内所有其他景点将被屏蔽（即$\log P(j)=-\infty,\ \forall j\in\text{Cluster}(\text{visited})$），确保路线在空间上的有效覆盖而不会原地徘徊。
 
 % =================== 四、求解与检验 ===================
-\section{RouteTransformer模型求解与检验}
+\section{ItineraryTransformer模型求解与检验}
 
 \subsection{训练策略与超参数}
 
@@ -1010,7 +1010,7 @@ s = \frac{1}{L}\sum_{i=0}^{L-1} \text{rating}(r_i)
 为进一步探究Engram记忆模块的工作原理，本文对检索数$K$进行了敏感性分析。分别设置$K=3,5,10$（默认值为5），在相同的训练设置下各训练一组模型，比较其验证损失收敛轨迹和最终生成路线的综合得分，为理解“记忆检索的广度—精度”权衡提供实验依据。直觉上，$K$过小可能造成检索结果信息量不足，而$K$过大可能引入噪声和无关记忆，稀释真正相关的历史路线信息。
 
 % =================== 五、模型结果分析 ===================
-\section{RouteTransformer模型结果分析}
+\section{ItineraryTransformer模型结果分析}
 
 \subsection{训练收敛分析}
 
@@ -1127,7 +1127,7 @@ $K=10$ & 2.5676 & 0.8714 \\
 % =================== 六、结论与建议 ===================
 \section{结论与建议}
 
-本文针对哈尔滨文旅路线优化问题，提出了一种融合Engram内容寻址记忆、MHC双曲流形约束和Muon优化器的Transformer序列生成模型——RouteTransformer。模型在10,000个POI和5,168条路线（168条XHS + 5,000条合成）上完成训练，验证损失从8.76降至4.90。为应对10K POI规模的显存挑战，设计了共享数据加载方案（GPU峰值显存约3.3 GB，RTX 4090 24 GB），配合AMP混合精度训练和Scheduled Sampling，在121 epoch触发早停（patience=15），最佳checkpoint为epoch 106。
+本文针对哈尔滨文旅路线优化问题，提出了一种融合Engram内容寻址记忆、MHC双曲流形约束和Muon优化器的Transformer序列生成模型——ItineraryTransformer。模型在10,000个POI和5,168条路线（168条XHS + 5,000条合成）上完成训练，验证损失从8.76降至4.90。为应对10K POI规模的显存挑战，设计了共享数据加载方案（GPU峰值显存约3.3 GB，RTX 4090 24 GB），配合AMP混合精度训练和Scheduled Sampling，在121 epoch触发早停（patience=15），最佳checkpoint为epoch 106。
 
 实验结果表明：（1）模型在10,000个POI的超大规模词表下成功收敛，验证损失降至4.90（对应有效候选约134个POI），远优于随机猜测基线（$\ln(10000)\approx 9.21$）；（2）共享数据加载方案（编码器输出预计算+2D距离索引）将训练峰值显存从理论上的25.6 GB压缩至3.3 GB，使10K规模训练在消费级GPU上成为可能；（3）AMP混合精度训练配合batch\_size=256大幅缩短训练周期（每epoch约40秒）；（4）train-val loss gap随训练扩大（终端2.79 vs 4.90），提示合成路线的有限多样性限制了泛化能力，未来可引入强化学习绕过数据质量瓶颈；（5）活动类型条件生成机制和约束Beam Search确保了生成路线的活动节奏合理性。消融实验结果表明：Engram记忆模块对路线空间效率具有显著改善，$K=3$配置综合得分0.8802为最优，较纯Transformer基线（0.8676）提升1.45%；MHC双曲约束在有限数据（165条路线）下贡献温和但改善方向一致；各模块协同后路线距离从基线的63.0 km大幅压缩至$K=3$的27.3 km（降幅56.7%），验证了记忆检索对空间布局优化的关键作用。
 
