@@ -25,12 +25,13 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.baselines import random_route, nearest_neighbor_route, two_opt_route, ortools_route, has_ortools
-from src.evaluate import route_distance, route_time, satisfaction_score, diversity_score, composite_score
+from src.evaluate import (route_distance, route_time, satisfaction_score, diversity_score,
+                          composite_score, composite_score_v2, rhythm_score)
 
 
 def evaluate_route(route, dist_matrix, time_matrix, ratings, categories,
                    max_distance, max_time):
-    """评估单条路线的 4 个指标 + composite."""
+    """评估单条路线的指标，同时计算 composite v1（原始）和 v2（含节奏惩罚）."""
     if len(route) < 2:
         return None
     d = route_distance(route, dist_matrix)
@@ -41,8 +42,10 @@ def evaluate_route(route, dist_matrix, time_matrix, ratings, categories,
         "distance": d, "time": t, "satisfaction": s, "diversity": div,
         "max_distance": max_distance, "max_time": max_time,
     }
-    weights = {"distance": 0.30, "time": 0.25, "satisfaction": 0.25, "diversity": 0.20}
-    metrics["composite"] = composite_score(metrics, weights)
+    weights_v1 = {"distance": 0.30, "time": 0.25, "satisfaction": 0.25, "diversity": 0.20}
+    metrics["composite"] = composite_score(metrics, weights_v1)
+    metrics["composite_v2"] = composite_score_v2(route, categories, metrics)
+    metrics["rhythm"] = rhythm_score(route, categories)
     return metrics
 
 
@@ -148,11 +151,12 @@ def main():
         print(f"  ⚠️  跳过 Transformer（checkpoint 不存在: {args.checkpoint}）")
 
     # === 评估 ===
-    print("\n" + "=" * 64)
+    print("\n" + "=" * 80)
     print("  评估结果")
-    print("=" * 64)
-    print(f"{'方法':<14} {'avg_dist':<10} {'avg_time':<10} {'satisf':<8} {'divers':<8} {'composite':<10}")
-    print("-" * 64)
+    print("=" * 80)
+    print(f"{'方法':<14} {'avg_dist':<10} {'rhythm':<8} {'divers':<8} "
+          f"{'comp_v1':<9} {'comp_v2':<9}")
+    print("-" * 80)
 
     results = {}
     for method, routes in methods_routes.items():
@@ -169,11 +173,22 @@ def main():
             "avg_time_min": round(float(np.mean([m["time"] for m in all_metrics])), 2),
             "avg_satisfaction": round(float(np.mean([m["satisfaction"] for m in all_metrics])), 3),
             "avg_diversity": round(float(np.mean([m["diversity"] for m in all_metrics])), 3),
+            "avg_rhythm": round(float(np.mean([m["rhythm"] for m in all_metrics])), 3),
             "composite": round(float(np.mean([m["composite"] for m in all_metrics])), 4),
+            "composite_v2": round(float(np.mean([m["composite_v2"] for m in all_metrics])), 4),
         }
         results[method] = avg
-        print(f"{method:<14} {avg['avg_distance_km']:<10} {avg['avg_time_min']:<10} "
-              f"{avg['avg_satisfaction']:<8} {avg['avg_diversity']:<8} {avg['composite']:<10}")
+        print(f"{method:<14} {avg['avg_distance_km']:<10} {avg['avg_rhythm']:<8} "
+              f"{avg['avg_diversity']:<8} {avg['composite']:<9} {avg['composite_v2']:<9}")
+
+    # v1 vs v2 排名变化提示
+    if len(results) >= 2:
+        v1_rank = sorted(results, key=lambda m: -results[m]["composite"])
+        v2_rank = sorted(results, key=lambda m: -results[m]["composite_v2"])
+        print(f"\n  v1 排名: {' > '.join(v1_rank)}")
+        print(f"  v2 排名: {' > '.join(v2_rank)}")
+        if v1_rank[0] != v2_rank[0]:
+            print(f"  ⚠️ v2 改变了排名！v1冠军={v1_rank[0]}, v2冠军={v2_rank[0]}")
 
     # === 保存 ===
     out_path = Path("output/baseline_comparison.json")

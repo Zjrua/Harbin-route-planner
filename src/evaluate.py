@@ -107,6 +107,64 @@ def composite_score(metrics: Dict[str, float], weights: Dict[str, float]) -> flo
     return sum(weights.get(k, 0) * v for k, v in normalized.items())
 
 
+def rhythm_score(route: List[int], categories: np.ndarray) -> float:
+    """计算路线的活动节奏得分（v2 新增指标）.
+
+    衡量相邻 POI 类型的切换频率。真实旅游路线应避免连续同类 POI
+    （如连续 5 个住宿、连续 3 个景点），合理的节奏是“景点→餐饮→景点”交替。
+
+    Returns:
+        节奏得分 [0, 1]，1 = 每步都切换类别（最优节奏），0 = 全程同类
+    """
+    if len(route) < 2:
+        return 1.0
+    same_type = sum(1 for i in range(1, len(route))
+                    if categories[route[i]] == categories[route[i - 1]])
+    return 1.0 - same_type / (len(route) - 1)
+
+
+# composite_score_v2 的默认权重：降低距离/时间（共线）权重，新增节奏项
+COMPOSITE_V2_WEIGHTS = {
+    "distance": 0.20,      # 0.30→0.20（distance 与 time 共线，实际权重过高）
+    "time": 0.15,          # 0.25→0.15
+    "satisfaction": 0.25,
+    "diversity": 0.20,
+    "rhythm": 0.20,        # 新增：惩罚连续同类 POI 的退化解
+}
+
+
+def composite_score_v2(route: List[int], categories: np.ndarray,
+                       metrics: Dict[str, float],
+                       weights: Dict[str, float] = None) -> float:
+    """改进的综合得分 v2：加入活动节奏惩罚，修正距离共线性.
+
+    相比 v1 的三点改进：
+    1. 降低 distance+time 合并权重（0.55→0.35），避免系统性偏袒纯距离优化方法
+    2. 新增 rhythm 项，直接惩罚“连续同类 POI”的退化解（如连续住宿/连续景点）
+    3. rhythm 用绝对计算（不依赖比较集的 max），跨数据集可比
+
+    Args:
+        route: POI 索引列表（用于计算节奏）
+        categories: POI 类别数组
+        metrics: {"distance", "time", "satisfaction", "diversity", "max_distance", "max_time"}
+        weights: 权重（默认用 COMPOSITE_V2_WEIGHTS）
+
+    Returns:
+        综合得分 v2 ∈ [0, 1]
+    """
+    if weights is None:
+        weights = COMPOSITE_V2_WEIGHTS
+    rhythm = rhythm_score(route, categories)
+    normalized = {
+        "distance": 1.0 - min(metrics.get("distance", 0) / max(metrics.get("max_distance", 1), 1e-10), 1.0),
+        "time": 1.0 - min(metrics.get("time", 0) / max(metrics.get("max_time", 1), 1e-10), 1.0),
+        "satisfaction": min(metrics.get("satisfaction", 0) / 5.0, 1.0),
+        "diversity": min(metrics.get("diversity", 0), 1.0),
+        "rhythm": rhythm,
+    }
+    return sum(weights.get(k, 0) * v for k, v in normalized.items())
+
+
 def evaluate_routes(routes: List[List[int]], dist_matrix: np.ndarray,
                     time_matrix: np.ndarray, ratings: np.ndarray,
                     categories: np.ndarray, weights: Dict[str, float]) -> Dict[str, float]:

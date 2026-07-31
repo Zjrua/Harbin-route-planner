@@ -92,6 +92,10 @@ def generate_with_constraints(model: ItineraryTransformer, encoder_output: torch
     ATTR_SCENIC, ATTR_DINING, ATTR_HOTEL = 0, 1, 2
     CONSECUTIVE_THRESHOLD = 3
 
+    # 加固 device 契约：poi_activity_types 可能从 .npy 加载在 CPU，
+    # 但下方用 route_t（在 device）做索引，需保证同设备。
+    poi_activity_types = poi_activity_types.to(device)
+
     model.eval()
     with torch.no_grad():
         route = [start_id]

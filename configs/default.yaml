@@ -48,8 +48,10 @@ loss:
   mhc_weight: 0.05
 
 # 优化器配置
+# 注：优化器对比实验（scripts/run_optimizer_comparison.py）已证明 AdamW 在本任务规模下
+# 优于 Muon（val_loss 4.88 vs 5.93，差21%）。Muon 在小模型/小数据上反而加速过拟合。
 optimizer:
-  name: "muon"  # muon / adam / adamw
+  name: "adamw"  # muon / adam / adamw（默认 adamw，见上方实验结论）
   lr_attn: 1.0e-4
   lr_ffn: 3.0e-4
   weight_decay: 1.0e-4
