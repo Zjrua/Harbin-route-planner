@@ -15,7 +15,7 @@ from pathlib import Path
 
 import torch
 from datasets import Dataset
-from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from peft import PeftModel
 from trl import DPOTrainer, DPOConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
@@ -56,21 +56,19 @@ def main():
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    # === 4bit 量化 + SFT LoRA ===
+    # === 4bit 量化 + 挂 SFT LoRA（关键：绝不 merge） ===
+    # merge_and_unload() 对 4bit base 有严重量化误差，会把 SFT 学到的路线知识洗掉，
+    # 模型退回 base 的"思考型"行为（输出 <think> 而非路线）。
+    # 正确做法：直接把 SFT LoRA 挂上，DPOTrainer 在 LoRA 层上继续训练，全程精度无损。
     bnb = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
                              bnb_4bit_compute_dtype=torch.bfloat16,
                              bnb_4bit_use_double_quant=True)
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_PATH, quantization_config=bnb, device_map="auto",
         trust_remote_code=True, torch_dtype=torch.bfloat16)
-    # 加载 SFT 阶段的 LoRA 权重（DPO 在这个基础上继续）
-    from peft import PeftModel
     model = PeftModel.from_pretrained(model, SFT_LORA)
-    # 重置为新 LoRA（DPO 单独训练一套，避免污染 SFT 权重）
-    model = get_peft_model(model, LoraConfig(
-        r=8, lora_alpha=16,
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
-        lora_dropout=0.05, bias="none", task_type="CAUSAL_LM"))
+    model.train()
+    print("SFT LoRA 已加载（未合并），DPO 直接在 SFT LoRA 上继续训练")
 
     # === 加载 DPO 数据集 ===
     samples = []
@@ -120,21 +118,34 @@ def main():
         remove_unused_columns=False,
         max_length=MAX_LEN,
         beta=args.beta,
+        # 关闭 gradient checkpointing：与 torch 2.6 use_reentrant 不兼容，且 batch 小显存够
+        gradient_checkpointing=False,
     )
 
     trainer = DPOTrainer(
         model=model,
-        ref_model=None,  # 用 model 自身做 reference（DPO 简化）
+        ref_model=None,  # 用模型自身做 reference（DPO 简化）
         args=dpo_config,
         train_dataset=ds,
         processing_class=tokenizer,
+        # 注意：不传 peft_config！model 已是 PeftModel（SFT LoRA），
+        # TRL 会保留 SFT adapter 作为 policy，并自动复制一份 "ref" adapter 做 reference。
+        # 若再传新 LoraConfig 会 get_peft_model 套娃，导致 adapter 嵌套错位。
     )
+    # DPOTrainer init 时 add_adapter("ref") 会把 default adapter 冻结（requires_grad=False），
+    # 必须在 init 之后重新激活，否则 loss 无梯度路径 → "does not require grad"。
+    trainer.model.set_requires_grad(["default"], True)
+    print("default adapter 梯度已激活")
 
     print("开始 DPO 训练...")
     trainer.train()
 
-    trainer.save_model(args.output)
-    print(f"DPO 模型已保存: {args.output}")
+    # 保存 LoRA adapter（只存 DPO 增量 + SFT 增量，约 24MB，不 merge 4bit base）。
+    # 推理时挂同一个 base + 本 adapter 即可得到"原始 Qwen + SFT + DPO"。
+    peft_model = trainer.model
+    peft_model.save_pretrained(args.output)
+    tokenizer.save_pretrained(args.output)
+    print(f"DPO LoRA 已保存（含 SFT+DPO 增量，未 merge）: {args.output}")
 
 
 if __name__ == "__main__":

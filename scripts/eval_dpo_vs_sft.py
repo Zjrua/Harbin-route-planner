@@ -34,17 +34,36 @@ TEST_INSTRUCTIONS = [
 ]
 
 
-def load_model(lora_dir, device):
+def load_model(model_dir, device, is_lora=None):
+    """加载模型.
+
+    SFT / DPO 都是 LoRA adapter（挂 base 4bit）。
+    is_lora 缺省时自动检测：目录存在 adapter_config.json 则按 LoRA 加载，
+    否则视为完整模型直接加载。
+    """
     from peft import PeftModel
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=True)
+    if is_lora is None:
+        is_lora = (Path(model_dir) / "adapter_config.json").exists()
+    # 尝试加载目录内的 tokenizer（完整模型自带），否则用 base
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(model_dir, trust_remote_code=True)
+    except Exception:
+        tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
     bnb = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
                              bnb_4bit_compute_dtype=torch.bfloat16,
                              bnb_4bit_use_double_quant=True)
-    model = AutoModelForCausalLM.from_pretrained(
-        MODEL_PATH, quantization_config=bnb, device_map="auto",
-        trust_remote_code=True, torch_dtype=torch.bfloat16)
-    model = PeftModel.from_pretrained(model, lora_dir)
+    if is_lora:
+        model = AutoModelForCausalLM.from_pretrained(
+            MODEL_PATH, quantization_config=bnb, device_map="auto",
+            trust_remote_code=True, torch_dtype=torch.bfloat16)
+        model = PeftModel.from_pretrained(model, model_dir)
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+            model_dir, quantization_config=bnb, device_map="auto",
+            trust_remote_code=True, torch_dtype=torch.bfloat16)
     return model, tokenizer
 
 
@@ -122,7 +141,7 @@ def main():
             result, match_rate = match_and_score(names, pois, dist_matrix, time_matrix,
                                                  ratings, categories, activity_types)
             if result is not None:
-                scores.append(result["score"])
+                scores.append(float(result["score"]))
                 feasible = "✓" if result.get("feasible") else f"✗({result.get('reason')})"
                 print(f"  [{i+1}] v4={result['score']:.4f} {feasible} 匹配率{match_rate:.0%} 距离{result['metrics']['total_dist_km']:.0f}km")
             else:
