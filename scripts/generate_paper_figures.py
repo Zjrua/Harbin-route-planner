@@ -70,7 +70,7 @@ def generate_training_curve():
 
     ax.set_xlabel("训练轮次 (Epoch)", fontsize=14, fontweight="bold")
     ax.set_ylabel("损失 (Loss)", fontsize=14, fontweight="bold")
-    ax.set_title("RouteTransformer 训练损失收敛曲线", fontsize=15, fontweight="bold", pad=14)
+    ax.set_title("ItineraryTransformer 训练损失收敛曲线", fontsize=15, fontweight="bold", pad=14)
     ax.legend(fontsize=12, loc="upper right", framealpha=0.9, edgecolor="gray")
     ax.grid(True, alpha=0.25, linestyle="--")
     ax.set_xlim(0, 125)

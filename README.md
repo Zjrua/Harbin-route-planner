@@ -1,6 +1,6 @@
-# 哈尔滨文旅线路优化模型
+# ItineraryTransformer
 
-基于 Transformer 架构的哈尔滨旅游路线智能规划系统，2026 年全国大学生统计建模大赛参赛作品。
+基于 Transformer 架构的文旅线路优化模型（以哈尔滨为案例城市），2026 年全国大学生统计建模大赛参赛作品。
 
 ## 创新点
 
@@ -23,8 +23,8 @@ uv pip install torch --index-url https://download.pytorch.org/whl/cu128
 ## 数据准备
 
 ```bash
-# 1. 10K POI 筛选 + 合成路线生成（主管线）
-uv run python scripts/prepare_10k_data.py
+# 1. POI 筛选 + 合成路线生成（主管线，默认用全部合格 POI，--max-pois N 限定数量）
+uv run python scripts/prepare_data.py
 
 # 2. 提取小红书 POI 热度
 uv run python scripts/process_xhs_data.py
@@ -54,7 +54,7 @@ uv run python scripts/prepare_real_data.py
 
 ### `data/processed/`（处理后数据，共 15 个文件，约 1.9 GB）
 
-**10K POI 规模（主管线输出）：**
+**当前 POI 规模（主管线输出，默认 10,000）：**
 
 | 文件 | 规模 | 说明 |
 |------|------|------|
@@ -81,9 +81,9 @@ uv run python scripts/prepare_real_data.py
 
 | 文件 | 规模 | 说明 |
 |------|------|------|
-| `poi_xhs_popularity.npy` | [180] float64 | 180-POI 规模的 XHS 热度（旧管线，未参与 10K 训练） |
+| `poi_xhs_popularity.npy` | [180] float64 | 180-POI 规模的 XHS 热度（旧管线，未参与当前训练） |
 
-### POI 类别与活动类型分布（10K 规模）
+### POI 类别与活动类型分布（当前规模）
 
 | 类别 | 活动类型 | 数量 | 占比 |
 |------|----------|------|------|
@@ -104,7 +104,7 @@ uv run python scripts/prepare_real_data.py
 ## 训练
 
 ```bash
-# 默认配置（10K POI 规模：3层, d_ff=384, 4.57M参数）
+# 默认配置（当前规模：3层, d_ff=384, 4.57M参数）
 uv run python -m src.train --config configs/default.yaml
 
 # 恢复训练
@@ -169,7 +169,7 @@ uv run pytest tests/ -v
 │   │   ├── preprocess.py     # 数据清洗 + 特征工程 + 概率分布矩阵
 │   │   └── dataset.py        # PyTorch Dataset + 概率采样
 │   ├── models/
-│   │   ├── transformer.py    # RouteTransformer（约束Beam Search）
+│   │   ├── transformer.py    # ItineraryTransformer（约束Beam Search）
 │   │   ├── encoder.py        # Graph-aware Encoder + 活动类型偏置
 │   │   ├── decoder.py        # Engram Decoder + 活动类型条件 + 转换约束
 │   │   ├── engram.py         # Engram 记忆模块
@@ -185,7 +185,7 @@ uv run pytest tests/ -v
 └── tests/                    # pytest 单元测试
 ```
 
-## 当前训练结果（10K POI 规模）
+## 当前训练结果（POI 规模 10,000）
 
 - **数据规模：** 10,000 个 POI，5,168 条路线（train 4,134 / val 517 / test 517）
 - **模型：** 4,569,976 参数（3 层编解码器, d_ff=384）

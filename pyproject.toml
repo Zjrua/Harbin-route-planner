@@ -1,7 +1,7 @@
 [project]
-name = "harbin-route-planner"
+name = "itinerary-transformer"
 version = "0.1.0"
-description = "基于Transformer的哈尔滨文旅线路优化模型"
+description = "基于Transformer的文旅线路优化模型"
 requires-python = ">=3.10"
 dependencies = [
     "numpy>=1.24.0",

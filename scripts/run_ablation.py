@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.data.dataset import create_dataloaders
-from src.models.transformer import RouteTransformer
+from src.models.transformer import ItineraryTransformer
 from src.models.losses import RouteLoss
 from src.evaluate import route_distance, route_time, satisfaction_score, diversity_score, composite_score
 from src.inference import generate_with_constraints, filter_route, optimize_route_order
@@ -27,7 +27,7 @@ def deep_merge(base, override):
 
 def train_quick(config, name, device):
     """快速训练（无tqdm输出）."""
-    model = RouteTransformer(config).to(device)
+    model = ItineraryTransformer(config).to(device)
     n_params = sum(p.numel() for p in model.parameters())
 
     train_loader, val_loader, _ = create_dataloaders("data/processed", config)

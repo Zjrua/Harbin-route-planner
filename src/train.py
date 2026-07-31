@@ -17,7 +17,7 @@ from torch.utils.tensorboard import SummaryWriter
 from pathlib import Path
 from tqdm import tqdm
 
-from src.models.transformer import RouteTransformer
+from src.models.transformer import ItineraryTransformer
 from src.models.losses import RouteLoss
 from src.data.dataset import create_dataloaders
 from src.optim.muon import MuonOptimizer
@@ -39,7 +39,7 @@ def set_seed(seed: int) -> None:
     torch.backends.cudnn.deterministic = True
 
 
-def build_optimizer(model: RouteTransformer, config: dict) -> torch.optim.Optimizer:
+def build_optimizer(model: ItineraryTransformer, config: dict) -> torch.optim.Optimizer:
     opt_cfg = config["optimizer"]
     name = opt_cfg["name"]
 
@@ -83,7 +83,7 @@ def build_optimizer(model: RouteTransformer, config: dict) -> torch.optim.Optimi
         return cls(grouped, weight_decay=opt_cfg["weight_decay"])
 
 
-def train_one_epoch(model: RouteTransformer, dataloader, optimizer,
+def train_one_epoch(model: ItineraryTransformer, dataloader, optimizer,
                     criterion: RouteLoss, device: torch.device,
                     epoch: int, config: dict,
                     shared_data: dict,
@@ -166,7 +166,7 @@ def train_one_epoch(model: RouteTransformer, dataloader, optimizer,
 
 
 @torch.no_grad()
-def validate(model: RouteTransformer, dataloader, criterion: RouteLoss,
+def validate(model: ItineraryTransformer, dataloader, criterion: RouteLoss,
              device: torch.device, epoch: int = 0,
              shared_data: dict = None,
              encoder_output: torch.Tensor = None,
@@ -210,7 +210,7 @@ def validate(model: RouteTransformer, dataloader, criterion: RouteLoss,
 
 
 def main():
-    parser = argparse.ArgumentParser(description="训练哈尔滨文旅路线模型")
+    parser = argparse.ArgumentParser(description="训练文旅路线模型")
     parser.add_argument("--config", type=str, default="configs/default.yaml")
     parser.add_argument("--resume", type=str, default=None)
     parser.add_argument("--device", type=str, default=None)
@@ -227,7 +227,7 @@ def main():
     scaler = torch.amp.GradScaler("cuda", enabled=use_amp) if use_amp else None
 
     print("=" * 60)
-    print("  哈尔滨文旅线路优化模型 — 训练")
+    print("  ItineraryTransformer — 文旅线路优化训练")
     print(f"  Device: {device}  |  AMP: {use_amp}")
     print(f"  Epochs: {total_epochs}  |  Patience: {patience_limit}")
     print(f"  Optimizer: {config['optimizer']['name']}")
@@ -245,7 +245,7 @@ def main():
             print(f"    {k}: {v.shape}")
 
     # 模型初始化
-    model = RouteTransformer(config).to(device)
+    model = ItineraryTransformer(config).to(device)
     n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"  模型参数量: {n_params:,}")
 

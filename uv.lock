@@ -472,7 +472,7 @@ wheels = [
 ]
 
 [[package]]
-name = "harbin-route-planner"
+name = "itinerary-transformer"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
