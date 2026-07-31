@@ -116,6 +116,26 @@ uv run tensorboard --logdir logs/ --host 0.0.0.0 --port 6006
 
 模型参数量：4,569,976。训练特性：AMP 混合精度、共享数据加载（编码器预计算 + 输出共享）、Teacher Forcing + Scheduled Sampling、早停（patience=15）、tqdm 终端进度条 + TensorBoard 双轨日志。
 
+## 评估实验
+
+```bash
+# 方向B：真实数据泛化性（168条XHS holdout上的next-POI预测）
+uv run python -m scripts.evaluate_on_real --checkpoint checkpoints/best_model.pt
+# 结果：Transformer top1=47.77%，比最近邻高24.7倍
+
+# 方向C：与启发式/OR方法对比（5方法，含composite v1/v2）
+uv run python -m scripts.run_baselines --checkpoint checkpoints/best_model.pt
+# 结果：v2指标下Transformer(0.8727) > NN/OR-Tools(0.7619)，节奏优势显现
+
+# 方向A：优化器对比（AdamW vs Muon）
+uv run python -m scripts.run_optimizer_comparison
+# 结果：AdamW(4.88) 显著优于 Muon(5.93)，Muon已降级为探索性尝试
+
+# 生成论文图表
+uv run python scripts/plot_optimizer_comparison.py
+uv run python scripts/plot_baseline_comparison.py
+```
+
 ## 推理
 
 ```bash
@@ -140,7 +160,10 @@ uv run python -m src.inference --checkpoint checkpoints/best_model.pt --season w
 ## 评估
 
 ```bash
-uv run python -m src.evaluate --checkpoint checkpoints/best_model.pt
+# 综合评估：路线生成质量（composite v1/v2 + 与启发式对比）
+uv run python -m scripts.run_baselines --checkpoint checkpoints/best_model.pt
+# 真实数据 next-POI 准确率（168条XHS holdout）
+uv run python -m scripts.evaluate_on_real --checkpoint checkpoints/best_model.pt
 ```
 
 四维评价体系：距离(0.30) + 时间(0.25) + 满意度(0.25) + 多样性(0.20)。

@@ -31,8 +31,9 @@ uv run python -m src.inference --checkpoint checkpoints/best_model.pt --start "�
 # 消融实验
 uv run python scripts/run_ablation.py
 
-# 评估
-uv run python -m src.evaluate --checkpoint checkpoints/best_model.pt
+# 评估（详见下方"评估实验"章节的三个方向）
+uv run python -m scripts.evaluate_on_real --checkpoint checkpoints/best_model.pt   # 方向B：真实数据next-POI
+uv run python -m scripts.run_baselines --checkpoint checkpoints/best_model.pt      # 方向C：方法对比
 
 # 测试
 uv run pytest tests/ -v
@@ -231,6 +232,50 @@ ItineraryDataset → get_shared_data() (shared tensors on GPU)
 - 清单中编号和标题须与实际 `\caption` 一致
 - 参考文献标题通过 `\renewcommand{\refname}` 控制格式，避免与 `thebibliography` 重复
 - 临时文件通过 `paper/.gitignore` 忽略（.aux/.log/.toc等）
+
+## 评估实验（方向 A/B/C，已完成）
+
+三个独立评估实验验证了模型的核心价值与边界，结果已写入论文：
+
+### 方向 B：真实数据泛化性评估（最强证据）⭐
+
+将168条小红书真实路线从训练集剥离为 holdout（`data/processed/routes_xhs_holdout.npy`），在从未见过的真实路线上测试 next-POI 预测：
+
+| 方法 | top-1 | top-5 |
+|---|---|---|
+| most_popular | 0.00% | 0.00% |
+| nearest_neighbor | 1.93% | 8.67% |
+| **Transformer** | **47.77%** | **78.73%** |
+
+模型比最近邻高 24.7 倍，证明学到了真实游客行为（非合成规则复现）。**打破了"合成数据循环论证"质疑。**
+- 脚本：`scripts/evaluate_on_real.py`
+- 数据：`output/real_data_evaluation.json`
+
+### 方向 C：与启发式/OR 方法对比 + 指标改进
+
+对比 5 个方法（random/NN/2-opt/OR-Tools/Transformer），揭示原始 composite 指标缺陷并改进：
+
+| 方法 | rhythm | composite v1 | composite v2 |
+|---|---|---|---|
+| NN/OR-Tools | 0.467 | 0.8685 | 0.7619（暴跌） |
+| **Transformer** | **1.000** | 0.8606 | **0.8727**（翻盘） |
+
+NN/OR-Tools 生成"连续5住宿"的荒谬路线，Transformer 生成"游-吃交替"的合理节奏。v1 偏袒距离优化，v2 加入 rhythm 惩罚后排名翻转。
+- 脚本：`scripts/run_baselines.py`、`src/baselines/`、`src/evaluate.py` 的 `composite_score_v2`
+- 数据：`output/baseline_comparison.json`
+
+### 方向 A：优化器对比（Muon 失败，诚实降级）
+
+严格对比证明 Muon 在本任务规模下劣于 AdamW：
+
+| 优化器 | best val_loss | train/val gap |
+|---|---|---|
+| **AdamW** | **4.8849** | 2.03 |
+| Muon | 5.9291 | 3.70（过拟合严重）|
+
+Muon 差 21.4%。论文已把 Muon 从"三大核心创新"降级为"探索性尝试"。核心创新改为：图感知注意力 + Engram + MHC。
+- 脚本：`scripts/run_optimizer_comparison.py`
+- 数据：`output/optimizer_comparison.json`
 
 ## 当前训练结果（POI 规模 10,000）
 
