@@ -131,17 +131,7 @@ class ItineraryTransformer(nn.Module):
         if encoder_output.size(0) != route_seq.size(0):
             encoder_output = encoder_output.expand(route_seq.size(0), -1, -1).contiguous()
 
-        # 2. 构建 Engram 记忆（可选）
-        engram_memory = None
-        if self.use_engram:
-            scores = batch.get("scores", None)
-            if scores is not None:
-                self.engram.build_memory(encoder_output.detach(), scores)
-            query = encoder_output.mean(dim=1)
-            retrieved, _ = self.engram.retrieve(query)
-            engram_memory = retrieved
-
-        # 3. 目标路线嵌入（包含活动类型嵌入）
+        # 3. 目标路线嵌入（包含活动类型嵌入）-- 先算 target_emb，供 Engram 用
         max_route_len = self.config["model"]["max_route_len"]
         target_seq = route_seq[:, :-1] if route_seq.size(1) > 1 else route_seq
         target_activity = activity_types[:, :-1] if activity_types is not None and activity_types.size(1) > 1 else activity_types
@@ -150,6 +140,25 @@ class ItineraryTransformer(nn.Module):
             target_seq,
             activity_types=target_activity
         )
+
+        # 2. 构建 Engram 记忆（可选）-- 用路线表征，而非 graph encoder output
+        # 修复：原版喂 encoder_output（batch 间 broadcast 相同，导致所有 memory_keys 相同）；
+        # 新版喂 target_emb 的 mean-pool（每条路线的真实表征），并环形累积跨 batch 历史。
+        engram_memory = None
+        if self.use_engram:
+            scores = batch.get("scores", None)
+            if scores is not None:
+                # 路线表征：target_emb mean-pool -> [batch, d_model]
+                route_repr = target_emb.detach().mean(dim=1)
+                # scores 形状适配：dataset 返回 [batch] 标量序列
+                if scores.dim() > 1:
+                    scores = scores.view(-1)[:route_repr.size(0)]
+                self.engram.build_memory(route_repr, scores)
+            # 检索 + 门控融合（让 gate/out_proj 参与训练）
+            query = target_emb.mean(dim=1)  # [batch, d_model]
+            engram_memory = self.engram.forward(query, None)  # [batch, d_model]
+            # 扩展到序列维度供 decoder 使用：[batch, 1, d_model] -> 广播
+            engram_memory = engram_memory.unsqueeze(1)  # [batch, 1, d_model]
 
         # 4. 构建因果掩码
         seq_len = target_emb.size(1)
