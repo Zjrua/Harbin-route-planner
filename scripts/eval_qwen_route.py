@@ -115,7 +115,7 @@ def match_poi_names(names: list[str], pois: pd.DataFrame) -> tuple[list[int], fl
         if len(exact) > 0:
             matched.append(int(exact.index[0]))
             continue
-        contains = pois[pois["name"].str.contains(name, na=False)]
+        contains = pois[pois["name"].str.contains(re.escape(name), na=False, regex=True)]
         if len(contains) > 0:
             matched.append(int(contains.index[0]))
             continue
