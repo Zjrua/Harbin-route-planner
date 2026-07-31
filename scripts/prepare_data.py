@@ -170,6 +170,35 @@ def match_poi(route_name: str, name_to_idx: dict, poi_names: list) -> int | None
     return None
 
 
+def extract_days(title: str) -> int:
+    """从标题提取旅游天数（默认 1 天）.
+
+    规则：
+    - "一日游"/"一天" → 1
+    - "两日游"/"两天"/"二日" → 2
+    - "三日游"/"三天" → 3
+    - "两天一夜"/"三天两晚" → 按日数（两天一夜=2, 三天两晚=3）
+    - 找不到 → 1（默认）
+    """
+    if not isinstance(title, str):
+        return 1
+    t = title.strip()
+    day_map = {
+        "一日": 1, "一天": 1, "一日游": 1,
+        "两日": 2, "两天": 2, "二日": 2,
+        "三日": 3, "三天": 3,
+        "四日": 4, "四天": 4,
+        "五日": 5, "五天": 5,
+        "六日": 6, "六天": 6,
+        "七日": 7, "七天": 7,
+    }
+    # 先匹配较长的（"三天两晚" 优先匹配 "三天"）
+    for k in sorted(day_map, key=len, reverse=True):
+        if k in t:
+            return day_map[k]
+    return 1
+
+
 def load_xhs_routes(pois: pd.DataFrame, raw_dir: Path):
     routes_path = raw_dir / "哈尔滨旅游路线数据.csv"
     if not routes_path.exists():
@@ -216,6 +245,7 @@ def load_xhs_routes(pois: pd.DataFrame, raw_dir: Path):
                 "season": row.get("season", "winter"),
                 "source": row.get("source", "xhs"),
                 "liked_count": row.get("liked_count", 0),
+                "days": extract_days(row.get("title", "")),
             })
 
     return matched
@@ -324,6 +354,7 @@ def augment_routes(routes_list: list, pois: pd.DataFrame, dist_matrix: np.ndarra
             "season": route_dict["season"],
             "source": route_dict["source"],
             "liked_count": route_dict.get("liked_count", 0),
+            "days": route_dict.get("days", 1),
         })
 
     return augmented
@@ -393,11 +424,15 @@ def main():
     synthetic_dicts = []
     rng = np.random.RandomState(123)
     for route in synthetic:
+        # 合成路线按长度分配天数：≤9站=1日, ≤16站=2日, 否则=3日
+        n_stops = len(route)
+        days = 1 if n_stops <= 9 else (2 if n_stops <= 16 else 3)
         synthetic_dicts.append({
             "indices": route.tolist(),
             "season": rng.choice(["winter", "summer"]),
             "source": "synthetic",
             "liked_count": 0,
+            "days": days,
         })
 
     # === 8. Combine and augment ===
@@ -409,6 +444,19 @@ def main():
     all_routes = augment_routes(all_routes, pois, dist_mean)
     avg_after = np.mean([len(r["indices"]) for r in all_routes])
     print(f"  增强后: {len(all_routes)} 条, 平均 {avg_after:.1f} 站")
+
+    # 增强后按站数统一估算天数（统计验证：Kruskal-Wallis p=0.0004, 轮廓系数0.563）
+    # 覆盖标题解析的初值——打分用的是增强后路线，天数需与最终站数一致
+    # 1日游 ≤10站, 2日游 11-16站, 3日游 ≥17站
+    def estimate_days_by_len(n_stops):
+        if n_stops <= 10:
+            return 1
+        if n_stops <= 16:
+            return 2
+        return 3
+
+    for r in all_routes:
+        r["days"] = estimate_days_by_len(len(r["indices"]))
 
     type_counts = {}
     for r in all_routes:
@@ -441,6 +489,10 @@ def main():
     # 保存 source 标签（区分 xhs 真实 / synthetic 合成），供方向B独立评估用
     route_sources = np.array([r.get("source", "unknown") for r in all_routes])
     np.save(out_dir / "routes_source.npy", route_sources)
+
+    # 保存 days 标签（多日游天数，供 v4 打分时间约束按天数校准）
+    route_days = np.array([int(r.get("days", 1)) for r in all_routes])
+    np.save(out_dir / "routes_days.npy", route_days)
 
     # 单独保存真实路线（XHS 等，非合成）作为 holdout 测试集（不参与 train/val）
     # 用"不是 synthetic"判断，兼容 source 字段为"小红书"/"xhs"等各种取值

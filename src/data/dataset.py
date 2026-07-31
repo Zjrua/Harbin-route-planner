@@ -68,6 +68,10 @@ class ItineraryDataset(Dataset):
         source_path = data_path / "routes_source.npy"
         routes_source = np.load(source_path, allow_pickle=True) if source_path.exists() else None
 
+        # 可选：加载 days 标签（多日游天数，v4 打分时间约束按天数校准）
+        days_path = data_path / "routes_days.npy"
+        routes_days = np.load(days_path) if days_path.exists() else None
+
         # 可选 holdout 测试集（真实 XHS 路线，不参与 train/val，打破数据循环论证）
         holdout_path = data_path / "routes_xhs_holdout.npy"
         use_holdout_for_test = (self.split == "test" and holdout_path.exists())

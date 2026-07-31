@@ -20,33 +20,57 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.scoring import composite_score_v3, compute_route_metrics
 
 
-def evaluate_routes_v3(routes, dist_matrix, time_matrix, ratings, categories, n_days=1):
-    """批量评估路线，返回 v3 得分列表."""
+def evaluate_routes_v3(routes, dist_matrix, time_matrix, ratings, categories,
+                       activity_types, n_days=None):
+    """批量评估路线，返回 v4 得分列表（含硬约束判负信息）.
+
+    n_days=None 时按站数自动推断天数（1日≤10站, 2日11-16, 3日≥17），
+    保证不同方法的路线用统一规则校准时间预算。
+    """
     scores = []
     for route in routes:
         if len(route) < 2:
             continue
+        if n_days is None:
+            n_days = 1 if len(route) <= 10 else (2 if len(route) <= 16 else 3)
         result = composite_score_v3(route, dist_matrix, time_matrix, ratings,
-                                    categories, n_days=n_days)
+                                    categories, n_days=n_days,
+                                    activity_types=activity_types)
         scores.append(result)
     return scores
 
 
 def summarize(scores, name):
-    """汇总一组路线的平均得分."""
+    """汇总一组路线的平均得分（含可行性统计）.
+
+    软指标只在可行路线上求平均（不可行路线没有这些分量）。
+    """
     if not scores:
         return None
     avg = {}
-    for key in ["score", "feasibility", "proximity", "area_density", "rhythm",
-                "satisfaction", "diversity"]:
-        avg[key] = round(float(np.mean([s[key] for s in scores])), 4)
-    # 原始指标
+    feasible_scores = [s for s in scores if s.get("feasible")]
+    for key in ["proximity", "area_density", "rhythm", "satisfaction", "diversity"]:
+        vals = [s[key] for s in feasible_scores] if feasible_scores else [0.0]
+        avg[key] = round(float(np.mean(vals)), 4)
+    # 原始指标（所有路线，含不可行的）
     for key in ["total_dist_km", "total_time_min", "hop_p50_km", "hop_p90_km"]:
         vals = [s["metrics"][key] for s in scores]
         avg[key] = round(float(np.mean(vals)), 1)
+    # 可行性统计
+    avg["score"] = round(float(np.mean([s["score"] for s in scores])), 4)
+    feasible = len(feasible_scores)
+    reasons = {}
+    for s in scores:
+        if not s.get("feasible"):
+            r = s.get("reason", "unknown")
+            reasons[r] = reasons.get(r, 0) + 1
+    avg["feasible_rate"] = round(feasible / len(scores), 2)
+    avg["infeasible_reasons"] = reasons
     print(f"=== {name} ===")
-    print(f"  v3得分: {avg['score']} | 可行性 {avg['feasibility']} | 就近性 {avg['proximity']} "
+    print(f"  v4得分: {avg['score']} | 可行性 {avg['feasible_rate']:.0%} | 就近性 {avg['proximity']} "
           f"| 区域密度 {avg['area_density']}")
+    if avg["infeasible_reasons"]:
+        print(f"  判负原因: {avg['infeasible_reasons']}")
     print(f"  节奏 {avg['rhythm']} | 满意度 {avg['satisfaction']} | 多样性 {avg['diversity']}")
     print(f"  总距离 {avg['total_dist_km']}km | 总耗时 {avg['total_time_min']}min "
           f"| 跳转p50 {avg['hop_p50_km']}km | p90 {avg['hop_p90_km']}km")
@@ -65,14 +89,34 @@ def main():
     time_matrix = np.load(data_dir / "time_matrix.npy")
     ratings = pois["rating"].values
     categories = pois["category"].values
+    # activity_types 用于停留时间计算（v4 时间约束的关键）
+    act_path = data_dir / "poi_activity_types.npy"
+    activity_types = np.load(act_path) if act_path.exists() else None
 
     results = {}
 
-    # 1. 真实 XHS 路线
+    # 天数标签（v4 时间约束按天数校准）：加载 routes_days.npy 或按站数估算
+    days_path = data_dir / "routes_days.npy"
+    if days_path.exists():
+        routes_days_all = np.load(days_path)
+    else:
+        # 按站数估算（与 prepare_data.py 一致）
+        routes_all = np.load(data_dir / "routes.npy", allow_pickle=True)
+        routes_days_all = np.array([
+            1 if len(r) <= 10 else (2 if len(r) <= 16 else 3)
+            for r in routes_all
+        ])
+
+    # 1. 真实 XHS 路线（每条用其估算天数，而非默认1天）
     real = np.load(data_dir / "routes_xhs_holdout.npy", allow_pickle=True)
     real_routes = [r for r in real if len(r) >= 3]
-    real_scores = evaluate_routes_v3(real_routes[:50], dist_matrix, time_matrix,
-                                     ratings, categories)
+    # holdout 是真实路线，天数按站数估算
+    real_scores = []
+    for r in real_routes[:50]:
+        n_days = 1 if len(r) <= 10 else (2 if len(r) <= 16 else 3)
+        result = composite_score_v3(r, dist_matrix, time_matrix, ratings,
+                                    categories, n_days=n_days, activity_types=activity_types)
+        real_scores.append(result)
     results["real_xhs"] = summarize(real_scores, "真实 XHS 路线")
 
     # 2. Transformer 生成（从真实起点）
@@ -100,7 +144,8 @@ def main():
         raw = generate_with_constraints(model, enc, start, 5, length, device, poi_act, cluster)
         transformer_routes.append(filter_route(raw, length))
     transformer_scores = evaluate_routes_v3(transformer_routes, dist_matrix,
-                                            time_matrix, ratings, categories)
+                                            time_matrix, ratings, categories,
+                                            activity_types)
     results["transformer"] = summarize(transformer_scores, "Transformer 生成")
 
     # 3. 启发式（NN + 2-opt）
@@ -108,12 +153,14 @@ def main():
     nn_routes = [nearest_neighbor_route(int(r[0]), dist_matrix, min(len(r), 12))
                  for r in real_routes[:args.n_starts]]
     results["nn"] = summarize(evaluate_routes_v3(nn_routes, dist_matrix, time_matrix,
-                                                 ratings, categories), "NN 最近邻")
+                                                 ratings, categories, activity_types),
+                              "NN 最近邻")
 
     ortools_routes = [ortools_route(int(r[0]), dist_matrix, min(len(r), 12), time_limit_sec=3)
                       for r in real_routes[:args.n_starts]]
     results["ortools"] = summarize(evaluate_routes_v3(ortools_routes, dist_matrix,
-                                                      time_matrix, ratings, categories),
+                                                      time_matrix, ratings, categories,
+                                                      activity_types),
                                    "OR-Tools")
 
     # 4. 随机
@@ -122,7 +169,8 @@ def main():
     random_routes = [random_route(int(r[0]), len(pois), min(len(r), 12), rng)
                      for r in real_routes[:args.n_starts]]
     results["random"] = summarize(evaluate_routes_v3(random_routes, dist_matrix,
-                                                     time_matrix, ratings, categories),
+                                                     time_matrix, ratings, categories,
+                                                     activity_types),
                                   "随机")
 
     # 保存
