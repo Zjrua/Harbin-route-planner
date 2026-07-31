@@ -58,3 +58,4 @@ __pycache__/
 data/external/**/
 !data/external/**/README.md
 !data/external/**/*.py
+data/qwen_*.jsonl

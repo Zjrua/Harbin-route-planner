@@ -49,13 +49,13 @@
       "composite_v2": 0.7619
     },
     "Transformer": {
-      "avg_distance_km": 164.41,
-      "avg_time_min": 226.94,
-      "avg_satisfaction": 4.52,
-      "avg_diversity": 0.587,
-      "avg_rhythm": 1.0,
-      "composite": 0.8606,
-      "composite_v2": 0.8727
+      "avg_distance_km": 141.23,
+      "avg_time_min": 188.34,
+      "avg_satisfaction": 4.442,
+      "avg_diversity": 0.517,
+      "avg_rhythm": 0.889,
+      "composite": 0.848,
+      "composite_v2": 0.836
     }
   }
 }

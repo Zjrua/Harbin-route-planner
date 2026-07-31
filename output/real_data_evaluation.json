@@ -13,8 +13,8 @@
       "total_predictions": 1660
     },
     "transformer": {
-      "top1_accuracy": 0.4777,
-      "top5_accuracy": 0.7873,
+      "top1_accuracy": 0.3054,
+      "top5_accuracy": 0.4422,
       "total_predictions": 1660
     }
   }

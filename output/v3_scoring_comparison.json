@@ -1,0 +1,67 @@
+{
+  "real_xhs": {
+    "score": 0.8298,
+    "feasibility": 1.0,
+    "proximity": 0.8969,
+    "area_density": 0.8403,
+    "rhythm": 0.6956,
+    "satisfaction": 0.9245,
+    "diversity": 0.3131,
+    "total_dist_km": 103.4,
+    "total_time_min": 177.3,
+    "hop_p50_km": 4.0,
+    "hop_p90_km": 23.9
+  },
+  "transformer": {
+    "score": 0.8177,
+    "feasibility": 1.0,
+    "proximity": 0.679,
+    "area_density": 0.8266,
+    "rhythm": 0.9778,
+    "satisfaction": 0.8685,
+    "diversity": 0.3094,
+    "total_dist_km": 283.9,
+    "total_time_min": 314.3,
+    "hop_p50_km": 11.5,
+    "hop_p90_km": 100.3
+  },
+  "nn": {
+    "score": 0.792,
+    "feasibility": 1.0,
+    "proximity": 0.9,
+    "area_density": 0.9672,
+    "rhythm": 0.3879,
+    "satisfaction": 0.8916,
+    "diversity": 0.25,
+    "total_dist_km": 0.7,
+    "total_time_min": 1.4,
+    "hop_p50_km": 0.1,
+    "hop_p90_km": 0.2
+  },
+  "ortools": {
+    "score": 0.792,
+    "feasibility": 1.0,
+    "proximity": 0.9,
+    "area_density": 0.9672,
+    "rhythm": 0.3879,
+    "satisfaction": 0.8916,
+    "diversity": 0.25,
+    "total_dist_km": 0.7,
+    "total_time_min": 1.4,
+    "hop_p50_km": 0.1,
+    "hop_p90_km": 0.2
+  },
+  "random": {
+    "score": 0.8477,
+    "feasibility": 1.0,
+    "proximity": 0.863,
+    "area_density": 0.8254,
+    "rhythm": 0.8566,
+    "satisfaction": 0.9007,
+    "diversity": 0.3767,
+    "total_dist_km": 334.4,
+    "total_time_min": 404.9,
+    "hop_p50_km": 8.9,
+    "hop_p90_km": 94.2
+  }
+}
