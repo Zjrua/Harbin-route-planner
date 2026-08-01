@@ -203,3 +203,186 @@ def composite_score_v3(route: List[int], dist_matrix: np.ndarray,
 
 # 兼容别名：v4 就是当前实现（函数名保持 v3 以便不破坏调用方，但语义已升级）
 composite_score_v4 = composite_score_v3
+
+
+# ==== v5：质量 + 需求匹配（指令约束） ====
+
+def infer_days_from_len(n_pois: int) -> int:
+    """按去重站数推断游览天数（与评估脚本一致）."""
+    if n_pois <= 10:
+        return 1
+    elif n_pois <= 16:
+        return 2
+    return 3
+
+
+def composite_score_v5(route: List[int], dist_matrix: np.ndarray,
+                       time_matrix: np.ndarray, ratings: np.ndarray,
+                       categories: np.ndarray, n_days: int = 1,
+                       activity_types: Optional[np.ndarray] = None,
+                       weights: Dict[str, float] = None,
+                       instruction: Optional[str] = None,
+                       constraints=None,
+                       use_llm: bool = False,
+                       poi_names: Optional[List[str]] = None,
+                       avg_costs: Optional[np.ndarray] = None,
+                       season_winter: Optional[np.ndarray] = None,
+                       season_summer: Optional[np.ndarray] = None) -> Dict:
+    """路线综合打分 v5：v4 质量分 + 需求匹配（指令约束）.
+
+    在 v4 基础上新增（只对"解析出的约束"生效）：
+    - 硬约束（判负）：天数严重不符 / 核心景点缺失 / 出发地不符
+    - 软维度（加权）：需求匹配度 requirement_match（预算/偏好/节奏/季节/天数超出）
+    - 分数 = 0.70 × 质量五维加权 + 0.30 × requirement_match
+
+    Args:
+        route/dist_matrix/time_matrix/ratings/categories/n_days/activity_types: 同 v4
+        instruction: 用户指令；传入时解析约束并纳入打分
+        constraints: 预解析的 Constraints（不传则从 instruction 解析）
+        use_llm: 约束解析是否允许 LLM 兜底（训练固定 False）
+        poi_names: [n_pois] 名称列表（核心景点/出发地匹配用）
+        avg_costs: [n_pois] 人均花费（预算估算用）
+        season_winter/season_summer: [n_pois] 季节分（0~1）
+
+    Returns:
+        同 v4 结构 + requirement_match / requirement_breakdown。
+        不传 instruction/constraints → 完全退回 v4 行为。
+    """
+    if weights is None:
+        weights = {
+            "proximity": 0.25, "area_density": 0.20, "rhythm": 0.20,
+            "satisfaction": 0.20, "diversity": 0.15,
+        }
+
+    # 约束解析（可选）
+    if constraints is None:
+        if instruction:
+            from src.constraint_parser import parse_constraints
+            constraints = parse_constraints(instruction, use_llm=use_llm)
+        else:
+            constraints = None
+
+    # 无约束 → 退回 v4（纯质量分）
+    if constraints is None:
+        return composite_score_v3(route, dist_matrix, time_matrix, ratings,
+                                  categories, n_days=n_days,
+                                  activity_types=activity_types, weights=weights)
+
+    metrics = compute_route_metrics(route, dist_matrix, time_matrix,
+                                    ratings, categories, activity_types)
+    if not metrics:
+        return {"score": 0.0, "feasible": False, "reason": "invalid_route"}
+
+    # === 质量硬约束（v4 原有） ===
+    reason = check_hard_constraints(metrics, n_days)
+    if reason is not None:
+        return {"score": 0.0, "feasible": False, "reason": reason,
+                "metrics": {k: round(v, 2) for k, v in metrics.items()}}
+
+    # === 需求硬约束 ===
+    inferred_days = infer_days_from_len(len(route))
+    # 1. 天数严重不符：推断天数 < 指令天数
+    if constraints.days is not None and inferred_days < constraints.days:
+        return {"score": 0.0, "feasible": False, "reason": "days_mismatch",
+                "metrics": {k: round(v, 2) for k, v in metrics.items()},
+                "inferred_days": inferred_days, "asked_days": constraints.days}
+    # 2. 核心景点缺失（核心景点在 POI 库存在才判负）
+    if constraints.core_pois and poi_names is not None:
+        route_names = [poi_names[i] for i in route if i < len(poi_names)]
+        hit = [cp for cp in constraints.core_pois
+               if any(cp in rn or rn in cp for rn in route_names)]
+        if len(hit) < len(constraints.core_pois):
+            all_in_db = all(
+                any(cp in pn or pn in cp for pn in poi_names)
+                for cp in constraints.core_pois)
+            if all_in_db:
+                return {"score": 0.0, "feasible": False, "reason": "missing_core_poi",
+                        "metrics": {k: round(v, 2) for k, v in metrics.items()},
+                        "missing": [cp for cp in constraints.core_pois if cp not in hit]}
+    # 3. 出发地不符（前两站容错；出发地 POI 在库存在才判负）
+    if constraints.start is not None and poi_names is not None:
+        start_names = [poi_names[i] for i in route[:2] if i < len(poi_names)]
+        hit_start = any(constraints.start in rn or rn in constraints.start
+                        for rn in start_names)
+        if not hit_start:
+            start_in_db = any(constraints.start in pn or pn in constraints.start
+                              for pn in poi_names)
+            if start_in_db:
+                return {"score": 0.0, "feasible": False, "reason": "start_mismatch",
+                        "metrics": {k: round(v, 2) for k, v in metrics.items()}}
+
+    # === 软指标（质量五维，v4 逻辑） ===
+    proximity = score_proximity(metrics)
+    area_density = score_area_density(metrics)
+    rhythm = 1.0 - metrics["same_type_rate"]
+    satisfaction = min(metrics["satisfaction"] / 5.0, 1.0)
+    diversity = metrics["diversity"]
+    components = {
+        "proximity": proximity, "area_density": area_density,
+        "rhythm": rhythm, "satisfaction": satisfaction, "diversity": diversity,
+    }
+    quality_score = sum(weights[k] * components[k] for k in weights)
+
+    # === 软扣分：需求匹配度 ===
+    deductions = {}
+    # 预算
+    if constraints.budget_max is not None and avg_costs is not None:
+        cost = sum(float(avg_costs[i]) for i in route
+                   if i < len(avg_costs) and avg_costs[i] > 0)
+        if cost > constraints.budget_max:
+            over = (cost - constraints.budget_max) / constraints.budget_max
+            deductions["budget"] = 0.6 if over > 0.5 else (0.3 if over > 0.2 else 0.1)
+    # 偏好
+    if constraints.preferences and activity_types is not None:
+        n = len(route)
+        types = [int(activity_types[i]) for i in route if i < len(activity_types)]
+        food_ratio = types.count(1) / n if n else 0.0
+        shop_ratio = types.count(4) / n if n else 0.0
+        worst = 0.0
+        for pref in constraints.preferences:
+            if pref == "food" and food_ratio < 0.25:
+                worst = max(worst, min(0.45, (0.25 - food_ratio) / 0.1 * 0.15))
+            elif pref == "shopping" and shop_ratio < 0.25:
+                worst = max(worst, min(0.45, (0.25 - shop_ratio) / 0.1 * 0.15))
+        if worst:
+            deductions["preference"] = worst
+    # 节奏
+    if constraints.pace == "slow":
+        per_day = len(route) / max(n_days, 1)
+        if per_day > 9:
+            deductions["pace"] = 0.6
+        elif per_day > 7:
+            deductions["pace"] = 0.3
+    elif constraints.pace == "fast" and constraints.days is not None:
+        per_day = len(route) / max(n_days, 1)
+        if per_day < 3:
+            deductions["pace"] = 0.3
+    # 季节（用 winter−summer 差值识别"冬季特色"，避免四季皆宜被误判）
+    if season_winter is not None and season_summer is not None:
+        diff = [float(season_winter[i]) - float(season_summer[i])
+                for i in route if i < len(season_winter)]
+        n_spec = sum(1 for d in diff if d > 0.3)
+        if constraints.season == "winter" and n_spec == 0:
+            deductions["season"] = 0.2
+        elif constraints.season == "summer" and len(diff) > 0 \
+                and n_spec / len(diff) > 0.5:
+            deductions["season"] = 0.2
+    # 天数超出（路线过长，超出用户时间）
+    if constraints.days is not None and inferred_days > constraints.days:
+        over_days = inferred_days - constraints.days
+        deductions["days_over"] = 0.15 if over_days == 1 else 0.3
+
+    req_match = max(0.0, 1.0 - sum(deductions.values()))
+    score = 0.70 * quality_score + 0.30 * req_match
+
+    components.update({
+        "score": round(score, 4),
+        "feasible": True,
+        "reason": None,
+        "metrics": {k: round(v, 2) for k, v in metrics.items()},
+        "quality_score": round(quality_score, 4),
+        "requirement_match": round(req_match, 4),
+        "requirement_breakdown": deductions,
+        "inferred_days": inferred_days,
+    })
+    return components

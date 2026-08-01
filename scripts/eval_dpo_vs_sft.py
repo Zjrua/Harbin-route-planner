@@ -19,7 +19,7 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.scoring import composite_score_v3
+from src.scoring import composite_score_v3, composite_score_v5
 
 MODEL_PATH = str(Path("data/external/modelscope_cache/models/Qwen--Qwen3-4B/snapshots/master"))
 SFT_LORA = "output/qwen_route_lora"
@@ -76,8 +76,8 @@ def generate_route(model, tokenizer, instruction, max_new_tokens=250):
     torch.manual_seed(42)  # 采样可复现
     with torch.no_grad():
         out = model.generate(**inp, max_new_tokens=max_new_tokens,
-                             do_sample=True, temperature=0.8, top_p=0.9,
-                             no_repeat_ngram_size=4)  # 采样解码 + 禁 4-gram 重复
+                             do_sample=True, temperature=0.4, top_p=0.9,
+                             no_repeat_ngram_size=4)  # 采样解码 + 禁 4-gram 重复（低温保路线长度）
     resp = tokenizer.decode(out[0][inp["input_ids"].shape[1]:], skip_special_tokens=True)
     return resp
 
@@ -96,12 +96,13 @@ def parse_route(text):
 
 
 def match_and_score(names, pois, dist_matrix, time_matrix, ratings, categories, activity_types,
-                    dedup=True):
-    """POI 名称 → 索引 → v4 打分.
+                    dedup=True, instruction=None):
+    """POI 名称 → 索引 → v5 打分（质量 + 需求匹配）.
 
     dedup=True 时按索引去重（保留首次出现）：
-    模型输出的"折返/景区内打转"会产生重复 POI，被 v4 硬约束判负。
+    模型输出的"折返/景区内打转"会产生重复 POI，被硬约束判负。
     去重后再打分，反映"路线骨架"的真实质量；重复数单独报告。
+    instruction 传入时用 v5（纳入指令约束），否则退回 v4 纯质量分。
     """
     matched = []
     for name in names:
@@ -125,8 +126,19 @@ def match_and_score(names, pois, dist_matrix, time_matrix, ratings, categories, 
     if len(matched) < 3:
         return None, len(matched) / max(len(names), 1), n_dropped
     n_days = 1 if len(matched) <= 10 else (2 if len(matched) <= 16 else 3)
-    result = composite_score_v3(matched, dist_matrix, time_matrix, ratings,
-                                categories, n_days=n_days, activity_types=activity_types)
+    if instruction is not None:
+        result = composite_score_v5(
+            matched, dist_matrix, time_matrix, ratings, categories,
+            n_days=n_days, activity_types=activity_types,
+            instruction=instruction,
+            poi_names=pois["name"].tolist(),
+            avg_costs=pois["avg_cost"].values,
+            season_winter=pois["season_winter"].values,
+            season_summer=pois["season_summer"].values,
+        )
+    else:
+        result = composite_score_v3(matched, dist_matrix, time_matrix, ratings,
+                                    categories, n_days=n_days, activity_types=activity_types)
     return result, len(matched) / max(len(names), 1), n_dropped
 
 
@@ -158,12 +170,15 @@ def main():
             raw = generate_route(model, tok, instr)
             names = parse_route(raw)
             result, match_rate, n_dropped = match_and_score(
-                names, pois, dist_matrix, time_matrix, ratings, categories, activity_types)
+                names, pois, dist_matrix, time_matrix, ratings, categories,
+                activity_types, instruction=instr)
             if result is not None:
                 scores.append(float(result["score"]))
                 feasible = "✓" if result.get("feasible") else f"✗({result.get('reason')})"
                 dup_tag = f"去重{n_dropped}" if n_dropped else ""
-                print(f"  [{i+1}] v4={result['score']:.4f} {feasible} {dup_tag} 匹配率{match_rate:.0%} 距离{result['metrics']['total_dist_km']:.0f}km")
+                req = result.get("requirement_match")
+                req_tag = f"需求{req:.2f}" if req is not None else ""
+                print(f"  [{i+1}] v5={result['score']:.4f} {feasible} {dup_tag} {req_tag} 匹配率{match_rate:.0%} 距离{result['metrics']['total_dist_km']:.0f}km")
             else:
                 print(f"  [{i+1}] ⚠️ 无法匹配/评估 (匹配率{match_rate:.0%}, 去重{n_dropped})")
         avg = np.mean(scores) if scores else 0

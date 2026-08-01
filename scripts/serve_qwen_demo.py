@@ -31,7 +31,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from src.scoring import composite_score_v3
+from src.scoring import composite_score_v3, composite_score_v5
 from src.visualize import plot_route_on_map
 
 # ==== 路径常量 ====
@@ -103,8 +103,8 @@ def generate_route(model, tokenizer, instruction, max_new_tokens=250):
     torch.manual_seed(int(time.time() * 1000) % (2 ** 31))  # 每次生成不同
     with torch.no_grad():
         out = model.generate(**inp, max_new_tokens=max_new_tokens,
-                             do_sample=True, temperature=0.8, top_p=0.9,
-                             no_repeat_ngram_size=4)
+                             do_sample=True, temperature=0.4, top_p=0.9,
+                             no_repeat_ngram_size=4)  # 采样解码 + 禁 4-gram 重复（低温保路线长度）
     return tokenizer.decode(out[0][inp["input_ids"].shape[1]:], skip_special_tokens=True)
 
 
@@ -182,9 +182,14 @@ def handle_generate(body: dict) -> dict:
                 "pois": [], "score_detail": None, "map_html": None}
 
     n_days = 1 if len(deduped) <= 10 else (2 if len(deduped) <= 16 else 3)
-    result = composite_score_v3(deduped, d["dist_matrix"], d["time_matrix"],
+    result = composite_score_v5(deduped, d["dist_matrix"], d["time_matrix"],
                                 d["ratings"], d["categories"], n_days=n_days,
-                                activity_types=d["activity_types"])
+                                activity_types=d["activity_types"],
+                                instruction=instruction, use_llm=True,
+                                poi_names=pois["name"].tolist(),
+                                avg_costs=pois["avg_cost"].values,
+                                season_winter=pois["season_winter"].values,
+                                season_summer=pois["season_summer"].values)
 
     # POI 序列展示（含距离标注）
     poi_names = [str(pois.iloc[i]["name"]) for i in deduped]
@@ -206,6 +211,9 @@ def handle_generate(body: dict) -> dict:
         "rhythm": round(float(result.get("rhythm", 0)), 3),
         "sub_scores": {k: round(float(v), 3) for k, v in result.items()
                        if k in ("proximity", "area_density", "rhythm", "satisfaction", "diversity")},
+        "requirement_match": round(float(result.get("requirement_match", 1.0)), 4),
+        "requirement_breakdown": result.get("requirement_breakdown", {}),
+        "inferred_days": result.get("inferred_days", n_days),
     }
 
     # 地图
@@ -331,7 +339,7 @@ function render(d){
   }
   const s = d.score_detail;
   if(s){
-    const badge = s.feasible ? '<span class="badge ok">可行</span>' : '<span class="badge no">不可行</span>';
+    const badge = s.feasible ? '<span class="badge ok">可行</span>' : '<span class="badge no">不可行('+ (s.reason||'') +')</span>';
     html += '<div class="card"><b>v4 综合评分</b>' + badge + '<div class="score-grid">'
       + '<div class="score-item main"><div class="v">'+s.score+'</div><div class="k">综合分</div></div>'
       + '<div class="score-item"><div class="v">'+s.n_days+'日</div><div class="k">推断天数</div></div>'
@@ -340,6 +348,8 @@ function render(d){
       + '<div class="score-item"><div class="v">'+s.total_time_min+'min</div><div class="k">总耗时</div></div>'
       + '<div class="score-item"><div class="v">'+s.satisfaction+'</div><div class="k">满意度</div></div>'
       + '<div class="score-item"><div class="v">'+s.diversity+'</div><div class="k">多样性</div></div>'
+      + (('<div class="score-item"><div class="v">'+s.requirement_match+'</div><div class="k">需求匹配</div></div>')
+         if s.requirement_match != null && s.requirement_match < 1 else '')
       + '</div><div class="score-grid" style="grid-template-columns:repeat(5,1fr)">'
       + ['proximity','area_density','rhythm','satisfaction','diversity'].map(k => {
           const v = s.sub_scores && s.sub_scores[k] != null ? s.sub_scores[k] : '—';

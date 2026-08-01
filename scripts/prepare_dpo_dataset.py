@@ -25,7 +25,7 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.scoring import composite_score_v3
+from src.scoring import composite_score_v3, composite_score_v5
 
 MODEL_PATH = str(Path("data/external/modelscope_cache/models/Qwen--Qwen3-4B/snapshots/master"))
 LORA_DIR = "output/qwen_route_lora"
@@ -96,12 +96,25 @@ def match_route_to_indices(names, pois):
 
 
 def score_route(route_indices, dist_matrix, time_matrix, ratings, categories,
-                activity_types, n_days):
-    """用 v4 打分评估路线，返回分数 + 是否可行."""
+                activity_types, n_days, instruction=None, pois=None):
+    """用 v5 打分评估路线（质量 + 需求匹配），返回分数或 None.
+
+    需求硬约束（天数不符/核心景点缺失/出发地不符）判负 → 返回 None。
+    """
     if len(route_indices) < 3:
         return None
-    result = composite_score_v3(route_indices, dist_matrix, time_matrix, ratings,
-                                categories, n_days=n_days, activity_types=activity_types)
+    if instruction is not None and pois is not None:
+        result = composite_score_v5(
+            route_indices, dist_matrix, time_matrix, ratings, categories,
+            n_days=n_days, activity_types=activity_types, instruction=instruction,
+            poi_names=pois["name"].tolist(),
+            avg_costs=pois["avg_cost"].values,
+            season_winter=pois["season_winter"].values,
+            season_summer=pois["season_summer"].values,
+        )
+    else:
+        result = composite_score_v3(route_indices, dist_matrix, time_matrix, ratings,
+                                    categories, n_days=n_days, activity_types=activity_types)
     if not result.get("feasible"):
         return None
     return result["score"]
@@ -111,7 +124,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--n-instructions", type=int, default=100)
     parser.add_argument("--samples", type=int, default=8)
-    parser.add_argument("--temperature", type=float, default=0.9)
+    parser.add_argument("--temperature", type=float, default=0.6,
+                        help="采样温度（过低路线太短难打分，过高路线被剪短；0.6 平衡）")
     parser.add_argument("--min-gap", type=float, default=0.05,
                         help="chosen 与 rejected 的最小分数差")
     args = parser.parse_args()
@@ -159,7 +173,7 @@ def main():
                 continue
             n_days = 1 if len(indices) <= 10 else (2 if len(indices) <= 16 else 3)
             sc = score_route(indices, dist_matrix, time_matrix, ratings, categories,
-                             activity_types, n_days)
+                             activity_types, n_days, instruction=instr, pois=pois)
             if sc is not None:
                 routes_scores.append((names, sc))
 
