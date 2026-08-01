@@ -83,6 +83,7 @@ def main():
     parser.add_argument("--grad-accum", type=int, default=8)
     parser.add_argument("--lr", type=float, default=2e-4)
     parser.add_argument("--max-samples", type=int, default=None)
+    parser.add_argument("--dataset", default=DATASET_PATH, help="训练数据 JSONL 路径")
     parser.add_argument("--output", default="output/qwen_route_lora")
     args = parser.parse_args()
 
@@ -124,7 +125,7 @@ def main():
     print(f"LoRA 可训练参数: {trainable:,} ({trainable / sum(p.numel() for p in model.parameters()) * 100:.2f}%)")
 
     # === 数据集 ===
-    samples = load_samples(DATASET_PATH, args.max_samples)
+    samples = load_samples(args.dataset, args.max_samples)
     ds = Dataset.from_list(samples)
     ds = ds.map(lambda s: tokenize_function(s, tokenizer), batched=True,
                 remove_columns=["prompt", "full"])
