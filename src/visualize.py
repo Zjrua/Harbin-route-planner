@@ -120,7 +120,8 @@ def plot_route_on_map(pois: pd.DataFrame, route: List[int],
                 ),
             ).add_to(m)
 
-    m.save(output_path)
+    if output_path:
+        m.save(output_path)
     return m
 
 
@@ -396,7 +397,8 @@ def plot_route_on_map_with_roads(pois: pd.DataFrame, route: List[int],
                 ),
             ).add_to(m)
 
-    m.save(output_path)
+    if output_path:
+        m.save(output_path)
     return m
 
 
