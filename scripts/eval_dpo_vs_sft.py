@@ -75,7 +75,8 @@ def generate_route(model, tokenizer, instruction, max_new_tokens=250):
     inp = tokenizer(text, return_tensors="pt").to(model.device)
     with torch.no_grad():
         out = model.generate(**inp, max_new_tokens=max_new_tokens,
-                             do_sample=False, temperature=None, top_p=None)
+                             do_sample=False, temperature=None, top_p=None,
+                             no_repeat_ngram_size=4)  # 禁止 4-gram 重复：拦 POI 名重复（模型爱折返/打转）
     resp = tokenizer.decode(out[0][inp["input_ids"].shape[1]:], skip_special_tokens=True)
     return resp
 
@@ -93,8 +94,14 @@ def parse_route(text):
     return []
 
 
-def match_and_score(names, pois, dist_matrix, time_matrix, ratings, categories, activity_types):
-    """POI 名称 → 索引 → v4 打分."""
+def match_and_score(names, pois, dist_matrix, time_matrix, ratings, categories, activity_types,
+                    dedup=True):
+    """POI 名称 → 索引 → v4 打分.
+
+    dedup=True 时按索引去重（保留首次出现）：
+    模型输出的"折返/景区内打转"会产生重复 POI，被 v4 硬约束判负。
+    去重后再打分，反映"路线骨架"的真实质量；重复数单独报告。
+    """
     matched = []
     for name in names:
         exact = pois[pois["name"] == name]
@@ -103,12 +110,23 @@ def match_and_score(names, pois, dist_matrix, time_matrix, ratings, categories, 
         contains = pois[pois["name"].str.contains(re.escape(name), na=False, regex=True)]
         if len(contains) > 0:
             matched.append(int(contains.index[0]))
+    n_dropped = 0
+    if dedup and len(matched) >= 3:
+        seen = set()
+        deduped = []
+        for idx in matched:
+            if idx in seen:
+                n_dropped += 1
+            else:
+                seen.add(idx)
+                deduped.append(idx)
+        matched = deduped
     if len(matched) < 3:
-        return None, len(matched) / max(len(names), 1)
+        return None, len(matched) / max(len(names), 1), n_dropped
     n_days = 1 if len(matched) <= 10 else (2 if len(matched) <= 16 else 3)
     result = composite_score_v3(matched, dist_matrix, time_matrix, ratings,
                                 categories, n_days=n_days, activity_types=activity_types)
-    return result, len(matched) / max(len(names), 1)
+    return result, len(matched) / max(len(names), 1), n_dropped
 
 
 def main():
@@ -138,14 +156,15 @@ def main():
         for i, instr in enumerate(TEST_INSTRUCTIONS):
             raw = generate_route(model, tok, instr)
             names = parse_route(raw)
-            result, match_rate = match_and_score(names, pois, dist_matrix, time_matrix,
-                                                 ratings, categories, activity_types)
+            result, match_rate, n_dropped = match_and_score(
+                names, pois, dist_matrix, time_matrix, ratings, categories, activity_types)
             if result is not None:
                 scores.append(float(result["score"]))
                 feasible = "✓" if result.get("feasible") else f"✗({result.get('reason')})"
-                print(f"  [{i+1}] v4={result['score']:.4f} {feasible} 匹配率{match_rate:.0%} 距离{result['metrics']['total_dist_km']:.0f}km")
+                dup_tag = f"去重{n_dropped}" if n_dropped else ""
+                print(f"  [{i+1}] v4={result['score']:.4f} {feasible} {dup_tag} 匹配率{match_rate:.0%} 距离{result['metrics']['total_dist_km']:.0f}km")
             else:
-                print(f"  [{i+1}] ⚠️ 无法匹配/评估 (匹配率{match_rate:.0%})")
+                print(f"  [{i+1}] ⚠️ 无法匹配/评估 (匹配率{match_rate:.0%}, 去重{n_dropped})")
         avg = np.mean(scores) if scores else 0
         print(f"  平均 v4 得分: {avg:.4f} ({len(scores)}/5 可评估)")
         results[name] = {"avg_score": round(float(avg), 4), "n_eval": len(scores),
