@@ -29,7 +29,7 @@ MAX_LEN = 1024
 
 def build_messages(instruction, route):
     """构造 chat 消息，chosen/rejected 都是完整对话."""
-    system = "你是一位哈尔滨旅游规划专家，根据用户的需求生成合理的旅游路线。路线用 POI 名称以 → 连接。"
+    system = "你是一位哈尔滨旅游规划专家，根据用户的需求生成合理的旅游路线。路线用 POI 名称以 → 连接。路线不得重复景点，禁止中途折返。"
     return [
         {"role": "system", "content": system},
         {"role": "user", "content": instruction},

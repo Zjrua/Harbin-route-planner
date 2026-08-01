@@ -69,14 +69,15 @@ def load_model(model_dir, device, is_lora=None):
 
 def generate_route(model, tokenizer, instruction, max_new_tokens=250):
     msgs = [{"role": "system",
-             "content": "你是一位哈尔滨旅游规划专家，根据用户的需求生成合理的旅游路线。路线用 POI 名称以 → 连接。"},
+             "content": "你是一位哈尔滨旅游规划专家，根据用户的需求生成合理的旅游路线。路线用 POI 名称以 → 连接。路线不得重复景点，禁止中途折返。"},
             {"role": "user", "content": instruction}]
     text = tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
     inp = tokenizer(text, return_tensors="pt").to(model.device)
+    torch.manual_seed(42)  # 采样可复现
     with torch.no_grad():
         out = model.generate(**inp, max_new_tokens=max_new_tokens,
-                             do_sample=False, temperature=None, top_p=None,
-                             no_repeat_ngram_size=4)  # 禁止 4-gram 重复：拦 POI 名重复（模型爱折返/打转）
+                             do_sample=True, temperature=0.8, top_p=0.9,
+                             no_repeat_ngram_size=4)  # 采样解码 + 禁 4-gram 重复
     resp = tokenizer.decode(out[0][inp["input_ids"].shape[1]:], skip_special_tokens=True)
     return resp
 

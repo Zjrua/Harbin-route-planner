@@ -40,7 +40,7 @@ def build_prompt(instruction: str) -> str:
     """构造 prompt（system + user 指令），assistant 部分留空待模型生成."""
     return (
         "<|im_start|>system\n你是一位哈尔滨旅游规划专家，根据用户的需求生成合理的旅游路线。"
-        "路线用 POI 名称以 → 连接。\n<|im_end|>\n"
+        "路线用 POI 名称以 → 连接。路线不得重复景点，禁止中途折返。\n<|im_end|>\n"
         f"<|im_start|>user\n{instruction}\n<|im_end|>\n"
         "<|im_start|>assistant\n"
     )

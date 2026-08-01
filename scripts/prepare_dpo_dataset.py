@@ -53,14 +53,15 @@ def load_instructions(path, n):
 def generate_route(model, tokenizer, instruction, max_new_tokens=200, temperature=0.9):
     """生成路线文本（temperature 高，多样）."""
     msgs = [{"role": "system",
-             "content": "你是一位哈尔滨旅游规划专家，根据用户的需求生成合理的旅游路线。路线用 POI 名称以 → 连接。"},
+             "content": "你是一位哈尔滨旅游规划专家，根据用户的需求生成合理的旅游路线。路线用 POI 名称以 → 连接。路线不得重复景点，禁止中途折返。"},
             {"role": "user", "content": instruction}]
     text = tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
     inp = tokenizer(text, return_tensors="pt").to(model.device)
     with torch.no_grad():
         out = model.generate(**inp, max_new_tokens=max_new_tokens,
                              do_sample=True, temperature=temperature,
-                             top_p=0.9, num_return_sequences=1)
+                             top_p=0.9, num_return_sequences=1,
+                             no_repeat_ngram_size=4)  # 采样路线也禁止 POI 重复/折返
     resp = tokenizer.decode(out[0][inp["input_ids"].shape[1]:], skip_special_tokens=True)
     return resp
 
