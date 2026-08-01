@@ -281,8 +281,9 @@ def composite_score_v5(route: List[int], dist_matrix: np.ndarray,
 
     # === 需求硬约束 ===
     inferred_days = infer_days_from_len(len(route))
-    # 1. 天数严重不符：推断天数 < 指令天数
-    if constraints.days is not None and inferred_days < constraints.days:
+    # 1. 天数严重不符：推断天数 ≤ 指令天数 - 2（如 3 日游只出 1 日量）→ 硬判负
+    if (constraints.days is not None
+            and inferred_days <= constraints.days - 2):
         return {"score": 0.0, "feasible": False, "reason": "days_mismatch",
                 "metrics": {k: round(v, 2) for k, v in metrics.items()},
                 "inferred_days": inferred_days, "asked_days": constraints.days}
@@ -371,6 +372,9 @@ def composite_score_v5(route: List[int], dist_matrix: np.ndarray,
     if constraints.days is not None and inferred_days > constraints.days:
         over_days = inferred_days - constraints.days
         deductions["days_over"] = 0.15 if over_days == 1 else 0.3
+    # 天数偏短（推断天数 = 指令天数 - 1，如 3 日游出 2 日量 11-16 站）→ 软扣
+    if constraints.days is not None and inferred_days == constraints.days - 1:
+        deductions["days_short"] = 0.5
 
     req_match = max(0.0, 1.0 - sum(deductions.values()))
     score = 0.70 * quality_score + 0.30 * req_match
