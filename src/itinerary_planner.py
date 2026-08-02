@@ -197,11 +197,81 @@ def plan_itinerary(model, tokenizer, instruction: str, d: dict) -> dict:
             if not any(atype_of.get(n) == 1 for n in day_names):
                 _ensure_type(1)  # 半天至少餐饮
 
+        # 人类旅游节奏整理（当天的 atype_of）：
+        # 住宿移到末尾（入住后不再移动），半天不安排住宿，连续餐饮错开
+        day_names = organize_day_rhythm(day_names, atype_of, cand_names,
+                                        is_half=is_half)
+
         days_result.append({"day": day_info["day"], "half": is_half,
                             "pois": day_names, "candidates": cand_names})
 
     # === 汇总 + 逐日打分 ===
     return _assemble(d, constraints, days_result, warnings, all_raw)
+
+
+def organize_day_rhythm(day_names: List[str], atype_of: dict,
+                        cand_names: List[str], is_half: bool = False) -> List[str]:
+    """人类旅游节奏整理（纯规则，不重训）.
+
+    规律（人类旅游节奏）：
+    1. 住宿 = 一天的终点站 → 移到末尾（入住后不再移动）；半天不安排住宿
+    2. 以景点开头（上午从景点/活动开始，不先吃饭）
+    3. 餐饮 = 节奏调节器 → 两个餐饮之间至少隔 1 个非餐饮（避免连吃两顿）
+    4. 半天：2-3 个景点 + 1 次餐饮，无住宿
+
+    策略：
+    - 住宿全部移到末尾
+    - 连续餐饮（相邻或隔一个）用后续非餐饮交换，或用候选池未选景点替换
+    """
+    if not day_names:
+        return day_names
+    # 分离住宿
+    hotels = [n for n in day_names if atype_of.get(n) == 2]
+    rest = [n for n in day_names if atype_of.get(n) != 2]
+    if is_half:
+        hotels = []  # 半天不安排住宿（下午离开）
+
+    # 以景点/活动开头（避免以餐饮开头）
+    if rest and atype_of.get(rest[0]) == 1:
+        # 找第一个非餐饮换到开头
+        swap_j = next((j for j in range(1, len(rest)) if atype_of.get(rest[j]) != 1), None)
+        if swap_j is not None:
+            rest[0], rest[swap_j] = rest[swap_j], rest[0]
+
+    # 餐饮间隔：两个餐饮之间至少隔 1 个非餐饮
+    used = set(rest)
+    spare = [cn for cn in cand_names if atype_of.get(cn) == 0 and cn not in used]
+    i = 0
+    while i < len(rest):
+        if atype_of.get(rest[i]) == 1:
+            # 找下一个餐饮位置
+            j = next((j for j in range(i + 1, len(rest))
+                      if atype_of.get(rest[j]) == 1), None)
+            if j is not None and j - i < 2:  # 中间隔不足 1 个非餐饮
+                # 尝试用 j 与后面非餐饮交换
+                swap_j = next((k for k in range(j + 1, len(rest))
+                               if atype_of.get(rest[k]) != 1), None)
+                if swap_j is not None:
+                    rest[j], rest[swap_j] = rest[swap_j], rest[j]
+                    continue  # 重查
+                # 否则用候选池景点替换 j（保持数量）
+                if spare:
+                    rest[j] = spare.pop(0)
+                    continue
+        i += 1
+    # 住宿放末尾（餐饮→住宿 = 晚餐后回酒店，合理）
+    # 但全天最多 1 个住宿（2 个酒店连排不合理——同一晚只需一家）
+    if len(hotels) > 1:
+        extra = hotels[1:]
+        spare_att = [cn for cn in cand_names
+                     if atype_of.get(cn) == 0 and cn not in day_names and cn not in extra]
+        # 用候选池景点替换多余的酒店（保持数量）
+        for i, h in enumerate(extra):
+            if spare_att:
+                hotels = hotels[:1] + [spare_att.pop(0)]
+            else:
+                hotels = hotels[:1]
+    return rest + hotels
 
 
 def _parse_route_names(text: str) -> List[str]:
