@@ -32,6 +32,7 @@ class Constraints:
     pace: Optional[str] = None              # slow / normal / fast
     season: Optional[str] = None            # winter / summer / None
     half_days: List[int] = field(default_factory=list)  # 半日索引（1-based），如第2天下午走 → [2]
+    suitable_for: Optional[str] = None   # elderly / family / None（检索语义过滤用）
     confidence: str = "high"                # high（规则完整解析）/ low
 
     def to_dict(self):
@@ -40,7 +41,7 @@ class Constraints:
             "budget_max": self.budget_max, "start": self.start,
             "core_pois": self.core_pois, "preferences": self.preferences,
             "pace": self.pace, "season": self.season,
-            "half_days": self.half_days,
+            "half_days": self.half_days, "suitable_for": self.suitable_for,
             "confidence": self.confidence,
         }
 
@@ -188,6 +189,12 @@ def parse_constraints(instruction: str, use_llm: bool = False) -> Constraints:
         c.pace = "fast"
     elif "节奏适中" in instruction:
         c.pace = "normal"
+
+    # --- 适合人群（检索语义过滤） ---
+    if any(k in instruction for k in ["带父母", "父母", "老人", "老年人", "长辈", "慢节奏", "走不快"]):
+        c.suitable_for = "elderly"
+    elif any(k in instruction for k in ["亲子", "带娃", "儿童", "孩子"]):
+        c.suitable_for = "family"
 
     # --- 季节 ---
     if any(k in instruction for k in _SEASON_WINTER):

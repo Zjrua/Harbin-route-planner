@@ -12,6 +12,7 @@
 """
 
 import re
+from pathlib import Path
 from typing import List, Optional
 
 import numpy as np
@@ -27,6 +28,31 @@ SYSTEM_PROMPT = (
     "只能从候选列表中选择景点规划路线，绝对禁止使用候选之外的名称。"
     "路线用 POI 名称以 → 连接。路线不得重复景点，禁止中途折返。"
 )
+
+# 语义标注缓存（全量 48,961 POI，由 label_poi_semantics.py 生成）
+_SEMANTIC = None
+
+
+def load_semantic():
+    """加载语义标注（name → {is_tourism, suitable_elderly, suitable_family}）."""
+    global _SEMANTIC
+    if _SEMANTIC is not None:
+        return _SEMANTIC
+    label_path = Path(__file__).resolve().parent.parent / "data" / "raw" / "merged_pois_labeled.csv"
+    _SEMANTIC = {}
+    if label_path.exists():
+        try:
+            labels = pd.read_csv(label_path, encoding="utf-8")
+            for _, r in labels.iterrows():
+                _SEMANTIC[str(r["name"])] = {
+                    "is_tourism": bool(r.get("is_tourism", True)),
+                    "suitable_elderly": bool(r.get("suitable_elderly", True)),
+                    "suitable_family": bool(r.get("suitable_family", True)),
+                }
+        except Exception as e:
+            print(f"语义标注加载失败: {e}")
+            _SEMANTIC = {}
+    return _SEMANTIC
 
 
 def split_days(constraints) -> List[dict]:
@@ -83,6 +109,8 @@ def plan_itinerary(model, tokenizer, instruction: str, d: dict) -> dict:
     warnings = []
     if constraints.half_days:
         warnings.append(f"已按半日拆分：第 {constraints.half_days} 天为半天")
+    # 语义标注（过滤非旅游 POI + 适合人群）
+    semantic = load_semantic()
 
     # 起始检索中心
     center_idx = None
@@ -104,7 +132,7 @@ def plan_itinerary(model, tokenizer, instruction: str, d: dict) -> dict:
         candidates = retrieve_candidates(
             pois, d["dist_matrix"], constraints,
             center_idx=center_idx, used_indices=used,
-            n=n_cand, type_budget=budget,
+            n=n_cand, type_budget=budget, semantic=semantic,
         )
         cand_names = [str(pois.loc[i, "name"]) for i in candidates if i in pois.index]
         used.update(candidates)

@@ -76,6 +76,7 @@ def retrieve_candidates(
     n: int = 35,
     prefer_core: bool = True,
     type_budget: Optional[dict] = None,
+    semantic: Optional[dict] = None,
 ) -> List[int]:
     """检索某一天的候选 POI 索引列表（按推荐度排序）.
 
@@ -87,8 +88,9 @@ def retrieve_candidates(
         used_indices: 已分配 POI（跨日不重复）
         n: 候选数量
         prefer_core: 核心景点/出发地强制进入候选（前排）
-        type_budget: 类别配额 {activity_type: 数量}，如 {0: 4, 1: 2, 2: 1, 4: 1}
-                     保证每天有合理的景点/餐饮/住宿/购物构成
+        type_budget: 类别配额 {activity_type: 数量}
+        semantic: 语义过滤 {name: {"is_tourism": bool, "suitable_elderly": bool, ...}}
+                  过滤非旅游 POI；suitable_for="elderly" 时再过滤不适合老人的
 
     Returns:
         候选 POI 索引列表（推荐度降序）
@@ -96,6 +98,25 @@ def retrieve_candidates(
     used = set(used_indices or set())
     constraints = constraints or type("C", (), {"core_pois": [], "start": None,
                                                 "preferences": [], "season": None})()
+
+    # 语义过滤：非旅游 POI 直接排除
+    suitable_for = getattr(constraints, "suitable_for", None)  # elderly/family/None
+    if semantic:
+        def _passes(i: int) -> bool:
+            nm = pois.loc[i, "name"]
+            meta = semantic.get(nm)
+            if meta is None:
+                return True  # 无标签默认放行
+            if not meta.get("is_tourism", True):
+                return False
+            if suitable_for == "elderly" and not meta.get("suitable_elderly", True):
+                return False
+            if suitable_for == "family" and not meta.get("suitable_family", True):
+                return False
+            return True
+    else:
+        def _passes(i: int) -> bool:
+            return True
 
     # 检索中心
     center = center_idx
@@ -109,13 +130,15 @@ def retrieve_candidates(
         idx = resolve_poi_index("中央大街", pois)
         center = idx
 
-    # 全部候选：按距离 + 季节 + 偏好 + 质量 加权
+    # 全部候选：按距离 + 季节 + 偏好 + 质量 加权（过滤非旅游 POI）
     all_idx = list(pois.index)
     dists = dist_matrix[center] if center is not None else np.zeros(len(pois))
     scored = []
     for i in all_idx:
         i = int(i)
         if i in used:
+            continue
+        if not _passes(i):
             continue
         d = float(dists[i])
         sw = _season_weight(pois, i, constraints.season)
