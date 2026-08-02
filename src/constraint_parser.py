@@ -23,7 +23,7 @@ _CN_NUM = {"一": 1, "两": 2, "二": 2, "三": 3, "四": 4, "五": 5,
 
 @dataclass
 class Constraints:
-    days: Optional[int] = None
+    days: Optional[float] = None           # 天数（支持小数，如 3.5 = 3 天半）
     budget_min: Optional[float] = None      # 预算下界
     budget_max: Optional[float] = None      # 预算上界（"预算充足"→None 无上限）
     start: Optional[str] = None             # 出发地 POI 名
@@ -31,6 +31,7 @@ class Constraints:
     preferences: List[str] = field(default_factory=list)  # 归一化偏好键
     pace: Optional[str] = None              # slow / normal / fast
     season: Optional[str] = None            # winter / summer / None
+    half_days: List[int] = field(default_factory=list)  # 半日索引（1-based），如第2天下午走 → [2]
     confidence: str = "high"                # high（规则完整解析）/ low
 
     def to_dict(self):
@@ -39,13 +40,19 @@ class Constraints:
             "budget_max": self.budget_max, "start": self.start,
             "core_pois": self.core_pois, "preferences": self.preferences,
             "pace": self.pace, "season": self.season,
+            "half_days": self.half_days,
             "confidence": self.confidence,
         }
 
 
 # ---- 正则规则 ----
-_DAYS_RE = re.compile(r"(\d+)\s*[日天]")
+_DAYS_RE = re.compile(r"(\d+(?:\.\d+)?)\s*[日天]")
 _CN_DAYS_RE = re.compile(r"([一二两三四五六七八九十]+)\s*[日天]")
+# 半日需求："3天半" 的小数部分 / "第2天下午5点走" / "第二天中午走" / "最后一天下午离开"
+_HALF_EXTRA_RE = re.compile(r"(\d+(?:\.\d+)?)\s*[日天]\s*(?:半|余)")
+_HALF_DAY_RE = re.compile(r"(?:第|到)?([一二两三四五六七八九十\d]+)\s*[日天]?[的]?(?:下午|中午|傍晚)\s*[0-9]*(?:点)?\s*(?:走|离开|出发|回|结束)|(?:最后|末尾)\s*[一二两三四五六七八九十\d]?\s*[日天][的]?(?:下午|中午)\s*(?:走|离开)")
+_CN_NUM_FULL = {"一": 1, "两": 2, "二": 2, "三": 3, "四": 4, "五": 5,
+                "六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
 _BUDGET_RE = re.compile(r"预算[约]?(\d+(?:\.\d+)?)\s*元")
 _START_RE = re.compile(r"从(.{2,12}?)出发|以(.{2,12}?)为起点|第一站想去(.{2,12}?)")
 _CORE_RE = re.compile(r"以(.{2,15}?)为核心|重点(?:游览)?(.{2,15}?)(?:。|，|,|$)|必须去(.{2,15}?)(?:。|，|,|$)|一定要去(.{2,15}?)(?:。|，|,|$)")
@@ -94,14 +101,41 @@ def parse_constraints(instruction: str, use_llm: bool = False) -> Constraints:
     """
     c = Constraints()
 
-    # --- 天数 ---
+    # --- 天数（支持小数：3天半 → 3.5） ---
     m = _DAYS_RE.search(instruction)
     if m:
-        c.days = int(m.group(1))
+        c.days = float(m.group(1))
+        # "3天半" → 0.5
+        if _HALF_EXTRA_RE.search(instruction):
+            c.days += 0.5
     else:
         m2 = _CN_DAYS_RE.search(instruction)
         if m2:
-            c.days = _cn_to_int(m2.group(1))
+            c.days = float(_cn_to_int(m2.group(1)))
+            if "半" in instruction:
+                c.days += 0.5
+    # 半日需求："第2天下午5点走" → 标记该日为半天
+    last_day_half = False
+    for m in _HALF_DAY_RE.finditer(instruction):
+        # "最后/末尾一天" → 指总天数的最后一天
+        if m.group(0).startswith("最后") or m.group(0).startswith("末尾"):
+            last_day_half = True
+            continue
+        day_str = m.group(1)
+        if day_str:
+            if day_str.isdigit():
+                c.half_days.append(int(day_str))
+            else:
+                c.half_days.append(_CN_NUM_FULL.get(day_str, 0))
+    if last_day_half and c.days is not None and c.days >= 1:
+        c.half_days.append(int(c.days))  # 最后一天 = days 整数部分
+    if "半天" in instruction:
+        # "只有半天" → 半天总数 0.5，标记为第 1 天半天
+        if c.days is None or c.days >= 1:
+            c.days = 0.5
+        elif c.days == 0.5 and not c.half_days:
+            c.half_days.append(1)
+    c.half_days = list(dict.fromkeys(c.half_days))
 
     # --- 预算 ---
     if "预算充足" in instruction or "预算无上限" in instruction or "不差钱" in instruction:
