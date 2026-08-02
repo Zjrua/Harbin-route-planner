@@ -39,6 +39,7 @@ MODEL_PATH = str(ROOT / "data/external/modelscope_cache/models/Qwen--Qwen3-4B/sn
 SFT_LORA = str(ROOT / "output/qwen_route_lora")
 DPO_LORA = str(ROOT / "output/qwen_route_dpo")
 GRPO_LORA = str(ROOT / "output/qwen_route_grpo")
+QWEN35_LORA = str(ROOT / "output/qwen35_route_lora")
 DATA_DIR = ROOT / "data" / "processed"
 
 SYSTEM_PROMPT = ("你是一位哈尔滨旅游规划专家，根据用户的需求生成合理的旅游路线。"
@@ -72,25 +73,32 @@ def load_data():
 
 
 # ==== 模型加载 ====
-_MODEL_DIRS = {"sft": SFT_LORA, "dpo": DPO_LORA, "grpo": GRPO_LORA}
+QWEN35_BASE = str(ROOT / "data/external/modelscope_cache/models/Qwen--Qwen3.5-4B")
+# 模型名 → (base 路径, LoRA 路径)
+_MODEL_DIRS = {
+    "sft": (MODEL_PATH, SFT_LORA),
+    "dpo": (MODEL_PATH, DPO_LORA),
+    "grpo": (MODEL_PATH, GRPO_LORA),
+    "qwen35": (QWEN35_BASE, QWEN35_LORA),
+}
 
 
 def get_model(name: str):
-    """按名字加载模型（懒加载 + 缓存）：sft / dpo / grpo."""
+    """按名字加载模型（懒加载 + 缓存）：sft / dpo / grpo / qwen35."""
     if name in _MODELS:
         return _MODELS[name]
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
     from peft import PeftModel
 
-    lora_dir = _MODEL_DIRS[name]
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=True)
+    base_path, lora_dir = _MODEL_DIRS[name]
+    tokenizer = AutoTokenizer.from_pretrained(base_path, trust_remote_code=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     bnb = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
                              bnb_4bit_compute_dtype=torch.bfloat16,
                              bnb_4bit_use_double_quant=True)
     model = AutoModelForCausalLM.from_pretrained(
-        MODEL_PATH, quantization_config=bnb, device_map="auto",
+        base_path, quantization_config=bnb, device_map="auto",
         trust_remote_code=True, torch_dtype=torch.bfloat16)
     model = PeftModel.from_pretrained(model, lora_dir)
     model.eval()
@@ -179,7 +187,7 @@ def _build_plan_response(plan: dict, instruction: str, pois) -> dict:
 def handle_generate(body: dict) -> dict:
     """核心：生成 + 匹配 + 去重 + 打分 + 地图."""
     instruction = (body.get("instruction") or "").strip()
-    model_name = body.get("model", "grpo")
+    model_name = body.get("model", "qwen35")
     if model_name not in _MODEL_DIRS:
         return {"ok": False, "error": f"未知模型 {model_name}，可选 {list(_MODEL_DIRS)}"}
     if not instruction:
@@ -343,7 +351,8 @@ PAGE_HTML = """<!DOCTYPE html>
         <option>带父母去哈尔滨玩三天，预算充足，节奏要慢，适合老年人的景点优先。</option>
       </select>
       <div class="model-switch">
-        <label><input type="radio" name="model" value="grpo" checked onchange="switchModel(this)"><span>GRPO</span></label>
+        <label><input type="radio" name="model" value="qwen35" checked onchange="switchModel(this)"><span>Qwen3.5</span></label>
+        <label><input type="radio" name="model" value="grpo" onchange="switchModel(this)"><span>GRPO</span></label>
         <label><input type="radio" name="model" value="dpo" onchange="switchModel(this)"><span>DPO</span></label>
         <label><input type="radio" name="model" value="sft" onchange="switchModel(this)"><span>SFT</span></label>
       </div>
@@ -482,14 +491,14 @@ def main():
     parser.add_argument("--host", default="")
     args = parser.parse_args()
 
-    # 预热：加载数据 + 主模型（GRPO）+ DPO（提升首个请求响应；SFT 懒加载）
+    # 预热：加载数据 + 主模型（Qwen3.5）+ GRPO（提升首个请求响应；SFT/DPO 懒加载）
     print("加载数据矩阵（POI/距离/时间）...")
     load_data()
-    for name in ("grpo", "dpo"):
+    for name in ("qwen35", "grpo"):
         print(f"加载模型 {name}（约 1 分钟）...")
         get_model(name)
     print("模型就绪，预热一次生成...")
-    m, tok = get_model("grpo")
+    m, tok = get_model("qwen35")
     _ = generate_route(m, tok, "帮我规划一条哈尔滨一日游路线，从中央大街出发。")
     print(f"预热完成。访问 http://localhost:{args.port}")
 

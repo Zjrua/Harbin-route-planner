@@ -118,7 +118,13 @@ def plan_itinerary(model, tokenizer, instruction: str, d: dict) -> dict:
         )
         msgs = [{"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt_instr}]
-        text = tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
+        # 手动 <|im_start|> 格式（Qwen3/Qwen3.5 通用）：
+        # apply_chat_template 会注入 <think>，破坏候选编号格式（Qwen3.5 尤其明显）
+        text = (
+            "<|im_start|>system\n" + SYSTEM_PROMPT + "\n<|im_end|>\n"
+            f"<|im_start|>user\n{prompt_instr}\n<|im_end|>\n"
+            "<|im_start|>assistant\n"
+        )
         inp = tokenizer(text, return_tensors="pt").to(model.device)
         with torch.no_grad():
             out = model.generate(**inp, max_new_tokens=100, do_sample=True,
