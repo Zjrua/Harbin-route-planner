@@ -141,6 +141,41 @@ def match_to_indices(names, pois):
     return matched, unmatched
 
 
+def _build_plan_response(plan: dict, instruction: str, pois) -> dict:
+    """把逐日规划结果转成前端响应格式."""
+    days_out = []
+    for day in plan["days"]:
+        sd = day.get("score_detail") or {}
+        days_out.append({
+            "day": day["day"],
+            "half": day["half"],
+            "pois": day["pois"],
+            "score_detail": {
+                "score": round(float(sd.get("score", 0)), 4),
+                "feasible": bool(sd.get("feasible", False)),
+                "reason": sd.get("reason"),
+            },
+        })
+    overall = plan.get("overall") or {}
+    return {
+        "ok": True,
+        "pois": [p for day in plan["days"] for p in day["pois"]],
+        "score_detail": {
+            "score": round(float(overall.get("score", 0)), 4),
+            "feasible": bool(overall.get("feasible", False)),
+            "reason": overall.get("reason"),
+            "requirement_match": round(float(overall.get("requirement_match", 1.0)), 4),
+            "total_dist_km": round(float(overall.get("metrics", {}).get("total_dist_km", 0)), 1),
+            "n_pois": plan["total_pois"],
+            "n_days": len(plan["days"]),
+            "inferred_days": overall.get("inferred_days", len(plan["days"])),
+        },
+        "days": days_out,
+        "warnings": plan.get("warnings", []),
+        "raw": "",  # 逐日规划不提供单条原始输出
+    }
+
+
 def handle_generate(body: dict) -> dict:
     """核心：生成 + 匹配 + 去重 + 打分 + 地图."""
     instruction = (body.get("instruction") or "").strip()
@@ -157,6 +192,15 @@ def handle_generate(body: dict) -> dict:
         model, tokenizer = get_model(model_name)
     except Exception as e:
         return {"ok": False, "error": f"模型加载失败: {e}"}
+
+    # === Phase 1：多日游拆分 + RAG 逐日规划（含半日需求） ===
+    try:
+        from src.itinerary_planner import plan_itinerary
+        plan = plan_itinerary(model, tokenizer, instruction, d)
+        if plan.get("ok") and plan["total_pois"] >= 3:
+            return _build_plan_response(plan, instruction, pois)
+    except Exception as e:
+        print(f"逐日规划失败，回退单次生成: {e}")
 
     raw = generate_route(model, tokenizer, instruction)
     names = parse_route(raw)
@@ -362,6 +406,19 @@ function render(d){
           return '<div class="score-item"><div class="v" style="font-size:15px">'+v+'</div><div class="k">'+nm+'</div></div>';
         }).join('')
       + '</div></div>';
+  }
+  if(d.days && d.days.length){
+    html += '<div class="card"><b>逐日行程</b>';
+    d.days.forEach(day => {
+      const tag = day.half ? '<span class="badge" style="background:#3f3f46;color:#a1a1aa">半日</span>' : '';
+      const sd = day.score_detail || {};
+      const ok = sd.feasible ? '' : ' <span style="color:#f87171;font-size:12px">✗('+(sd.reason||'')+')</span>';
+      html += '<div style="margin-top:10px"><b>第'+day.day+'天</b> '+tag+' <span style="color:#94a3b8;font-size:12px">v5='+sd.score+'</span>'+ok
+        + '<div class="route-list">'
+        + (day.pois||[]).map((p,i)=>'<div class="poi-row"><div class="n">'+(i+1)+'</div><div class="nm">'+p+'</div></div>').join('')
+        + '</div></div>';
+    });
+    html += '</div>';
   }
   if(d.pois && d.pois.length){
     html += '<div class="card"><b>路线</b><div class="route-list">'
