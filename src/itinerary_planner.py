@@ -96,10 +96,11 @@ def plan_itinerary(model, tokenizer, instruction: str, d: dict) -> dict:
     days_result = []
     all_raw = []
     for i, day_info in enumerate(plan):
-        # 每天候选：全天 8 个（景点4/餐饮2/购物1/住宿1），半天 5 个（景点2/餐饮1/购物1/住宿1）
+        # 每天候选：全天 10 个（景点4/餐饮3/购物1/住宿2），半天 6 个（景点2/餐饮2/购物1/住宿1）
+        # 提高餐饮/住宿配额：SFT 数据只有 26% 的天含住宿，模型偏好景点把住宿挤掉
         is_half = day_info["half"]
-        budget = {0: 2, 1: 1, 4: 1, 2: 1} if is_half else {0: 4, 1: 2, 4: 1, 2: 1}
-        n_cand = 5 if is_half else 8
+        budget = {0: 2, 1: 2, 4: 1, 2: 1} if is_half else {0: 4, 1: 3, 4: 1, 2: 2}
+        n_cand = 6 if is_half else 10
         candidates = retrieve_candidates(
             pois, d["dist_matrix"], constraints,
             center_idx=center_idx, used_indices=used,
@@ -148,6 +149,26 @@ def plan_itinerary(model, tokenizer, instruction: str, d: dict) -> dict:
                     break
                 if cn not in day_names:
                     day_names.append(cn)
+
+        # 类型校验补足：全天路线必须含餐饮+住宿，半天至少含餐饮。
+        # 模型偏好景点（SFT 数据只有 26% 天含住宿），用候选里未选的类型补上。
+        atype_of = {str(pois.loc[i, "name"]): int(pois.loc[i, "activity_type"])
+                    for i in candidates if i in pois.index}
+        # 找一个餐饮候选（未选）补入
+        def _ensure_type(need_type: int):
+            for cn in cand_names:
+                if cn not in day_names and atype_of.get(cn) == need_type:
+                    day_names.append(cn)
+                    return
+        if not is_half:
+            if not any(atype_of.get(n) == 1 for n in day_names):
+                _ensure_type(1)  # 餐饮
+            if not any(atype_of.get(n) == 2 for n in day_names):
+                _ensure_type(2)  # 住宿
+        else:
+            if not any(atype_of.get(n) == 1 for n in day_names):
+                _ensure_type(1)  # 半天至少餐饮
+
         days_result.append({"day": day_info["day"], "half": is_half,
                             "pois": day_names, "candidates": cand_names})
 
