@@ -38,6 +38,7 @@ from src.visualize import plot_route_on_map
 MODEL_PATH = str(ROOT / "data/external/modelscope_cache/models/Qwen--Qwen3-4B/snapshots/master")
 SFT_LORA = str(ROOT / "output/qwen_route_lora")
 DPO_LORA = str(ROOT / "output/qwen_route_dpo")
+GRPO_LORA = str(ROOT / "output/qwen_route_grpo")
 DATA_DIR = ROOT / "data" / "processed"
 
 SYSTEM_PROMPT = ("你是一位哈尔滨旅游规划专家，根据用户的需求生成合理的旅游路线。"
@@ -71,14 +72,17 @@ def load_data():
 
 
 # ==== 模型加载 ====
+_MODEL_DIRS = {"sft": SFT_LORA, "dpo": DPO_LORA, "grpo": GRPO_LORA}
+
+
 def get_model(name: str):
-    """按名字加载模型（懒加载 + 缓存）：sft / dpo."""
+    """按名字加载模型（懒加载 + 缓存）：sft / dpo / grpo."""
     if name in _MODELS:
         return _MODELS[name]
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
     from peft import PeftModel
 
-    lora_dir = SFT_LORA if name == "sft" else DPO_LORA
+    lora_dir = _MODEL_DIRS[name]
     tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -140,9 +144,9 @@ def match_to_indices(names, pois):
 def handle_generate(body: dict) -> dict:
     """核心：生成 + 匹配 + 去重 + 打分 + 地图."""
     instruction = (body.get("instruction") or "").strip()
-    model_name = body.get("model", "dpo")
-    if model_name not in ("sft", "dpo"):
-        return {"ok": False, "error": f"未知模型 {model_name}，可选 sft/dpo"}
+    model_name = body.get("model", "grpo")
+    if model_name not in _MODEL_DIRS:
+        return {"ok": False, "error": f"未知模型 {model_name}，可选 {list(_MODEL_DIRS)}"}
     if not instruction:
         return {"ok": False, "error": "请输入规划指令"}
 
@@ -295,7 +299,8 @@ PAGE_HTML = """<!DOCTYPE html>
         <option>带父母去哈尔滨玩三天，预算充足，节奏要慢，适合老年人的景点优先。</option>
       </select>
       <div class="model-switch">
-        <label><input type="radio" name="model" value="dpo" checked onchange="switchModel(this)"><span>DPO</span></label>
+        <label><input type="radio" name="model" value="grpo" checked onchange="switchModel(this)"><span>GRPO</span></label>
+        <label><input type="radio" name="model" value="dpo" onchange="switchModel(this)"><span>DPO</span></label>
         <label><input type="radio" name="model" value="sft" onchange="switchModel(this)"><span>SFT</span></label>
       </div>
       <button class="primary" id="genBtn" onclick="generate()">生成路线</button>
@@ -420,14 +425,14 @@ def main():
     parser.add_argument("--host", default="")
     args = parser.parse_args()
 
-    # 预热：加载数据 + 两个模型（提升首个请求响应）
+    # 预热：加载数据 + 主模型（GRPO）+ DPO（提升首个请求响应；SFT 懒加载）
     print("加载数据矩阵（POI/距离/时间）...")
     load_data()
-    for name in ("sft", "dpo"):
+    for name in ("grpo", "dpo"):
         print(f"加载模型 {name}（约 1 分钟）...")
         get_model(name)
     print("模型就绪，预热一次生成...")
-    m, tok = get_model("dpo")
+    m, tok = get_model("grpo")
     _ = generate_route(m, tok, "帮我规划一条哈尔滨一日游路线，从中央大街出发。")
     print(f"预热完成。访问 http://localhost:{args.port}")
 
