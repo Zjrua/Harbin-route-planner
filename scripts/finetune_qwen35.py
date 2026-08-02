@@ -66,13 +66,20 @@ def tokenize_function(samples, tokenizer):
 
 
 def find_lora_targets(model) -> list:
-    """探测可挂 LoRA 的注意力线性层名（Qwen3.5 text tower）."""
+    """探测可挂 LoRA 的注意力线性层名（Qwen3.5 混合注意力：self_attn + linear_attn）.
+
+    Qwen3.5 是混合架构：部分层用标准 self_attn（q/k/v/o_proj），
+    部分层用 linear_attn（in_proj_qkv 等）。只挂注意力层，排除 mlp 与 vision。
+    """
     targets = []
     for name, module in model.named_modules():
-        # 匹配注意力投影层（q/k/v/o_proj，排除 vision tower）
-        if "text" in name and module.__class__.__name__ == "Linear" and name.endswith(("_proj")):
-            if any(k in name for k in ("q_proj", "k_proj", "v_proj", "o_proj")):
-                targets.append(name.split(".")[-1])
+        if "layers" not in name or "mlp" in name:
+            continue
+        cls = module.__class__.__name__
+        if "Linear" in cls:  # Linear / Linear4bit / bnb.nn.Linear4bit
+            leaf = name.split(".")[-1]
+            if leaf in ("q_proj", "k_proj", "v_proj", "o_proj", "in_proj_qkv"):
+                targets.append(leaf)
     return list(dict.fromkeys(targets))
 
 
@@ -139,14 +146,33 @@ def main():
         bf16=torch.cuda.is_bf16_supported(),
         report_to="none",
         remove_unused_columns=False,
+        dataloader_pin_memory=False,
         gradient_checkpointing=False,
     )
+
+    def collate_fn(batch):
+        """Pad 到 batch 内最大长度，labels 用 -100 对齐（忽略 padding loss）."""
+        max_len = max(len(d["input_ids"]) for d in batch)
+        input_ids, attention_mask, labels = [], [], []
+        for d in batch:
+            n = len(d["input_ids"])
+            pad_n = max_len - n
+            input_ids.append(torch.tensor(d["input_ids"] + [tokenizer.pad_token_id] * pad_n))
+            attention_mask.append(torch.tensor([1] * n + [0] * pad_n))
+            labels.append(torch.tensor(d["labels"] + [-100] * pad_n))
+        return {
+            "input_ids": torch.stack(input_ids),
+            "attention_mask": torch.stack(attention_mask),
+            "labels": torch.stack(labels),
+        }
+
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=split["train"],
         eval_dataset=split["test"],
         processing_class=tokenizer,
+        data_collator=collate_fn,
     )
     print("开始 SFT 训练...")
     trainer.train()
