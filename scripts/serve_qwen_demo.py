@@ -40,6 +40,7 @@ SFT_LORA = str(ROOT / "output/qwen_route_lora")
 DPO_LORA = str(ROOT / "output/qwen_route_dpo")
 GRPO_LORA = str(ROOT / "output/qwen_route_grpo")
 QWEN35_LORA = str(ROOT / "output/qwen35_route_lora")
+QWEN35_GRPO_LORA = str(ROOT / "output/qwen35_route_grpo")
 DATA_DIR = ROOT / "data" / "processed"
 
 SYSTEM_PROMPT = ("你是一位哈尔滨旅游规划专家，根据用户的需求生成合理的旅游路线。"
@@ -80,6 +81,7 @@ _MODEL_DIRS = {
     "dpo": (MODEL_PATH, DPO_LORA),
     "grpo": (MODEL_PATH, GRPO_LORA),
     "qwen35": (QWEN35_BASE, QWEN35_LORA),
+    "qwen35grpo": (QWEN35_BASE, QWEN35_GRPO_LORA),
 }
 
 
@@ -352,7 +354,8 @@ PAGE_HTML = """<!DOCTYPE html>
       </select>
       <div class="model-switch">
         <label><input type="radio" name="model" value="qwen35" checked onchange="switchModel(this)"><span>Qwen3.5</span></label>
-        <label><input type="radio" name="model" value="grpo" onchange="switchModel(this)"><span>GRPO</span></label>
+        <label><input type="radio" name="model" value="qwen35grpo" onchange="switchModel(this)"><span>Q3.5-GRPO</span></label>
+        <label><input type="radio" name="model" value="grpo" onchange="switchModel(this)"><span>Q3-GRPO</span></label>
         <label><input type="radio" name="model" value="dpo" onchange="switchModel(this)"><span>DPO</span></label>
         <label><input type="radio" name="model" value="sft" onchange="switchModel(this)"><span>SFT</span></label>
       </div>
