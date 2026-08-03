@@ -1,275 +1,139 @@
-# ItineraryTransformer
+# Harbin Route Planner
 
-基于 Transformer 架构的文旅线路优化模型（以哈尔滨为案例城市），2026 年全国大学生统计建模大赛参赛作品。
+基于 **Qwen3.5-4B 微调**的旅游路线生成系统：输入自然语言旅行需求（天数、季节、预算、人群），输出**逐日 POI 路线** + v5 质量评分 + 交互地图。
 
-## 创新点
+> 以哈尔滨为案例城市，覆盖 48,961 个真实 POI（含语义标注）。
 
-1. **Engram 记忆机制** — 外部内容寻址记忆库，从历史优质路线中检索相似路线辅助决策
-2. **MHC 双曲流形约束** — 庞加莱球模型嵌入，在双曲空间中保持地理拓扑关系
-3. **Muon 优化器** — Newton-Schulz quintic 迭代矩阵正交化 + Nesterov 动量 + AdamW 1D 参数回退
-4. **随机图建模** — POI 间距离和通行时间建模为概率分布 N(mean, std)，训练时采样提升鲁棒性
-5. **活动类型条件生成** — 6种活动类型约束解码，景点→餐饮→住宿自然节奏
-6. **POI步行聚类** — ≤1km连通图聚类，90个景点团，同团不重复访问
-7. **XHS数据增强** — 11,959条小红书笔记提取餐饮/住宿热度，加权路线增强
+## 它解决什么问题
 
-## 环境安装
+大模型直接生成旅游路线有两大通病，本项目通过**混合架构**解决：
+
+1. **编造 POI 名** — 4B 模型记不住 1 万个真实地名，长序列生成时即兴发挥（"南岗区天主教堂"等假名）。
+   ✅ **RAG 候选检索 + 候选编号输出**：模型只从真实候选中选编号，编造名从源头消失。
+2. **多日游一次性输出崩溃** — "三天半、第二天下午 5 点走"这类需求，单次生成长路线必然退化。
+   ✅ **逐日拆分**：按天数（含小数/半日）拆成单日任务，每天 5-6 站，模型稳定输出。
+
+## 功能特性
+
+- 🗺️ **自然语言 → 路线**：解析天数（含 `3.5 天`）、季节、预算、出发地、核心景点、人群（老人/亲子）
+- 📅 **逐日规划**：全天/半天混合（"第 2 天下午 5 点走" → 半天模板），跨日不重复 POI
+- 🎯 **候选编号生成**：模型从检索出的 8-10 个真实候选里选编号，杜绝编造名
+- 🌿 **人类旅游节奏**：住宿在每天末尾、餐饮穿插景点间、半天不安排住宿（规则层）
+- 🧭 **RAG 语义过滤**：48,961 个 POI 全量语义标注，过滤健身房/酒吧/银行等非旅游设施；带父母 → 只检索适合老人的
+- 📊 **v5 硬约束打分**：质量五维（0.70）+ 需求匹配（0.30），天数不符/核心景点缺失/出发地不符直接判负
+- 🖥️ **Web Demo**：SFT / GRPO / DPO 模型一键切换，逐日行程卡片 + folium 地图
+
+## 架构
+
+```
+指令 ──→ constraint_parser（约束抽取）
+       │  天数(3.5) / 季节 / 预算 / 出发地 / 核心景点 / 人群
+       ▼
+  逐日拆分 split_days（含半日）  检索 retrieval（语义过滤 + 类型配额 + 就近/季节/偏好加权）
+       │                          │
+       ▼                          ▼
+   Qwen3.5-4B 候选编号输出 ──→ 编号→真实名 ──→ 节奏整理 organize_day_rhythm
+                                                       │
+                                                       ▼
+                                            v5 逐日打分（composite_score_v5）
+```
+
+## 快速开始
+
+### 环境
 
 ```bash
-# 使用 uv 管理环境（推荐）
+# Python 3.10+，建议 uv
 uv sync
-uv pip install torch --index-url https://download.pytorch.org/whl/cu128
 ```
 
-## 数据准备
+### 数据准备
 
 ```bash
-# 1. POI 筛选 + 合成路线生成（主管线，默认用全部合格 POI，--max-pois N 限定数量）
-uv run python scripts/prepare_data.py
+# 1. 语义标注全量 POI（48,961 个，输出 merged_pois_labeled.csv）
+uv run python scripts/label_poi_semantics.py
 
-# 2. 提取小红书 POI 热度
-uv run python scripts/process_xhs_data.py
-
-# 3. POI增强 + 路线增强（180-POI 旧管线，可选）
-uv run python scripts/prepare_real_data.py
+# 2. 生成 Qwen3.5 候选编号 SFT 数据（3,000 条逐日样本）
+uv run python scripts/prepare_qwen35_dataset.py --max-samples 3000
 ```
 
-## 数据规模
-
-### `data/raw/`（原始数据，共 10 个文件，约 31 MB）
-
-| 文件 | 规模 | 说明 |
-|------|------|------|
-| `merged_pois.csv` | 48,961 行 × 10 列（6.5 MB） | 合并去重后的哈尔滨 POI（餐饮 28K / 购物 10.7K / 住宿 7.4K / 景点 2.3K / 交通 538） |
-| `百度poi(旅游相关) - 全集.xlsx` | 72,455 行 × 15 列（12.3 MB） | 百度地图旅游相关 POI 全集 |
-| `哈尔滨POI数据_完整版.csv` | 5,739 行 × 8 列 | 高德 POI 完整版 |
-| `哈尔滨POI_核心节点.csv` | 135 行 × 8 列 | 人工筛选的核心 POI 节点 |
-| `哈尔滨旅游路线数据.csv` | 403 行 × 6 列 | 小红书旅游路线 |
-| `距离矩阵_公里.csv` | 135 × 136 | 135 核心节点真实路网距离（km） |
-| `耗时矩阵_分钟.csv` | 135 × 136 | 135 核心节点真实路网耗时（min） |
-| `search_contents_2026-05-04.jsonl` | 1,179 条（3.9 MB） | 小红书笔记内容 |
-| `search_contents_2026-05-05.jsonl` | 653 条（1.7 MB） | 小红书笔记内容 |
-| `search_comments_2026-05-04.jsonl` | 10,127 条（5.1 MB） | 小红书笔记评论 |
-
-> 三份 JSONL 合计 **11,959 条小红书笔记**，用于提取餐饮/住宿热度。
-
-### `data/processed/`（处理后数据，共 15 个文件，约 1.9 GB）
-
-**当前 POI 规模（主管线输出，默认 10,000）：**
-
-| 文件 | 规模 | 说明 |
-|------|------|------|
-| `poi_metadata.csv` | 10,000 行 × 15 列 | POI 元信息（名称、坐标、类别、评分、XHS 热度、活动类型） |
-| `poi_features.npy` | [10000, 128] float64 | POI 特征矩阵 |
-| `adjacency.npy` | [10000, 10000] float32 | 邻接矩阵（距离衰减权重，<30 km 连通） |
-| `distance_matrix.npy` | [10000, 10000] float32 | Haversine 球面距离矩阵（km） |
-| `distance_std.npy` | [10000, 10000] float32 | 距离标准差（概率分布建模） |
-| `time_matrix.npy` | [10000, 10000] float32 | 通行时间矩阵（min） |
-| `time_std.npy` | [10000, 10000] float32 | 通行时间标准差 |
-| `poi_activity_types.npy` | [10000] int64 | 活动类型标签 |
-| `cluster_id.npy` | [10000] int32 | 步行景点聚类 ID |
-| `clusters.npy` | 90 个团 | ≤1 km 连通的步行景点聚类 |
-| `routes.npy` | 5,168 条 | 训练路线（168 XHS + 5,000 合成，长度 2–33，均值 14.0） |
-
-**XHS 数据提取（`process_xhs_data.py` 输出）：**
-
-| 文件 | 规模 | 说明 |
-|------|------|------|
-| `xhs_extracted_routes.npy` | 153 条 | 从笔记中提取的路线 |
-| `xhs_processing_report.json` | — | 11,959 笔记分类报告（路线 493 / 餐饮 794 / 住宿 355 / 其他 10,317） |
-
-**180-POI 旧管线遗留：**
-
-| 文件 | 规模 | 说明 |
-|------|------|------|
-| `poi_xhs_popularity.npy` | [180] float64 | 180-POI 规模的 XHS 热度（旧管线，未参与当前训练） |
-
-### POI 类别与活动类型分布（当前规模）
-
-| 类别 | 活动类型 | 数量 | 占比 |
-|------|----------|------|------|
-| 餐饮 | 餐饮(1) | 4,091 | 40.9% |
-| 住宿 | 住宿(2) | 2,000 | 20.0% |
-| 景点 | 景点(0) | 1,923 | 19.2% |
-| 购物 | 购物(4) | 1,500 | 15.0% |
-| 交通 | 出发点(5) | 486 | 4.9% |
-| **合计** | — | **10,000** | **100%** |
-
-> 配额筛选目标比例为「景点 0.35 / 餐饮 0.25 / 住宿 0.20 / 购物 0.15 / 交通 0.05」，
-> 但原始景点仅 2,317 个未填满 35% 配额，余额按综合分补给了餐饮，故餐饮占比最高。
-
-### 训练数据划分
-
-- **总路线：** 5,168 条（train 4,134 / val 517 / test 517，比例 0.8 / 0.1 / 0.1）
-
-## 训练
+### 运行 Web Demo
 
 ```bash
-# 默认配置（当前规模：3层, d_ff=384, 4.57M参数）
-uv run python -m src.train --config configs/default.yaml
-
-# 恢复训练
-uv run python -m src.train --config configs/default.yaml --resume checkpoints/best_model.pt
-
-# TensorBoard 实时监控
-uv run tensorboard --logdir logs/ --host 0.0.0.0 --port 6006
+uv run python scripts/serve_qwen_demo.py --port 8898
+# 打开 http://localhost:8898，默认 Qwen3.5-SFT 模型
 ```
 
-模型参数量：4,569,976。训练特性：AMP 混合精度、共享数据加载（编码器预计算 + 输出共享）、Teacher Forcing + Scheduled Sampling、早停（patience=15）、tqdm 终端进度条 + TensorBoard 双轨日志。
+> 模型权重未随仓库分发（见 `.gitignore`），需先完成训练生成 `output/qwen35_route_lora/`。
 
-## 评估实验
+### 训练
 
 ```bash
-# 方向B：真实数据泛化性（168条XHS holdout上的next-POI预测）
-uv run python -m scripts.evaluate_on_real --checkpoint checkpoints/best_model.pt
-# 结果：Transformer top1=47.77%，比最近邻高24.7倍
+# SFT（候选编号格式，Qwen3.5-4B + QLoRA）
+uv run python scripts/finetune_qwen35.py --epochs 3
 
-# 方向C：与启发式/OR方法对比（5方法，含composite v1/v2）
-uv run python -m scripts.run_baselines --checkpoint checkpoints/best_model.pt
-# 结果：v2指标下Transformer(0.8727) > NN/OR-Tools(0.7619)，节奏优势显现
+# GRPO 在线强化（在 SFT 之上，可选）
+uv run python scripts/train_grpo_qwen35.py --max-steps 150
 
-# 方向A：优化器对比（AdamW vs Muon）
-uv run python -m scripts.run_optimizer_comparison
-# 结果：AdamW(4.88) 显著优于 Muon(5.93)，Muon已降级为探索性尝试
-
-# 生成论文图表
-uv run python scripts/plot_optimizer_comparison.py
-uv run python scripts/plot_baseline_comparison.py
+# DPO 偏好对齐（Qwen3 版本）
+uv run python scripts/train_dpo.py --epochs 2
 ```
 
-## 推理
+## 训练与评估结果
 
-```bash
-# 一日游（从景点出发）
-uv run python -m src.inference --checkpoint checkpoints/best_model.pt --start "中央大街" --season winter
+### 模型对比（v5 打分，带父母三天逐日规划）
 
-# 从酒店出发
-uv run python -m src.inference --checkpoint checkpoints/best_model.pt --start_id 104 --season winter
+| 模型 | 结果 |
+|---|---|
+| **Qwen3.5-SFT**（默认） | ✅ 单日 v5 0.88-0.95，18 站全真实 POI，需求匹配 1.0 |
+| Qwen3.5-GRPO | 与 SFT 相当（候选编号任务简单，SFT 已收敛） |
+| Qwen3-GRPO | v5 0.65，被 Qwen3.5-SFT 单轮超越 |
+| Qwen3-DPO | v5 0.34，弱 |
 
-# 限时路线
-uv run python -m src.inference --checkpoint checkpoints/best_model.pt --start "太阳岛" --season summer --max_hours 6
+> **架构演进教训**：4B 模型做 1 万级 POI 规划，正确解是**混合系统**（检索 + 规则 + 轻模型排序）。直接生成或大规模强化学习都触天花板，SFT 已足够。
 
-# 多日游
-uv run python -m src.inference --checkpoint checkpoints/best_model.pt --start "中央大街" --season winter --max_stops 14 --days 2
+### 数据规模
 
-# 多条候选对比
-uv run python -m src.inference --checkpoint checkpoints/best_model.pt --season winter --n_routes 3
-```
-
-输出：终端路线详情表 + 活动类型序列 + 综合评估得分 + `output/best_route_map.html` 交互式地图。
-
-## 评估
-
-```bash
-# 综合评估：路线生成质量（composite v1/v2 + 与启发式对比）
-uv run python -m scripts.run_baselines --checkpoint checkpoints/best_model.pt
-# 真实数据 next-POI 准确率（168条XHS holdout）
-uv run python -m scripts.evaluate_on_real --checkpoint checkpoints/best_model.pt
-```
-
-四维评价体系：距离(0.30) + 时间(0.25) + 满意度(0.25) + 多样性(0.20)。
-
-## 测试
-
-```bash
-uv run pytest tests/ -v
-```
+| 数据 | 规模 |
+|---|---|
+| 原始 POI（`merged_pois.csv`） | 48,961 个 |
+| 语义标注（`merged_pois_labeled.csv`） | 48,961 个，排除 1,447 个非旅游 POI |
+| 处理后 POI（`data/processed/`，10K 上限因矩阵内存） | 10,000 个 |
+| 训练路线（`data/processed/routes.npy`） | 5,168 条 |
+| Qwen3.5 SFT 数据（候选编号逐日） | 3,000 条 |
 
 ## 项目结构
 
 ```
-├── configs/
-│   ├── default.yaml          # 主配置（data/model/engram/mhc/loss/optimizer/training）
-│   └── ablation.yaml         # 消融实验配置
-├── data/
-│   ├── raw/                  # 原始数据（CSV + XLSX + JSONL）
-│   └── processed/            # 处理后数据（npy + csv）
-├── scripts/
-│   ├── prepare_real_data.py  # POI增强 + 路线增强 + 聚类
-│   ├── process_xhs_data.py   # XHS笔记清洗 + POI热度提取
-│   └── merge_data.py         # 高德百度数据合并去重
-├── src/
-│   ├── data/
-│   │   ├── preprocess.py     # 数据清洗 + 特征工程 + 概率分布矩阵
-│   │   └── dataset.py        # PyTorch Dataset + 概率采样
-│   ├── models/
-│   │   ├── transformer.py    # ItineraryTransformer（约束Beam Search）
-│   │   ├── encoder.py        # Graph-aware Encoder + 活动类型偏置
-│   │   ├── decoder.py        # Engram Decoder + 活动类型条件 + 转换约束
-│   │   ├── engram.py         # Engram 记忆模块
-│   │   ├── mhc.py            # Poincaré 球双曲嵌入
-│   │   ├── embeddings.py     # POI + 活动类型 + 位置编码
-│   │   └── losses.py         # CE + 距离惩罚 + MHC 正则
-│   ├── optim/
-│   │   └── muon.py           # Muon + AdamW 混合优化器
-│   ├── train.py              # 训练主脚本
-│   ├── evaluate.py           # 四维评估
-│   ├── inference.py          # 推理 + 路线优化 + 多日游
-│   └── visualize.py          # folium交互地图 + 沿道路绘制
-└── tests/                    # pytest 单元测试
+src/
+├── constraint_parser.py   # 指令约束抽取（天数/季节/预算/人群/半日）
+├── retrieval.py           # RAG 候选检索（语义过滤 + 类型配额）
+├── itinerary_planner.py   # 逐日拆分 + 候选编号生成 + 节奏整理
+├── scoring.py             # v5 打分（质量 0.70 + 需求匹配 0.30）
+└── visualize.py           # folium 交互地图
+
+scripts/
+├── serve_qwen_demo.py         # Web Demo（5 模型切换）
+├── finetune_qwen35.py         # Qwen3.5 SFT（候选编号格式）
+├── train_grpo_qwen35.py       # Qwen3.5 GRPO
+├── train_dpo.py               # DPO 偏好对齐
+├── train_grpo.py              # Qwen3 GRPO
+├── finetune_qwen.py           # Qwen3 SFT
+├── prepare_qwen35_dataset.py  # 候选编号逐日数据
+├── label_poi_semantics.py     # POI 语义标注（全量 48,961）
+├── augment_elderly_dataset.py # 带父母/老人指令数据增强
+└── eval_dpo_vs_sft.py         # SFT vs DPO/GRPO 评估
+
+archive/                       # 历史竞赛代码（已归档，见下文）
 ```
 
-## 当前训练结果（POI 规模 10,000）
+## 历史归档
 
-- **数据规模：** 10,000 个 POI，5,168 条路线（train 4,134 / val 517 / test 517）
-- **模型：** 4,569,976 参数（3 层编解码器, d_ff=384）
-- **最佳模型：** epoch 106，val_loss=4.9041（早停于 epoch 121）
-- **训练配置：** batch_size=256, AMP 混合精度, patience=15, AdamW
-- **loss 曲线：** train 9.06→2.79, val 8.76→4.90
-- **GPU 显存峰值：** ~3.27 GB（RTX 4090 24GB）
-- **90 个步行景点团（≤1km）**
-- **消融实验：** 7 组（K=3/5/10、-Engram、-MHC、-Engram-MHC、纯 Transformer 基线，180-POI 规模）
+`archive/` 保留了早期统计建模竞赛的完整代码与论文（Transformer 编解码器、Engram/MHC/Muon 等），以及被实验证实无效的设计：
 
----
+- `archive/legacy_transformer/` — 旧 ItineraryTransformer 模型与训练管线
+- `archive/legacy_scripts/` — 旧数据管线与竞赛评估脚本
+- `archive/paper/` — 竞赛论文（LaTeX）
+- `archive/docs/` — 旧开发文档与诊断报告
 
-## Qwen 路线生成模型（当前主线）
-
-竞赛后转向 **Qwen3.5-4B 微调路线生成**（自然语言指令 → POI 路线），逐步取代旧 Transformer 编解码器作为主模型。
-
-### 架构演进
-
-| 阶段 | 方案 | 问题 | 结论 |
-|---|---|---|---|
-| 初版 | Qwen3-4B QLoRA 直接生成长路线 | 编造 POI 名、多日游站数不足 | 4B 记不住 10K 真实名 |
-| Phase 1 | **逐日拆分 + RAG 候选检索** | 模型从真实候选里选，编造名消失 | 带父母三天 18 站全真实 |
-| 基模升级 | **Qwen3.5-4B**（纯文本模式） | 仅 1 轮 SFT 超 Qwen3 多轮强化 | v5 逐日 0.877 |
-| 后训练 | Qwen3.5 GRPO | 候选编号任务简单，SFT 已收敛 | 与 SFT 相当，维持 SFT 为默认 |
-
-### 关键组件
-
-- **`src/constraint_parser.py`** — 指令解析（天数含小数 3.5/半日"第2天下午走"/预算/出发地/核心景点/偏好/季节/适合人群）
-- **`src/retrieval.py`** — RAG 候选检索（就近 + 季节 + 偏好 + sort_score 加权 + 类型配额）
-- **`src/itinerary_planner.py`** — 逐日拆分 + **候选编号生成**（模型输出 1-8 编号，后端映射真实名）+ 节奏整理
-- **`scripts/label_poi_semantics.py`** — 全量 48,961 POI 语义标注（`is_tourism` 质量门控 + 适合老人/亲子），排除 1,447 个非旅游设施
-- **`scripts/serve_qwen_demo.py`** — Web Demo（Qwen3.5-SFT 默认，5 模型可切换，逐日行程展示）
-
-### 人类旅游节奏（规则层）
-
-`organize_day_rhythm` 纯规则整理，不重训：
-- 住宿 = 一天终点站 → 移到末尾（半天不安排住宿）
-- 全天最多 1 个住宿
-- 餐饮穿插于景点之间（间隔 ≥1 非餐饮）
-- 以景点开头
-
-### 生成管线
-
-```
-指令 → constraint_parser → 逐日拆分(含半日) → retrieval 候选(语义过滤)
-    → Qwen3.5 候选编号输出 → 编号→真实名 → 节奏整理 → v5 逐日打分
-```
-
-### 当前最佳输出示例（带父母三天）
-
-```
-Day1: 秋林公司 → 南岗博物馆 → 雪山书集(餐) → 版画博物馆 → 十八街烧烤(餐) → 哈布斯堡江景酒店
-Day2: 奋斗路副食品商场 → 秋林里道斯(餐) → 圣索菲亚教堂 → 儿童公园 → 防洪纪念塔 → 汉庭酒店
-Day3: 公署旧址 → 秋林洋行旧址 → 中央书店 → 壹月咖啡(餐) → 犹太新会堂旧址 → 如家精选酒店
-```
-
-18 站全真实 POI，无非旅游设施，单日 v5 0.88-0.95。
-
-### v5 打分（`composite_score_v5`）
-
-`0.70 × 质量五维（就近/区域密度/节奏/满意度/多样性） + 0.30 × 需求匹配`
-- 硬判负：天数严重不符 / 核心景点缺失 / 出发地不符
-- 软扣分：预算 / 偏好 / 节奏 / 季节
-- 不传指令时退回 v4（向后兼容）
+> **为何归档**：Muon 优化器（对比实验 AdamW 胜出 21%）、MHC 双曲流形（消融为净负贡献）、Engram 记忆（差分在噪声级）均被证实无实质收益。当前 Qwen 主线的"检索 + 规则 + 轻模型排序"架构已取代旧方案。

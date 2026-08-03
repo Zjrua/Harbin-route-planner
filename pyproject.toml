@@ -1,7 +1,7 @@
 [project]
-name = "itinerary-transformer"
-version = "0.1.0"
-description = "基于Transformer的文旅线路优化模型"
+name = "harbin-route-planner"
+version = "0.2.0"
+description = "基于 Qwen3.5-4B 微调的哈尔滨旅游路线生成系统（自然语言指令 → 逐日 POI 路线）"
 requires-python = ">=3.10"
 dependencies = [
     "numpy>=1.24.0",
@@ -12,7 +12,14 @@ dependencies = [
     "folium>=0.15.0",
     "matplotlib>=3.7.0",
     "tqdm>=4.65.0",
-    "tensorboard>=2.20.0",
+    # Qwen 微调与推理
+    "torch>=2.4.0",
+    "transformers>=5.0.0",
+    "trl>=1.9.0",
+    "peft>=0.13.0",
+    "datasets>=3.0.0",
+    "accelerate>=1.0.0",
+    "bitsandbytes>=0.44.0",
 ]
 
 [dependency-groups]
@@ -22,8 +29,6 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
 pythonpath = ["."]
 
 [tool.ruff]
