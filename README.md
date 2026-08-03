@@ -43,9 +43,17 @@
 ### 环境
 
 ```bash
-# Python 3.10+，建议 uv
-uv sync
+# Python 3.10-3.12，建议 uv
+# Windows：自动探测（NVIDIA → CUDA 版 torch；Intel Arc/无独显 → CPU 版，内置 XPU）
+./scripts/install_env.ps1
+# macOS (Apple Silicon)：PyPI 官方 torch 自带 MPS 后端
+./scripts/install_env.sh
+# 或手动指定：
+uv sync                        # Mac / Windows CPU+XPU
+uv sync --index pytorch-cu128  # Windows NVIDIA CUDA
 ```
+
+运行时代码自动选设备（`src/device.py`）：`CUDA → MPS → XPU → CPU`。
 
 ### 数据准备
 
@@ -102,6 +110,65 @@ uv run python scripts/train_dpo.py --epochs 2
 | 训练路线（`data/processed/routes.npy`） | 5,168 条 |
 | Qwen3.5 SFT 数据（候选编号逐日） | 3,000 条 |
 
+## 打分技术细节（v5）
+
+路线质量由 `src/scoring.py` 的 `composite_score_v5` 评估，**质量 + 需求匹配双层结构**：
+
+```
+score = 0.70 × 质量五维（加权） + 0.30 × 需求匹配度
+```
+
+### 质量五维（路线内部属性）
+
+| 维度 | 权重 | 计算 |
+|---|---|---|
+| **proximity** 就近性 | 0.25 | 步长中位数 `hop_p50`：≤1km 取 0.9；1-8km 线性衰减；>8km 快速衰减（下限 0.2） |
+| **area_density** 区域密度 | 0.20 | `hop_p90 / hop_p50` 比值（跳距离散度），≤15 满分，越大越低 |
+| **rhythm** 节奏 | 0.20 | `1 − 连续同类POI比例`（景点→餐饮→景点 交替加分） |
+| **satisfaction** 满意度 | 0.20 | 路线内 POI 平台评分均值 / 5 |
+| **diversity** 多样性 | 0.15 | 去重类别数 / 总站数 |
+
+### 时间模型
+
+```
+总耗时 = Σ 交通时间 + Σ 停留时间
+每日预算 = 720 分钟（12 小时）
+```
+
+停留时间按活动类型：**景点 45min / 餐饮 60min / 住宿 0 / 购物 40min / 出发点 0**。
+
+### 硬约束（违反 → `score=0` 判负）
+
+| 约束 | 判负条件 |
+|---|---|
+| `time_over_budget` | 总耗时 > 720 × 天数 |
+| `repeat_poi` | 路线内 POI 重复 |
+| `too_short` | 去重后 < 3 站 |
+| `days_mismatch` | 推断天数 ≤ 指令天数 − 2（**渐进式**：3 日游出 1 日量才判负，差 1 天走软扣分） |
+| `missing_core_poi` | 指令核心景点不在路线（且 POI 库存在该景点） |
+| `start_mismatch` | 出发地不在路线前两站（前两站容错） |
+
+> **天数推断**：按去重站数 `≤10 → 1日`、`≤16 → 2日`、`>16 → 3日`。
+
+### 需求匹配度（软扣分）
+
+`requirement_match = max(0, 1 − Σ 扣分)`，只对指令里**显式出现**的约束扣分：
+
+| 维度 | 扣分规则 |
+|---|---|
+| **预算超支** | 估算花费超预算 ≤20% 扣 0.1；≤50% 扣 0.3；>50% 扣 0.6 |
+| **偏好** | 指令"喜欢美食"但餐饮占比 <0.25：每低 0.1 扣 0.15，封顶 0.45 |
+| **节奏** | 慢节奏但每天 >7 站扣 0.3；>9 站扣 0.6 |
+| **季节** | 冬季指令但路线无冬季特色 POI（`season_winter − season_summer > 0.3`）扣 0.2 |
+| **天数超出** | 推断天数 > 指令天数：超 1 天扣 0.15，超 2 天扣 0.3 |
+| **天数偏短** | 推断天数 = 指令天数 − 1（如 3 日游出 2 日量）扣 0.5 |
+
+> 不传 `instruction` 时 `composite_score_v5` 完全退回 v4 行为（纯质量五维），旧调用不受影响。
+
+### 逐日模式下的打分
+
+多日游按天拆分后，**每天按 1 日游独立打分**（天数约束只作用于总行程），逐日分 + 需求匹配汇总成整体分。半天（如"第 2 天下午 5 点走"）按 3-4 站轻量路线评估。
+
 ## 项目结构
 
 ```
@@ -110,6 +177,7 @@ src/
 ├── retrieval.py           # RAG 候选检索（语义过滤 + 类型配额）
 ├── itinerary_planner.py   # 逐日拆分 + 候选编号生成 + 节奏整理
 ├── scoring.py             # v5 打分（质量 0.70 + 需求匹配 0.30）
+├── device.py              # 多平台设备选择（CUDA/MPS/XPU/CPU）
 └── visualize.py           # folium 交互地图
 
 scripts/
