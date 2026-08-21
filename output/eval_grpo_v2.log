@@ -1,0 +1,10 @@
+W0802 01:39:29.160000 28092 .venv\Lib\site-packages\torch\utils\flop_counter.py:29] triton not found; flop counting will not work for triton kernels
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/398 [00:00<?, ?it/s]Loading weights:   0%|          | 1/398 [00:00<01:36,  4.13it/s]Loading weights:   4%|▎         | 14/398 [00:00<00:07, 48.12it/s]Loading weights:   8%|▊         | 31/398 [00:00<00:04, 87.31it/s]Loading weights:  12%|█▏        | 48/398 [00:00<00:03, 111.69it/s]Loading weights:  17%|█▋        | 67/398 [00:00<00:02, 135.63it/s]Loading weights:  21%|██        | 83/398 [00:00<00:02, 140.59it/s]Loading weights:  26%|██▌       | 103/398 [00:00<00:01, 151.76it/s]Loading weights:  30%|███       | 121/398 [00:00<00:01, 159.45it/s]Loading weights:  35%|███▍      | 138/398 [00:01<00:01, 156.87it/s]Loading weights:  39%|███▉      | 157/398 [00:01<00:01, 162.87it/s]Loading weights:  44%|████▎     | 174/398 [00:01<00:01, 154.73it/s]Loading weights:  48%|████▊     | 190/398 [00:01<00:01, 154.73it/s]Loading weights:  52%|█████▏    | 207/398 [00:01<00:01, 158.94it/s]Loading weights:  56%|█████▋    | 224/398 [00:01<00:01, 160.56it/s]Loading weights:  62%|██████▏   | 245/398 [00:01<00:00, 170.43it/s]Loading weights:  66%|██████▋   | 264/398 [00:01<00:00, 173.47it/s]Loading weights:  71%|███████   | 282/398 [00:01<00:00, 171.11it/s]Loading weights:  76%|███████▌  | 301/398 [00:02<00:00, 172.57it/s]Loading weights:  81%|████████  | 322/398 [00:02<00:00, 179.28it/s]Loading weights:  86%|████████▌ | 341/398 [00:02<00:00, 180.69it/s]Loading weights:  90%|█████████ | 360/398 [00:02<00:00, 179.78it/s]Loading weights:  95%|█████████▍| 378/398 [00:02<00:00, 177.88it/s]Loading weights: 100%|██████████| 398/398 [00:02<00:00, 153.84it/s]
+=== GRPO_v2 (v5打分) ===
+  [1] v5=0.8424 OK 需求1.0 站6
+  [2] v5=0.0 X(days_mismatch) 需求0 站5
+  [3] v5=0.0 X(days_mismatch) 需求0 站11
+  [4] v5=0.0 X(start_mismatch) 需求0 站7
+  [5] v5=0.0 X(days_mismatch) 需求0 站9
+  平均 v5: 0.1685 (5/5)

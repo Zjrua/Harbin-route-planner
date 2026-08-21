@@ -2,19 +2,18 @@
 data/raw/
 !data/README.md
 
-# Model artifacts — LoRA adapter / 完整模型权重不提交（体积大且可重训）
-output/*_lora*/
-output/*_dpo*/
-output/*_grpo*/
+# Model artifacts — 最终 LoRA adapter 提交（单文件 <24MB）；
+# 只忽略训练中间 checkpoint / 冒烟 / 临时产物
+output/*/checkpoint-*/
 output/*_smoke/
 output/*_ckpt/
 output/qwen_progress/
 output/_tmp*/
-output/*.log
+# 日志：放行训练/评估日志（小且有分析价值）
 output/auto_pipeline_wait.sh
 output/await_qwen35.sh
 
-# 结果日志（保留 JSON/PNG/HTML 结果，忽略过程日志）
+# 结果日志（保留可复现的 JSON/PNG/HTML 结果，忽略过程日志）
 output/base_eval.txt
 output/lora_eval.txt
 output/*_err.txt
@@ -53,9 +52,11 @@ Thumbs.db
 
 # Misc
 *.log
+!output/*.log
+output/qwen35_download.log
+output/demo_server.log
 wandb/
 .claude/
-uv.lock
 # LaTeX
 paper/*.aux
 paper/*.out
@@ -74,5 +75,3 @@ __pycache__/
 data/external/**/
 !data/external/**/README.md
 !data/external/**/*.py
-data/qwen*.jsonl
-data/qwen*_v1.jsonl

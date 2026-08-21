@@ -1,0 +1,20 @@
+W0802 01:57:00.697000 32356 .venv\Lib\site-packages\torch\utils\flop_counter.py:29] triton not found; flop counting will not work for triton kernels
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/398 [00:00<?, ?it/s]Loading weights:   0%|          | 1/398 [00:00<01:38,  4.02it/s]Loading weights:   4%|▎         | 14/398 [00:00<00:08, 47.90it/s]Loading weights:   8%|▊         | 33/398 [00:00<00:03, 94.09it/s]Loading weights:  12%|█▏        | 49/398 [00:00<00:03, 112.94it/s]Loading weights:  18%|█▊        | 70/398 [00:00<00:02, 139.42it/s]Loading weights:  23%|██▎       | 91/398 [00:00<00:01, 157.43it/s]Loading weights:  27%|██▋       | 108/398 [00:00<00:01, 160.70it/s]Loading weights:  32%|███▏      | 126/398 [00:01<00:01, 159.99it/s]Loading weights:  37%|███▋      | 147/398 [00:01<00:01, 169.47it/s]Loading weights:  42%|████▏     | 168/398 [00:01<00:01, 178.26it/s]Loading weights:  47%|████▋     | 187/398 [00:01<00:01, 174.87it/s]Loading weights:  52%|█████▏    | 205/398 [00:01<00:01, 171.36it/s]Loading weights:  56%|█████▋    | 224/398 [00:01<00:01, 171.07it/s]Loading weights:  62%|██████▏   | 245/398 [00:01<00:00, 177.62it/s]Loading weights:  66%|██████▌   | 263/398 [00:01<00:00, 170.95it/s]Loading weights:  71%|███████   | 281/398 [00:01<00:00, 165.24it/s]Loading weights:  76%|███████▌  | 301/398 [00:02<00:00, 169.72it/s]Loading weights:  81%|████████  | 322/398 [00:02<00:00, 177.97it/s]Loading weights:  85%|████████▌ | 340/398 [00:02<00:00, 174.01it/s]Loading weights:  90%|████████▉ | 358/398 [00:02<00:00, 167.66it/s]Loading weights:  95%|█████████▍| 378/398 [00:02<00:00, 170.62it/s]Loading weights: 100%|██████████| 398/398 [00:02<00:00, 156.16it/s]
+=== DPO_v3 (v5打分) ===
+  [1] v5=0.9025 OK 需求0.8 站5
+  [2] v5=0.7783 OK 需求0.42 站5
+  [3] v5=0.0 X(days_mismatch) 需求0 站5
+  [4] v5=0.0 X(start_mismatch) 需求0 站3
+  [5] v5=0.0 X(days_mismatch) 需求0 站3
+  平均 v5: 0.3362 (5/5)
+
+Loading weights:   0%|          | 0/398 [00:00<?, ?it/s]Loading weights:   0%|          | 1/398 [00:00<01:29,  4.44it/s]Loading weights:   4%|▍         | 16/398 [00:00<00:06, 59.90it/s]Loading weights:   9%|▉         | 36/398 [00:00<00:03, 108.87it/s]Loading weights:  13%|█▎        | 53/398 [00:00<00:02, 128.31it/s]Loading weights:  18%|█▊        | 70/398 [00:00<00:02, 140.86it/s]Loading weights:  22%|██▏       | 86/398 [00:00<00:02, 145.04it/s]Loading weights:  26%|██▌       | 103/398 [00:00<00:01, 150.16it/s]Loading weights:  30%|███       | 121/398 [00:00<00:01, 157.70it/s]Loading weights:  35%|███▍      | 138/398 [00:01<00:01, 156.17it/s]Loading weights:  39%|███▉      | 157/398 [00:01<00:01, 164.49it/s]Loading weights:  44%|████▎     | 174/398 [00:01<00:01, 163.26it/s]Loading weights:  48%|████▊     | 191/398 [00:01<00:01, 159.38it/s]Loading weights:  53%|█████▎    | 212/398 [00:01<00:01, 168.75it/s]Loading weights:  58%|█████▊    | 229/398 [00:01<00:01, 168.06it/s]Loading weights:  62%|██████▏   | 247/398 [00:01<00:00, 166.16it/s]Loading weights:  67%|██████▋   | 268/398 [00:01<00:00, 172.60it/s]Loading weights:  72%|███████▏  | 286/398 [00:01<00:00, 173.19it/s]Loading weights:  76%|███████▋  | 304/398 [00:02<00:00, 169.89it/s]Loading weights:  81%|████████  | 323/398 [00:02<00:00, 174.09it/s]Loading weights:  86%|████████▋ | 344/398 [00:02<00:00, 181.60it/s]Loading weights:  91%|█████████ | 363/398 [00:02<00:00, 179.81it/s]Loading weights:  96%|█████████▌| 382/398 [00:02<00:00, 179.99it/s]Loading weights: 100%|██████████| 398/398 [00:02<00:00, 157.43it/s]
+=== GRPO_v3 (v5打分) ===
+  [1] v5=0.8424 OK 需求1.0 站6
+  [2] v5=0.6694 OK 需求0.42 站5
+  [3] v5=0.6982 OK 需求0.5 站11
+  [4] v5=0.0 X(start_mismatch) 需求0 站7
+  [5] v5=0.0 X(days_mismatch) 需求0 站9
+  平均 v5: 0.442 (5/5)
+

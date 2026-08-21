@@ -1,0 +1,10 @@
+W0802 11:36:20.040000 29592 .venv\Lib\site-packages\torch\utils\flop_counter.py:29] triton not found; flop counting will not work for triton kernels
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/398 [00:00<?, ?it/s]Loading weights:   0%|          | 1/398 [00:00<01:32,  4.31it/s]Loading weights:   4%|▎         | 14/398 [00:00<00:07, 50.28it/s]Loading weights:   8%|▊         | 33/398 [00:00<00:03, 97.57it/s]Loading weights:  12%|█▏        | 49/398 [00:00<00:02, 117.53it/s]Loading weights:  18%|█▊        | 70/398 [00:00<00:02, 146.38it/s]Loading weights:  23%|██▎       | 91/398 [00:00<00:01, 165.69it/s]Loading weights:  28%|██▊       | 110/398 [00:00<00:01, 173.01it/s]Loading weights:  32%|███▏      | 129/398 [00:00<00:01, 176.01it/s]Loading weights:  37%|███▋      | 148/398 [00:01<00:01, 167.63it/s]Loading weights:  42%|████▏     | 169/398 [00:01<00:01, 177.47it/s]Loading weights:  48%|████▊     | 190/398 [00:01<00:01, 182.65it/s]Loading weights:  53%|█████▎    | 209/398 [00:01<00:01, 180.95it/s]Loading weights:  57%|█████▋    | 228/398 [00:01<00:00, 173.71it/s]Loading weights:  62%|██████▏   | 246/398 [00:01<00:00, 172.46it/s]Loading weights:  67%|██████▋   | 267/398 [00:01<00:00, 178.41it/s]Loading weights:  72%|███████▏  | 286/398 [00:01<00:00, 179.51it/s]Loading weights:  77%|███████▋  | 305/398 [00:01<00:00, 176.08it/s]Loading weights:  81%|████████  | 323/398 [00:02<00:00, 173.93it/s]Loading weights:  86%|████████▋ | 344/398 [00:02<00:00, 178.32it/s]Loading weights:  91%|█████████ | 362/398 [00:02<00:00, 178.13it/s]Loading weights:  95%|█████████▌| 380/398 [00:02<00:00, 172.32it/s]Loading weights: 100%|██████████| 398/398 [00:02<00:00, 160.91it/s]
+=== GRPO v4 (v5打分) ===
+  [1] v5=0.8424 OK 需求1.0 站6 匹配率0.67
+  [2] v5=0.6694 OK 需求0.42 站5 匹配率0.71
+  [3] v5=0.6982 OK 需求0.5 站11 匹配率1.0
+  [4] v5=0.0 X(start_mismatch) 需求0 站7 匹配率0.58
+  [5] v5=0.0 X(days_mismatch) 需求0 站9 匹配率0.56
+  平均 v5: 0.442 (5/5)

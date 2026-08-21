@@ -1,0 +1,50 @@
+W0821 10:08:50.442000 8628 .venv\Lib\site-packages\torch\utils\flop_counter.py:29] triton not found; flop counting will not work for triton kernels
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[transformers] The fast path is not available because one of the required library is not installed. Falling back to torch implementation. To install follow https://github.com/fla-org/flash-linear-attention#installation and https://github.com/Dao-AILab/causal-conv1d
+Loading weights:   0%|          | 0/426 [00:00<?, ?it/s]Loading weights:   0%|          | 1/426 [00:00<05:12,  1.36it/s]Loading weights:   2%|▏         | 8/426 [00:00<00:34, 12.14it/s]Loading weights:   3%|▎         | 14/426 [00:00<00:20, 20.48it/s]Loading weights:   6%|▋         | 27/426 [00:01<00:09, 41.73it/s]Loading weights:   9%|▉         | 40/426 [00:01<00:06, 59.24it/s]Loading weights:  12%|█▏        | 49/426 [00:01<00:06, 59.98it/s]Loading weights:  15%|█▌        | 64/426 [00:01<00:04, 79.92it/s]Loading weights:  18%|█▊        | 75/426 [00:01<00:04, 83.97it/s]Loading weights:  20%|█▉        | 85/426 [00:01<00:03, 85.46it/s]Loading weights:  22%|██▏       | 95/426 [00:01<00:04, 80.82it/s]Loading weights:  24%|██▍       | 104/426 [00:01<00:03, 82.37it/s]Loading weights:  28%|██▊       | 118/426 [00:02<00:03, 95.12it/s]Loading weights:  31%|███       | 131/426 [00:02<00:02, 102.23it/s]Loading weights:  33%|███▎      | 142/426 [00:02<00:02, 101.19it/s]Loading weights:  36%|███▌      | 153/426 [00:02<00:03, 81.89it/s] Loading weights:  40%|████      | 171/426 [00:02<00:02, 99.18it/s]Loading weights:  43%|████▎     | 184/426 [00:02<00:02, 104.56it/s]Loading weights:  46%|████▌     | 196/426 [00:02<00:02, 99.87it/s] Loading weights:  49%|████▊     | 207/426 [00:02<00:02, 84.72it/s]Loading weights:  53%|█████▎    | 224/426 [00:03<00:02, 98.36it/s]Loading weights:  56%|█████▌    | 237/426 [00:03<00:01, 102.92it/s]Loading weights:  58%|█████▊    | 248/426 [00:03<00:01, 101.05it/s]Loading weights:  61%|██████    | 259/426 [00:03<00:02, 82.72it/s] Loading weights:  65%|██████▌   | 277/426 [00:03<00:01, 98.91it/s]Loading weights:  68%|██████▊   | 289/426 [00:03<00:01, 102.84it/s]Loading weights:  70%|███████   | 300/426 [00:03<00:01, 104.09it/s]Loading weights:  73%|███████▎  | 311/426 [00:04<00:01, 84.08it/s] Loading weights:  77%|███████▋  | 326/426 [00:04<00:01, 98.69it/s]Loading weights:  79%|███████▉  | 337/426 [00:04<00:00, 98.34it/s]Loading weights:  82%|████████▏ | 348/426 [00:04<00:00, 92.65it/s]Loading weights:  84%|████████▍ | 359/426 [00:04<00:00, 94.26it/s]Loading weights:  87%|████████▋ | 369/426 [00:04<00:00, 88.13it/s]Loading weights:  90%|████████▉ | 383/426 [00:04<00:00, 97.99it/s]Loading weights:  93%|█████████▎| 396/426 [00:04<00:00, 102.82it/s]Loading weights:  96%|█████████▌| 407/426 [00:05<00:00, 100.72it/s]Loading weights:  98%|█████████▊| 418/426 [00:05<00:00, 82.65it/s] Loading weights: 100%|██████████| 426/426 [00:05<00:00, 81.07it/s]
+模型加载完成
+指令数: 60，LLM seeds: [0, 1, 2]
+  进度 10/60
+  进度 20/60
+  进度 30/60
+  进度 40/60
+  进度 50/60
+  进度 60/60
+{
+  "summary": {
+    "rule_score": {
+      "day_v5_mean": 0.4555,
+      "std": 0.3163,
+      "req_match": 0.3897,
+      "n_pois": 12.2
+    },
+    "rule_near": {
+      "day_v5_mean": 0.6453,
+      "std": 0.2702,
+      "req_match": 0.5378,
+      "n_pois": 12.1
+    },
+    "llm": {
+      "day_v5_mean": 0.6539,
+      "std": 0.2642,
+      "req_match": 0.6279,
+      "n_pois": 11.9
+    }
+  },
+  "paired_tests": {
+    "llm_vs_rule_score": {
+      "mean_diff": 0.1984,
+      "win_rate": 0.767,
+      "wilcoxon_stat": 363.0,
+      "p_value": 8e-05
+    },
+    "llm_vs_rule_near": {
+      "mean_diff": 0.0086,
+      "win_rate": 0.45,
+      "wilcoxon_stat": 906.0,
+      "p_value": 0.94717
+    }
+  },
+  "llm_seed_std_mean": 0.0865
+}
+保存至: output/eval_llm_vs_rule.json

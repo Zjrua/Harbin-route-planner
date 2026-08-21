@@ -1,0 +1,16 @@
+W0802 21:10:53.915000 24188 Lib\site-packages\torch\utils\flop_counter.py:29] triton not found; flop counting will not work for triton kernels
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[transformers] The fast path is not available because one of the required library is not installed. Falling back to torch implementation. To install follow https://github.com/fla-org/flash-linear-attention#installation and https://github.com/Dao-AILab/causal-conv1d
+Loading weights:   0%|          | 0/426 [00:00<?, ?it/s]Loading weights:   0%|          | 1/426 [00:00<02:36,  2.71it/s]Loading weights:   3%|▎         | 13/426 [00:00<00:11, 35.17it/s]Loading weights:   9%|▊         | 37/426 [00:00<00:04, 91.91it/s]Loading weights:  12%|█▏        | 52/426 [00:00<00:03, 107.27it/s]Loading weights:  18%|█▊        | 76/426 [00:00<00:02, 143.15it/s]Loading weights:  22%|██▏       | 94/426 [00:00<00:02, 149.86it/s]Loading weights:  27%|██▋       | 115/426 [00:00<00:01, 167.03it/s]Loading weights:  31%|███▏      | 134/426 [00:01<00:01, 164.26it/s]Loading weights:  36%|███▌      | 152/426 [00:01<00:01, 163.52it/s]Loading weights:  40%|████      | 171/426 [00:01<00:01, 167.54it/s]Loading weights:  44%|████▍     | 189/426 [00:01<00:01, 169.46it/s]Loading weights:  49%|████▊     | 207/426 [00:01<00:01, 162.30it/s]Loading weights:  55%|█████▍    | 234/426 [00:01<00:01, 186.35it/s]Loading weights:  59%|█████▉    | 253/426 [00:01<00:00, 179.00it/s]Loading weights:  64%|██████▍   | 273/426 [00:01<00:00, 184.58it/s]Loading weights:  69%|██████▊   | 292/426 [00:02<00:00, 175.68it/s]Loading weights:  73%|███████▎  | 310/426 [00:02<00:00, 173.76it/s]Loading weights:  78%|███████▊  | 331/426 [00:02<00:00, 178.57it/s]Loading weights:  83%|████████▎ | 355/426 [00:02<00:00, 193.88it/s]Loading weights:  88%|████████▊ | 375/426 [00:02<00:00, 185.73it/s]Loading weights:  93%|█████████▎| 397/426 [00:02<00:00, 188.22it/s]Loading weights:  98%|█████████▊| 416/426 [00:02<00:00, 180.27it/s]Loading weights: 100%|██████████| 426/426 [00:02<00:00, 155.83it/s]
+=== Qwen3.5-SFT ===
+  Day1(全) v5=0.9074: 黑龙江省(国际)版画博物馆 → 中东铁路印象馆 → 雪山书集 → 哈尔滨中央大街哈布斯堡江景酒店(索菲亚教堂店)
+  Day2(全) v5=0.8741: 防洪纪念塔(轮渡站) → 儿童公园 → 本至·Whisky·Cocktail → 南岗博物馆
+  Day3(全) v5=0.8907: 浴日台 → 颐园街1号欧式建筑 → K重装健身工厂 → 秋林里道斯食品(安国街店)
+  总 18 POI
+C:\Users\Administrator\Projects\Harbin-route-planner\.venv\lib\site-packages\peft\tuners\tuners_utils.py:305: UserWarning: Already found a `peft_config` attribute in the model. This will lead to having multiple adapters in the model. Make sure to know what you are doing!
+  warnings.warn(
+=== Qwen3.5-GRPO ===
+  Day1(全) v5=0.8768: 中东铁路印象馆 → 黑龙江省(国际)版画博物馆 → 哈尔滨中央大街哈布斯堡江景酒店(索菲亚教堂店) → 雪山书集
+  Day2(全) v5=0.8735: 儿童公园 → 本至·Whisky·Cocktail → 黑龙江省美术馆 → 防洪纪念塔(轮渡站)
+  Day3(全) v5=0.8785: K重装健身工厂 → 颐园街1号欧式建筑 → 老俄侨俄式私房菜(哈尔滨中央大街店) → 秋林里道斯食品(安国街店)
+  总 18 POI

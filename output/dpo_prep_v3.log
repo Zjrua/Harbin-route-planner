@@ -1,0 +1,21 @@
+W0801 22:31:23.648000 37728 .venv\Lib\site-packages\torch\utils\flop_counter.py:29] triton not found; flop counting will not work for triton kernels
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/398 [00:00<?, ?it/s]Loading weights:   0%|          | 1/398 [00:00<01:36,  4.12it/s]Loading weights:   4%|▎         | 14/398 [00:00<00:07, 48.25it/s]Loading weights:   8%|▊         | 31/398 [00:00<00:04, 88.72it/s]Loading weights:  12%|█▏        | 49/398 [00:00<00:03, 113.77it/s]Loading weights:  18%|█▊        | 70/398 [00:00<00:02, 139.49it/s]Loading weights:  23%|██▎       | 91/398 [00:00<00:01, 157.76it/s]Loading weights:  27%|██▋       | 108/398 [00:00<00:01, 161.38it/s]Loading weights:  31%|███▏      | 125/398 [00:00<00:01, 162.87it/s]Loading weights:  37%|███▋      | 146/398 [00:01<00:01, 171.48it/s]Loading weights:  41%|████      | 164/398 [00:01<00:01, 172.45it/s]Loading weights:  46%|████▌     | 182/398 [00:01<00:01, 166.39it/s]Loading weights:  51%|█████     | 202/398 [00:01<00:01, 170.61it/s]Loading weights:  56%|█████▌    | 223/398 [00:01<00:00, 175.29it/s]Loading weights:  61%|██████    | 241/398 [00:01<00:00, 176.37it/s]Loading weights:  65%|██████▌   | 259/398 [00:01<00:00, 169.83it/s]Loading weights:  70%|███████   | 279/398 [00:01<00:00, 173.88it/s]Loading weights:  75%|███████▌  | 300/398 [00:01<00:00, 180.46it/s]Loading weights:  80%|████████  | 319/398 [00:02<00:00, 179.77it/s]Loading weights:  85%|████████▍ | 338/398 [00:02<00:00, 178.11it/s]Loading weights:  89%|████████▉ | 356/398 [00:02<00:00, 175.17it/s]Loading weights:  95%|█████████▍| 377/398 [00:02<00:00, 181.24it/s]Loading weights:  99%|█████████▉| 396/398 [00:02<00:00, 179.64it/s]Loading weights: 100%|██████████| 398/398 [00:02<00:00, 158.32it/s]
+微调模型加载完成
+指令数: 150
+  进度 20/150, 已生成 20 对
+  进度 40/150, 已生成 40 对
+  进度 60/150, 已生成 60 对
+  进度 80/150, 已生成 79 对
+  进度 100/150, 已生成 99 对
+  进度 120/150, 已生成 119 对
+  进度 140/150, 已生成 138 对
+
+生成偏好对: 148
+跳过（无法打分/差距不足）: 0
+保存至 data\qwen_dpo_dataset.jsonl
+
+=== 样例 ===
+指令: 帮我规划一条哈尔滨2日游路线，夏季（暑假）出行，总预算约500元，以经典景点为主，可以适当安排住宿和餐饮，第一站想去哈尔...
+chosen (0.8434): 广播室→哈尔滨文化城公园→川粹餐厅(秋林店)→圣·伊维尔教堂→哈尔滨市人民体育馆→江畔餐厅(旭初街店)→天马广告社遗址→哈尔滨新巴黎大酒店...
+rejected (0.6861): worlds店)→淘鸭逃呀儿童探案馆(红博中央公园店)→小铁24h自助台球(哈尔滨中兴大道店)→陈金羽毛球俱乐部(红博会展购物广场店)→小米...
