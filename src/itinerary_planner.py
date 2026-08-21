@@ -90,14 +90,19 @@ def _candidate_names(pois: pd.DataFrame, idxs: List[int]) -> str:
     return "、".join(names)
 
 
-def plan_itinerary(model, tokenizer, instruction: str, d: dict) -> dict:
+def plan_itinerary(model, tokenizer, instruction: str, d: dict,
+                   selector: str = "llm") -> dict:
     """逐日规划主入口.
 
     Args:
-        model/tokenizer: Qwen 模型
+        model/tokenizer: Qwen 模型（selector="llm" 时必需，规则模式传 None）
         instruction: 用户指令
         d: 数据字典 {pois, dist_matrix, time_matrix, ratings, categories,
                     activity_types, season_winter, season_summer}
+        selector: 候选选择方式
+            - "llm"        模型候选编号输出（默认）
+            - "rule_score" 规则基线：按检索分数直接取前 N（无 LLM）
+            - "rule_near"  规则基线：从中心贪心选最近候选（无 LLM）
 
     Returns:
         {"ok": bool, "days": [{"day":1, "half":bool, "pois":[...], "score_detail":...}],
@@ -137,38 +142,57 @@ def plan_itinerary(model, tokenizer, instruction: str, d: dict) -> dict:
         cand_names = [str(pois.loc[i, "name"]) for i in candidates if i in pois.index]
         used.update(candidates)
 
-        # 构造当天 prompt：候选编号 + 半天/全天提示
-        half_note = "（半天，安排 2-3 个即可）" if is_half else ""
-        cand_lines = "\n".join(f"{j+1}.{n}" for j, n in enumerate(cand_names))
-        prompt_instr = (
-            f"请为第{day_info['day']}天安排路线{half_note}。候选景点：\n{cand_lines}\n"
-            f"输出{day_info['n_stops_target']}个左右景点的编号路线，编号用 → 连接"
-            f"（如 1→3→5→2→8→6），只能从上述 {len(cand_names)} 个候选中选，不要输出编号以外的任何文字。"
-        )
-        msgs = [{"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": prompt_instr}]
-        # 手动 <|im_start|> 格式（Qwen3/Qwen3.5 通用）：
-        # apply_chat_template 会注入 <think>，破坏候选编号格式（Qwen3.5 尤其明显）
-        text = (
-            "<|im_start|>system\n" + SYSTEM_PROMPT + "\n<|im_end|>\n"
-            f"<|im_start|>user\n{prompt_instr}\n<|im_end|>\n"
-            "<|im_start|>assistant\n"
-        )
-        inp = tokenizer(text, return_tensors="pt").to(model.device)
-        with torch.no_grad():
-            out = model.generate(**inp, max_new_tokens=100, do_sample=True,
-                                 temperature=0.4, top_p=0.9, no_repeat_ngram_size=4)
-        raw = tokenizer.decode(out[0][inp["input_ids"].shape[1]:], skip_special_tokens=True)
-        all_raw.append(raw)
+        # === 候选选择（模型编号 or 规则基线） ===
+        if selector == "llm":
+            # 构造当天 prompt：候选编号 + 半天/全天提示
+            half_note = "（半天，安排 2-3 个即可）" if is_half else ""
+            cand_lines = "\n".join(f"{j+1}.{n}" for j, n in enumerate(cand_names))
+            prompt_instr = (
+                f"请为第{day_info['day']}天安排路线{half_note}。候选景点：\n{cand_lines}\n"
+                f"输出{day_info['n_stops_target']}个左右景点的编号路线，编号用 → 连接"
+                f"（如 1→3→5→2→8→6），只能从上述 {len(cand_names)} 个候选中选，不要输出编号以外的任何文字。"
+            )
+            # 手动 <|im_start|> 格式（Qwen3/Qwen3.5 通用）：
+            # apply_chat_template 会注入 <think>，破坏候选编号格式（Qwen3.5 尤其明显）
+            text = (
+                "<|im_start|>system\n" + SYSTEM_PROMPT + "\n<|im_end|>\n"
+                f"<|im_start|>user\n{prompt_instr}\n<|im_end|>\n"
+                "<|im_start|>assistant\n"
+            )
+            inp = tokenizer(text, return_tensors="pt").to(model.device)
+            with torch.no_grad():
+                out = model.generate(**inp, max_new_tokens=100, do_sample=True,
+                                     temperature=0.4, top_p=0.9, no_repeat_ngram_size=4)
+            raw = tokenizer.decode(out[0][inp["input_ids"].shape[1]:], skip_special_tokens=True)
+            all_raw.append(raw)
 
-        # 解析编号（丢弃越界 0 或 >len(cand_names) 的编号，即模型灌水部分）
-        picked_nums = []
-        for token in re.findall(r"\d+", raw):
-            v = int(token)
-            if 1 <= v <= len(cand_names) and v not in picked_nums:
-                picked_nums.append(v)
-        # 编号 → 候选名
-        day_names = [cand_names[v - 1] for v in picked_nums]
+            # 解析编号（丢弃越界 0 或 >len(cand_names) 的编号，即模型灌水部分）
+            picked_nums = []
+            for token in re.findall(r"\d+", raw):
+                v = int(token)
+                if 1 <= v <= len(cand_names) and v not in picked_nums:
+                    picked_nums.append(v)
+            # 编号 → 候选名
+            day_names = [cand_names[v - 1] for v in picked_nums]
+        else:
+            # 规则基线（无 LLM，确定性）
+            all_raw.append("")
+            if selector == "rule_near":
+                # 贪心最近：从当日中心出发，每步选最近未访问候选
+                cur = center_idx if center_idx is not None else candidates[0]
+                remaining = list(candidates)
+                picked = []
+                for _ in range(day_info["n_stops_target"]):
+                    if not remaining:
+                        break
+                    dists = [float(d["dist_matrix"][cur][c]) for c in remaining]
+                    best = remaining[dists.index(min(dists))]
+                    picked.append(best)
+                    remaining.remove(best)
+                    cur = best
+                day_names = [str(pois.loc[i, "name"]) for i in picked if i in pois.index]
+            else:  # rule_score：检索分数序即 candidates 顺序，直接取前 N
+                day_names = cand_names[: day_info["n_stops_target"]]
         # 不足目标数：用候选池按检索序补足（保持真实、够长）
         missing = day_info["n_stops_target"] - len(day_names)
         if missing > 0:
