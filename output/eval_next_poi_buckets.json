@@ -1,0 +1,34 @@
+{
+  "buckets": {
+    "near_lt2km": {
+      "n": 234,
+      "share": 0.523,
+      "rule_near": 0.662,
+      "rule_markov": 0.62,
+      "llm": 0.291,
+      "random": 0.111
+    },
+    "mid_2_8km": {
+      "n": 99,
+      "share": 0.221,
+      "rule_near": 0.0,
+      "rule_markov": 0.01,
+      "llm": 0.242,
+      "random": 0.121
+    },
+    "far_gt8km": {
+      "n": 114,
+      "share": 0.255,
+      "rule_near": 0.0,
+      "rule_markov": 0.0,
+      "llm": 0.14,
+      "random": 0.132
+    }
+  },
+  "midfar_mcnemar_llm_vs_rule": {
+    "llm_only_wins": 40,
+    "rule_only_wins": 0,
+    "p_exact": "<1.8e-12"
+  },
+  "conclusion": "聚合命中率(34.7% vs 24.2%)是辛普森悖论: rule_near 全部分数来自近距桶(52%), 在中远距桶(48%)命中率 0.0% vs LLM 19.7%(p<1e-10)。真实游客行为双峰: 就近闲逛用规则, 跨区取舍需模型——推荐价值恰在中远距桶。"
+}
