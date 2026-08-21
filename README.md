@@ -72,7 +72,12 @@ uv run python scripts/serve_qwen_demo.py --port 8898
 # 打开 http://localhost:8898，默认 Qwen3.5-SFT 模型
 ```
 
-> 模型权重未随仓库分发（见 `.gitignore`），需先完成训练生成 `output/qwen35_route_lora/`。
+> **模型权重说明**：LoRA adapter 已随仓库分发（`output/*_route_*/adapter_model.safetensors`，每个 <24MB，单文件含微调增量）。基座模型需自行下载（约 9.3GB，超 GitHub 单文件限制未入库）：
+> ```bash
+> # ModelScope 下载 Qwen3.5-4B 基座到 data/external/modelscope_cache/models/Qwen--Qwen3.5-4B
+> uv run python -c "from modelscope import snapshot_download; snapshot_download('Qwen/Qwen3.5-4B', local_dir='data/external/modelscope_cache/models/Qwen--Qwen3.5-4B')"
+> ```
+> 推理时 4bit 量化加载基座 + 挂载 adapter（`src/device.py` 自动选设备）。
 
 ### 训练
 
