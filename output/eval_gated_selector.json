@@ -1,0 +1,41 @@
+{
+  "n_points": 447,
+  "n_train": 223,
+  "n_test": 224,
+  "best_tau": 2.5,
+  "train_gate_hit": 0.426,
+  "test": {
+    "gate": {
+      "total": 0.3393,
+      "near_lt2km": 0.584,
+      "mid_2_8km": 0.055,
+      "far_gt8km": 0.125
+    },
+    "rule_near": {
+      "total": 0.3304,
+      "near_lt2km": 0.655,
+      "mid_2_8km": 0.0,
+      "far_gt8km": 0.0
+    },
+    "llm": {
+      "total": 0.25,
+      "near_lt2km": 0.292,
+      "mid_2_8km": 0.164,
+      "far_gt8km": 0.25
+    }
+  },
+  "routed_to_llm": {
+    "n": 74,
+    "share": 0.33
+  },
+  "mcnemar_gate_vs_rule": {
+    "win_only": 11,
+    "lose_only": 9,
+    "p": 0.823803
+  },
+  "mcnemar_gate_vs_llm": {
+    "win_only": 48,
+    "lose_only": 28,
+    "p": 0.028627
+  }
+}
