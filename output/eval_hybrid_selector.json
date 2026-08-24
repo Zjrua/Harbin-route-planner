@@ -1,0 +1,103 @@
+{
+  "n_points": 447,
+  "alpha_curve": [
+    {
+      "alpha": 0.0,
+      "total": 0.2595,
+      "near_lt2km": 0.303,
+      "mid_2_8km": 0.202,
+      "far_gt8km": 0.219
+    },
+    {
+      "alpha": 0.1,
+      "total": 0.2617,
+      "near_lt2km": 0.321,
+      "mid_2_8km": 0.212,
+      "far_gt8km": 0.184
+    },
+    {
+      "alpha": 0.2,
+      "total": 0.255,
+      "near_lt2km": 0.329,
+      "mid_2_8km": 0.202,
+      "far_gt8km": 0.149
+    },
+    {
+      "alpha": 0.3,
+      "total": 0.2506,
+      "near_lt2km": 0.346,
+      "mid_2_8km": 0.182,
+      "far_gt8km": 0.114
+    },
+    {
+      "alpha": 0.4,
+      "total": 0.2461,
+      "near_lt2km": 0.363,
+      "mid_2_8km": 0.172,
+      "far_gt8km": 0.07
+    },
+    {
+      "alpha": 0.5,
+      "total": 0.2461,
+      "near_lt2km": 0.389,
+      "mid_2_8km": 0.141,
+      "far_gt8km": 0.044
+    },
+    {
+      "alpha": 0.6,
+      "total": 0.2573,
+      "near_lt2km": 0.44,
+      "mid_2_8km": 0.111,
+      "far_gt8km": 0.009
+    },
+    {
+      "alpha": 0.7,
+      "total": 0.2662,
+      "near_lt2km": 0.487,
+      "mid_2_8km": 0.051,
+      "far_gt8km": 0.0
+    },
+    {
+      "alpha": 0.8,
+      "total": 0.2975,
+      "near_lt2km": 0.564,
+      "mid_2_8km": 0.01,
+      "far_gt8km": 0.0
+    },
+    {
+      "alpha": 0.9,
+      "total": 0.3579,
+      "near_lt2km": 0.684,
+      "mid_2_8km": 0.0,
+      "far_gt8km": 0.0
+    },
+    {
+      "alpha": 1.0,
+      "total": 0.3468,
+      "near_lt2km": 0.662,
+      "mid_2_8km": 0.0,
+      "far_gt8km": 0.0
+    }
+  ],
+  "best_alpha": {
+    "alpha": 0.9,
+    "total": 0.3579,
+    "near_lt2km": 0.684,
+    "mid_2_8km": 0.0,
+    "far_gt8km": 0.0
+  },
+  "sanity": {
+    "rule_near_total": 0.3468,
+    "llm_firsttoken_total": 0.2595
+  },
+  "mcnemar_best_vs_rule": {
+    "win_only": 16,
+    "lose_only": 11,
+    "p": 0.442068
+  },
+  "mcnemar_best_vs_llm": {
+    "win_only": 106,
+    "lose_only": 62,
+    "p": 0.000855
+  }
+}
