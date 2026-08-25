@@ -1,0 +1,169 @@
+{
+  "prior_model": {
+    "K": 8,
+    "alpha_selected": 0.1,
+    "alpha_sensitivity": {
+      "0.1": 0.6071,
+      "0.5": 0.6242,
+      "1.0": 0.6448,
+      "2.0": 0.6794,
+      "5.0": 0.7633
+    },
+    "decay_selection": {
+      "exp": {
+        "params": [
+          500.0
+        ],
+        "fit_loglik": -1570.5,
+        "aic": 3143.1,
+        "lambda_logloss": 2.0902
+      },
+      "power": {
+        "params": [
+          0.05
+        ],
+        "fit_loglik": -1568.1,
+        "aic": 3138.2,
+        "lambda_logloss": 2.0833
+      },
+      "mix": {
+        "params": [
+          0.95,
+          0.3,
+          0.05
+        ],
+        "fit_loglik": -1412.3,
+        "aic": 2830.6,
+        "lambda_logloss": 1.8772
+      }
+    },
+    "decay_form": "mix",
+    "mixture": {
+      "w_near": 0.447,
+      "near_median_km": 0.58,
+      "far_loggamma_a": 2.66,
+      "far_median_km": 25.45
+    }
+  },
+  "n_points": {
+    "lambda": 368,
+    "test": 372
+  },
+  "fixed_lambda": 0.55,
+  "cv_logloss": {
+    "('fixed', 0.55)": 1.6508,
+    "('state_l2', 0.1)": 1.648
+  },
+  "lambda_dist_test": {
+    "mean": 0.542,
+    "p10": 0.516,
+    "p90": 0.572
+  },
+  "summary": {
+    "random": {
+      "hit": 0.1317,
+      "ci95": [
+        0.1011,
+        0.1699
+      ],
+      "k": 49,
+      "n": 372
+    },
+    "rule_near": {
+      "hit": 0.3226,
+      "ci95": [
+        0.2771,
+        0.3717
+      ],
+      "k": 120,
+      "n": 372
+    },
+    "rule_markov": {
+      "hit": 0.3038,
+      "ci95": [
+        0.2592,
+        0.3523
+      ],
+      "k": 113,
+      "n": 372
+    },
+    "prior": {
+      "hit": 0.371,
+      "ci95": [
+        0.3234,
+        0.4211
+      ],
+      "k": 138,
+      "n": 372
+    },
+    "llm": {
+      "hit": 0.2661,
+      "ci95": [
+        0.2238,
+        0.3133
+      ],
+      "k": 99,
+      "n": 372
+    },
+    "fixed": {
+      "hit": 0.4328,
+      "ci95": [
+        0.3834,
+        0.4836
+      ],
+      "k": 161,
+      "n": 372
+    },
+    "state": {
+      "hit": 0.4301,
+      "ci95": [
+        0.3808,
+        0.4809
+      ],
+      "k": 160,
+      "n": 372
+    }
+  },
+  "paired_mcnemar": {
+    "prior_vs_rule_near": {
+      "m1_only_win": 20,
+      "m2_only_win": 2,
+      "p_value": 0.00012
+    },
+    "llm_vs_rule_near": {
+      "m1_only_win": 67,
+      "m2_only_win": 88,
+      "p_value": 0.10788
+    },
+    "state_vs_rule_near": {
+      "m1_only_win": 56,
+      "m2_only_win": 16,
+      "p_value": 0.0
+    },
+    "state_vs_prior": {
+      "m1_only_win": 40,
+      "m2_only_win": 18,
+      "p_value": 0.00535
+    },
+    "state_vs_llm": {
+      "m1_only_win": 89,
+      "m2_only_win": 28,
+      "p_value": 0.0
+    },
+    "state_vs_fixed": {
+      "m1_only_win": 2,
+      "m2_only_win": 3,
+      "p_value": 1.0
+    },
+    "fixed_vs_rule_near": {
+      "m1_only_win": 57,
+      "m2_only_win": 16,
+      "p_value": 0.0
+    },
+    "rule_markov_vs_rule_near": {
+      "m1_only_win": 20,
+      "m2_only_win": 27,
+      "p_value": 0.38169
+    }
+  }
+}

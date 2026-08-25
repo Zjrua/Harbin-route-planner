@@ -1,0 +1,140 @@
+[1] 拟合行为先验（拟合份 84 条）
+  α 敏感性(λ份 log-loss/转移): {0.1: 0.6071, 0.5: 0.6242, 1.0: 0.6448, 2.0: 0.6794, 5.0: 0.7633} → α=0.1
+  距离混合: w_near=0.45 logN(median=0.58km) + logGamma(a=2.66, median=25.45km)
+[2] 构建候选池
+[3] 距离衰减选型
+  {"exp": {"params": [500.0], "fit_loglik": -1570.5, "aic": 3143.1, "lambda_logloss": 2.0902}, "power": {"params": [0.05], "fit_loglik": -1568.1, "aic": 3138.2, "lambda_logloss": 2.0833}, "mix": {"params": [0.95, 0.3, 0.05], "fit_loglik": -1412.3, "aic": 2830.6, "lambda_logloss": 1.8772}} → mix
+[4] LLM 候选概率
+W0825 12:42:40.364000 34080 .venv\Lib\site-packages\torch\utils\flop_counter.py:29] triton not found; flop counting will not work for triton kernels
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[transformers] The fast path is not available because one of the required library is not installed. Falling back to torch implementation. To install follow https://github.com/fla-org/flash-linear-attention#installation and https://github.com/Dao-AILab/causal-conv1d
+Loading weights:   0%|          | 0/426 [00:00<?, ?it/s]Loading weights:   0%|          | 1/426 [00:00<05:21,  1.32it/s]Loading weights:   2%|▏         | 8/426 [00:00<00:35, 11.78it/s]Loading weights:   3%|▎         | 14/426 [00:00<00:20, 19.97it/s]Loading weights:   6%|▋         | 27/426 [00:01<00:09, 41.03it/s]Loading weights:   9%|▉         | 40/426 [00:01<00:06, 58.33it/s]Loading weights:  12%|█▏        | 49/426 [00:01<00:06, 59.04it/s]Loading weights:  15%|█▌        | 64/426 [00:01<00:04, 78.63it/s]Loading weights:  18%|█▊        | 75/426 [00:01<00:04, 82.59it/s]Loading weights:  20%|█▉        | 85/426 [00:01<00:04, 83.86it/s]Loading weights:  22%|██▏       | 95/426 [00:01<00:04, 79.59it/s]Loading weights:  24%|██▍       | 104/426 [00:01<00:03, 81.54it/s]Loading weights:  28%|██▊       | 118/426 [00:02<00:03, 93.52it/s]Loading weights:  31%|███       | 131/426 [00:02<00:02, 99.79it/s]Loading weights:  33%|███▎      | 142/426 [00:02<00:02, 98.39it/s]Loading weights:  36%|███▌      | 153/426 [00:02<00:03, 80.18it/s]Loading weights:  40%|███▉      | 170/426 [00:02<00:02, 101.03it/s]Loading weights:  43%|████▎     | 182/426 [00:02<00:02, 98.11it/s] Loading weights:  45%|████▌     | 193/426 [00:02<00:02, 100.39it/s]Loading weights:  48%|████▊     | 204/426 [00:02<00:02, 87.13it/s] Loading weights:  50%|█████     | 214/426 [00:03<00:02, 89.32it/s]Loading weights:  53%|█████▎    | 225/426 [00:03<00:02, 92.03it/s]Loading weights:  56%|█████▌    | 238/426 [00:03<00:01, 99.09it/s]Loading weights:  59%|█████▉    | 251/426 [00:03<00:01, 103.63it/s]Loading weights:  62%|██████▏   | 262/426 [00:03<00:01, 87.24it/s] Loading weights:  65%|██████▌   | 277/426 [00:03<00:01, 96.32it/s]Loading weights:  68%|██████▊   | 290/426 [00:03<00:01, 102.12it/s]Loading weights:  71%|███████   | 301/426 [00:03<00:01, 100.49it/s]Loading weights:  73%|███████▎  | 312/426 [00:04<00:01, 81.62it/s] Loading weights:  77%|███████▋  | 329/426 [00:04<00:00, 101.58it/s]Loading weights:  80%|████████  | 341/426 [00:04<00:00, 98.99it/s] Loading weights:  83%|████████▎ | 352/426 [00:04<00:00, 100.89it/s]Loading weights:  85%|████████▌ | 363/426 [00:04<00:00, 87.65it/s] Loading weights:  88%|████████▊ | 373/426 [00:04<00:00, 89.14it/s]Loading weights:  90%|█████████ | 384/426 [00:04<00:00, 91.93it/s]Loading weights:  93%|█████████▎| 397/426 [00:04<00:00, 98.68it/s]Loading weights:  96%|█████████▌| 408/426 [00:05<00:00, 101.56it/s]Loading weights:  98%|█████████▊| 419/426 [00:05<00:00, 81.15it/s] Loading weights: 100%|██████████| 426/426 [00:05<00:00, 79.64it/s]
+  LLM 打分 [fit]: 752 点
+  LLM 进度 100/752
+  LLM 进度 200/752
+  LLM 进度 300/752
+  LLM 进度 400/752
+  LLM 进度 500/752
+  LLM 进度 600/752
+  LLM 进度 700/752
+  LLM 打分 [lambda]: 368 点
+  LLM 进度 100/368
+  LLM 进度 200/368
+  LLM 进度 300/368
+  LLM 打分 [test]: 372 点
+  LLM 进度 100/372
+  LLM 进度 200/372
+  LLM 进度 300/372
+[5] 评估
+  嵌套CV log-loss: {"('fixed', 0.55)": 1.6508, "('state_l2', 0.1)": 1.648}
+  λ(s) 分布(测试份): {'mean': 0.542, 'p10': 0.516, 'p90': 0.572}
+{
+  "summary": {
+    "random": {
+      "hit": 0.1317,
+      "ci95": [
+        0.1011,
+        0.1699
+      ],
+      "k": 49,
+      "n": 372
+    },
+    "rule_near": {
+      "hit": 0.3226,
+      "ci95": [
+        0.2771,
+        0.3717
+      ],
+      "k": 120,
+      "n": 372
+    },
+    "rule_markov": {
+      "hit": 0.3038,
+      "ci95": [
+        0.2592,
+        0.3523
+      ],
+      "k": 113,
+      "n": 372
+    },
+    "prior": {
+      "hit": 0.371,
+      "ci95": [
+        0.3234,
+        0.4211
+      ],
+      "k": 138,
+      "n": 372
+    },
+    "llm": {
+      "hit": 0.2661,
+      "ci95": [
+        0.2238,
+        0.3133
+      ],
+      "k": 99,
+      "n": 372
+    },
+    "fixed": {
+      "hit": 0.4328,
+      "ci95": [
+        0.3834,
+        0.4836
+      ],
+      "k": 161,
+      "n": 372
+    },
+    "state": {
+      "hit": 0.4301,
+      "ci95": [
+        0.3808,
+        0.4809
+      ],
+      "k": 160,
+      "n": 372
+    }
+  },
+  "paired_mcnemar": {
+    "prior_vs_rule_near": {
+      "m1_only_win": 20,
+      "m2_only_win": 2,
+      "p_value": 0.00012
+    },
+    "llm_vs_rule_near": {
+      "m1_only_win": 67,
+      "m2_only_win": 88,
+      "p_value": 0.10788
+    },
+    "state_vs_rule_near": {
+      "m1_only_win": 56,
+      "m2_only_win": 16,
+      "p_value": 0.0
+    },
+    "state_vs_prior": {
+      "m1_only_win": 40,
+      "m2_only_win": 18,
+      "p_value": 0.00535
+    },
+    "state_vs_llm": {
+      "m1_only_win": 89,
+      "m2_only_win": 28,
+      "p_value": 0.0
+    },
+    "state_vs_fixed": {
+      "m1_only_win": 2,
+      "m2_only_win": 3,
+      "p_value": 1.0
+    },
+    "fixed_vs_rule_near": {
+      "m1_only_win": 57,
+      "m2_only_win": 16,
+      "p_value": 0.0
+    },
+    "rule_markov_vs_rule_near": {
+      "m1_only_win": 20,
+      "m2_only_win": 27,
+      "p_value": 0.38169
+    }
+  }
+}
+保存至: output/eval_fusion.json
