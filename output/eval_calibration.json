@@ -1,0 +1,97 @@
+{
+  "ece": {
+    "raw_lambda": 0.041,
+    "by_T": {
+      "1.0": 0.041,
+      "1.5": 0.0259,
+      "2.0": 0.0569,
+      "3.0": 0.0883,
+      "4.0": 0.1039
+    }
+  },
+  "joint_search": {
+    "T_star": 0.5,
+    "lambda_star": 0.65,
+    "logloss_cal": 1.6106,
+    "logloss_nocal": 1.651,
+    "delta_logloss": 0.0404
+  },
+  "lambda_dist_cal_test": {
+    "mean": 0.672,
+    "p10": 0.662,
+    "p90": 0.683
+  },
+  "summary": {
+    "random": {
+      "hit": 0.1317,
+      "ci95": [
+        0.1011,
+        0.1699
+      ],
+      "k": 49,
+      "n": 372
+    },
+    "rule_near": {
+      "hit": 0.3226,
+      "ci95": [
+        0.2771,
+        0.3717
+      ],
+      "k": 120,
+      "n": 372
+    },
+    "rule_markov": {
+      "hit": 0.3038,
+      "ci95": [
+        0.2592,
+        0.3523
+      ],
+      "k": 113,
+      "n": 372
+    },
+    "prior": {
+      "hit": 0.371,
+      "ci95": [
+        0.3234,
+        0.4211
+      ],
+      "k": 138,
+      "n": 372
+    },
+    "cal_fixed": {
+      "hit": 0.4301,
+      "ci95": [
+        0.3808,
+        0.4809
+      ],
+      "k": 160,
+      "n": 372
+    },
+    "cal_state": {
+      "hit": 0.4382,
+      "ci95": [
+        0.3886,
+        0.489
+      ],
+      "k": 163,
+      "n": 372
+    }
+  },
+  "paired_mcnemar": {
+    "cal_state_vs_cal_fixed": {
+      "m1_only_win": 5,
+      "m2_only_win": 2,
+      "p_value": 0.45312
+    },
+    "cal_fixed_vs_rule_near": {
+      "m1_only_win": 61,
+      "m2_only_win": 21,
+      "p_value": 1e-05
+    },
+    "cal_state_vs_rule_near": {
+      "m1_only_win": 60,
+      "m2_only_win": 17,
+      "p_value": 0.0
+    }
+  }
+}
