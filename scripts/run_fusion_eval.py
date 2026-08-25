@@ -229,12 +229,11 @@ def mcnemar_exact(b, c):
     return min(1.0, p)
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--skip-llm", action="store_true",
-                        help="使用缓存的 LLM 分数（无缓存时评估先验/规则链）")
-    args = parser.parse_args()
+def compute_artifacts(skip_llm=False):
+    """数据 + 先验拟合 + 衰减选型 + LLM 概率（池/LLM 分数走缓存）.
 
+    返回 dict，供本脚本与 run_calibration.py 复用。
+    """
     routes = np.load("data/processed/routes_xhs_holdout.npy", allow_pickle=True)
     pois = pd.read_csv("data/processed/poi_metadata.csv", encoding="utf-8")
     dist = np.load("data/processed/distance_matrix.npy")
@@ -299,7 +298,6 @@ def main():
     models = {}
     for form in ("exp", "power", "mix"):
         m = DecayModel(form=form).fit(decay_pools("fit"))
-        ll_lam = -m.heldout_logloss(decay_pools("lambda")) * len(pools["lambda"])
         decay_out[form] = {"params": [round(p, 3) for p in m.params_],
                            "fit_loglik": round(m.loglik_, 1),
                            "aic": round(m.aic(), 1),
@@ -313,43 +311,70 @@ def main():
 
     # ==== LLM 概率 ====
     print("[4] LLM 候选概率", flush=True)
-    llm_probs = get_llm_probs(pools, pois, skip_llm=args.skip_llm)
+    llm_probs = get_llm_probs(pools, pois, skip_llm=skip_llm)
+
+    return {"routes": routes, "pois": pois, "dist": dist,
+            "splits": splits, "region_of_poi": region_of_poi,
+            "fit_seqs": fit_seqs, "mk": mk, "mix": mix, "T_type": T_type,
+            "decay": decay, "decay_out": decay_out, "best_form": best_form,
+            "alpha_scan": alpha_scan, "best_alpha": best_alpha,
+            "pools": pools, "llm_probs": llm_probs}
+
+
+def score_split(art, name):
+    """一个分割的逐方法命中 / 先验 log 分 / λ(s) 特征 / 真值下标."""
+    pois, dist = art["pois"], art["dist"]
+    region_of_poi, mk, mix, T_type = (art["region_of_poi"], art["mk"],
+                                      art["mix"], art["T_type"])
+    pts = art["pools"][name]
+    n = len(pts)
+    res = {m: np.zeros(n, bool) for m in
+           ("random", "rule_near", "rule_markov", "prior")}
+    log_prior = np.zeros((n, 8))
+    X = np.zeros((n, 8))
+    y_true = np.zeros(n, int)
+    rng = random.Random(5)
+    for i, pt in enumerate(pts):
+        last, prev = pt["prefix"][-1], pt["prefix"][-2]
+        ds = np.array([float(dist[last][c]) for c in pt["cands"]])
+        res["random"][i] = rng.choice(pt["cands"]) == pt["true_next"]
+        res["rule_near"][i] = (pt["cands"][int(np.argmin(ds))]
+                               == pt["true_next"])
+        lt = int(pois.iloc[last]["activity_type"])
+        rm_sc = [T_type[lt][int(pois.iloc[c]["activity_type"])]
+                 * np.exp(-float(dist[last][c]) / 3.0) for c in pt["cands"]]
+        res["rule_markov"][i] = (pt["cands"][int(np.argmax(rm_sc))]
+                                 == pt["true_next"])
+        cr = np.array([region_of_poi[c] for c in pt["cands"]])
+        lp = mk.log_score(region_of_poi[prev], region_of_poi[last], cr) \
+            + decay_log_score(art, ds)
+        log_prior[i] = lp - lp.max()
+        res["prior"][i] = (pt["cands"][int(np.argmax(lp))]
+                           == pt["true_next"])
+        X[i] = point_features(pt, pois, dist, region_of_poi, mk, mix)
+        y_true[i] = pt["cands"].index(pt["true_next"])
+    return res, log_prior, X, y_true
+
+
+def decay_log_score(art, ds):
+    return art["decay"].log_score(ds)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--skip-llm", action="store_true",
+                        help="使用缓存的 LLM 分数（无缓存时评估先验/规则链）")
+    args = parser.parse_args()
+
+    art = compute_artifacts(skip_llm=args.skip_llm)
+    alpha_scan, best_alpha = art["alpha_scan"], art["best_alpha"]
+    decay_out, best_form, mix = art["decay_out"], art["best_form"], art["mix"]
+    pools, llm_probs = art["pools"], art["llm_probs"]
 
     # ==== 逐方法预测（λ 份 + 测试份） ====
     print("[5] 评估", flush=True)
-
-    def eval_split(name):
-        pts = pools[name]
-        n = len(pts)
-        res = {m: np.zeros(n, bool) for m in
-               ("random", "rule_near", "rule_markov", "prior")}
-        log_prior = np.zeros((n, 8))
-        X = np.zeros((n, 8))
-        y_true = np.zeros(n, int)
-        rng = random.Random(5)
-        for i, pt in enumerate(pts):
-            last, prev = pt["prefix"][-1], pt["prefix"][-2]
-            ds = np.array([float(dist[last][c]) for c in pt["cands"]])
-            res["random"][i] = rng.choice(pt["cands"]) == pt["true_next"]
-            res["rule_near"][i] = (pt["cands"][int(np.argmin(ds))]
-                                   == pt["true_next"])
-            lt = int(pois.iloc[last]["activity_type"])
-            rm_sc = [T_type[lt][int(pois.iloc[c]["activity_type"])]
-                     * np.exp(-float(dist[last][c]) / 3.0) for c in pt["cands"]]
-            res["rule_markov"][i] = (pt["cands"][int(np.argmax(rm_sc))]
-                                     == pt["true_next"])
-            cr = np.array([region_of_poi[c] for c in pt["cands"]])
-            lp = mk.log_score(region_of_poi[prev], region_of_poi[last], cr) \
-                + decay.log_score(ds)
-            log_prior[i] = lp - lp.max()
-            res["prior"][i] = (pt["cands"][int(np.argmax(lp))]
-                               == pt["true_next"])
-            X[i] = point_features(pt, pois, dist, region_of_poi, mk, mix)
-            y_true[i] = pt["cands"].index(pt["true_next"])
-        return pts, res, log_prior, X, y_true
-
-    lam_pts, lam_res, lam_lp, lam_X, lam_y = eval_split("lambda")
-    test_pts, test_res, test_lp, test_X, test_y = eval_split("test")
+    lam_res, lam_lp, lam_X, lam_y = score_split(art, "lambda")
+    test_res, test_lp, test_X, test_y = score_split(art, "test")
 
     # 固定 λ 扫描（λ 份上选）
     if "lambda" in llm_probs:

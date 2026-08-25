@@ -67,7 +67,7 @@
 | 1 | 双峰正式检验 | ✅ 已完成（本文档 §一） |
 | 2 | 数据三分方案 + 功效粗算 | ✅ 已完成（`scripts/test_split_power.py` → `output/test_split_power.json`，2026-08-25） |
 | 3 | 一阶 vs 二阶 LRT | ✅ 已完成（`scripts/test_markov_order.py` → `output/test_markov_order.json`，2026-08-25） |
-| 4 | 文献定位（next-POI 推荐：FPMC/PRME 一代；LLM+统计先验融合；MoE/learning to defer） | ⬜ 开题前必须 |
+| 4 | 文献定位 | ✅ 已完成（`docs/literature-review.md`，2026-08-25：next-POI 三代 / log-linear 池化与 L2D / 距离衰减形态之争 / LLM 行程规划，含缺口→本项目证据映射表） |
 
 **#3 结果摘要**：K=8 区域级（区域划分复用 #2 的 Ward 合并与 seed）。两层检验一致支持**二阶**：
 - 参数 bootstrap LRT（拟合份 84 条）：观测 339.7 vs H0 模拟 p95=275.5，p=0.005；
