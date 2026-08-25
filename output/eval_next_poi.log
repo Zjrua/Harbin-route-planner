@@ -1,0 +1,90 @@
+真实路线: 168 条
+=== 真实一阶类型转移（行=当前类型, 列=下一类型概率）===
+        景点   餐饮   住宿   交通   购物  出发点
+   景点 | 0.43  0.42  0.11  0.00  0.04  0.01
+   餐饮 | 0.83  0.08  0.04  0.00  0.05  0.01
+   住宿 | 0.17  0.17  0.17  0.17  0.17  0.17
+   交通 | 0.17  0.17  0.17  0.17  0.17  0.17
+   购物 | 0.70  0.11  0.12  0.01  0.04  0.02
+  出发点 | 0.57  0.03  0.23  0.03  0.03  0.12
+预测点: 447
+W0821 12:43:03.236000 28244 .venv\Lib\site-packages\torch\utils\flop_counter.py:29] triton not found; flop counting will not work for triton kernels
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[transformers] The fast path is not available because one of the required library is not installed. Falling back to torch implementation. To install follow https://github.com/fla-org/flash-linear-attention#installation and https://github.com/Dao-AILab/causal-conv1d
+Loading weights:   0%|          | 0/426 [00:00<?, ?it/s]Loading weights:   0%|          | 1/426 [00:00<02:15,  3.13it/s]Loading weights:   3%|▎         | 14/426 [00:00<00:09, 41.59it/s]Loading weights:   9%|▉         | 40/426 [00:00<00:03, 107.53it/s]Loading weights:  14%|█▍        | 61/426 [00:00<00:02, 136.92it/s]Loading weights:  19%|█▉        | 80/426 [00:00<00:02, 151.01it/s]Loading weights:  23%|██▎       | 99/426 [00:00<00:02, 159.33it/s]Loading weights:  28%|██▊       | 120/426 [00:00<00:01, 173.45it/s]Loading weights:  34%|███▍      | 146/426 [00:01<00:01, 197.14it/s]Loading weights:  39%|███▉      | 168/426 [00:01<00:01, 200.73it/s]Loading weights:  44%|████▍     | 189/426 [00:01<00:01, 196.90it/s]Loading weights:  49%|████▉     | 210/426 [00:01<00:01, 193.78it/s]Loading weights:  56%|█████▌    | 237/426 [00:01<00:00, 214.17it/s]Loading weights:  61%|██████    | 259/426 [00:01<00:00, 190.34it/s]Loading weights:  68%|██████▊   | 288/426 [00:01<00:00, 213.48it/s]Loading weights:  73%|███████▎  | 311/426 [00:01<00:00, 198.05it/s]Loading weights:  78%|███████▊  | 332/426 [00:01<00:00, 200.21it/s]Loading weights:  84%|████████▍ | 358/426 [00:02<00:00, 213.47it/s]Loading weights:  89%|████████▉ | 380/426 [00:02<00:00, 210.74it/s]Loading weights:  94%|█████████▍| 402/426 [00:02<00:00, 207.12it/s]Loading weights:  99%|█████████▉| 423/426 [00:02<00:00, 189.30it/s]Loading weights: 100%|██████████| 426/426 [00:02<00:00, 174.51it/s]
+模型加载完成
+  进度 50/447
+  进度 100/447
+  进度 150/447
+  进度 200/447
+  进度 250/447
+  进度 300/447
+  进度 350/447
+  进度 400/447
+{
+  "summary": {
+    "random": {
+      "hit": 0.1186,
+      "ci95": [
+        0.0918,
+        0.1518
+      ],
+      "type_hit": 0.528,
+      "k": 53,
+      "n": 447
+    },
+    "rule_near": {
+      "hit": 0.3468,
+      "ci95": [
+        0.3041,
+        0.392
+      ],
+      "type_hit": 0.604,
+      "k": 155,
+      "n": 447
+    },
+    "rule_markov": {
+      "hit": 0.3266,
+      "ci95": [
+        0.2848,
+        0.3714
+      ],
+      "type_hit": 0.7293,
+      "k": 146,
+      "n": 447
+    },
+    "llm": {
+      "hit": 0.2416,
+      "ci95": [
+        0.2042,
+        0.2834
+      ],
+      "type_hit": 0.528,
+      "k": 108,
+      "n": 447
+    }
+  },
+  "paired_mcnemar": {
+    "llm_vs_rule_near": {
+      "m1_only_win": 59,
+      "m2_only_win": 106,
+      "p_value": 0.00031
+    },
+    "llm_vs_rule_markov": {
+      "m1_only_win": 66,
+      "m2_only_win": 104,
+      "p_value": 0.0044
+    },
+    "llm_vs_random": {
+      "m1_only_win": 91,
+      "m2_only_win": 36,
+      "p_value": 0.0
+    },
+    "rule_markov_vs_rule_near": {
+      "m1_only_win": 32,
+      "m2_only_win": 41,
+      "p_value": 0.34918
+    }
+  }
+}
+保存至: output/eval_next_poi.json

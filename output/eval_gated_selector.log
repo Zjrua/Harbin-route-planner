@@ -1,0 +1,52 @@
+预测点: 447
+W0824 10:22:04.774000 36136 .venv\Lib\site-packages\torch\utils\flop_counter.py:29] triton not found; flop counting will not work for triton kernels
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[transformers] The fast path is not available because one of the required library is not installed. Falling back to torch implementation. To install follow https://github.com/fla-org/flash-linear-attention#installation and https://github.com/Dao-AILab/causal-conv1d
+Loading weights:   0%|          | 0/426 [00:00<?, ?it/s]Loading weights:   0%|          | 1/426 [00:00<03:14,  2.19it/s]Loading weights:   3%|▎         | 13/426 [00:00<00:13, 30.11it/s]Loading weights:   8%|▊         | 36/426 [00:00<00:04, 80.33it/s]Loading weights:  12%|█▏        | 51/426 [00:00<00:03, 97.05it/s]Loading weights:  18%|█▊        | 75/426 [00:00<00:02, 135.69it/s]Loading weights:  22%|██▏       | 94/426 [00:00<00:02, 146.46it/s]Loading weights:  27%|██▋       | 117/426 [00:01<00:01, 168.49it/s]Loading weights:  32%|███▏      | 137/426 [00:01<00:01, 172.92it/s]Loading weights:  37%|███▋      | 156/426 [00:01<00:01, 163.30it/s]Loading weights:  42%|████▏     | 181/426 [00:01<00:01, 181.53it/s]Loading weights:  47%|████▋     | 201/426 [00:01<00:01, 169.56it/s]Loading weights:  52%|█████▏    | 223/426 [00:01<00:01, 182.44it/s]Loading weights:  57%|█████▋    | 242/426 [00:01<00:01, 171.78it/s]Loading weights:  61%|██████    | 260/426 [00:01<00:01, 160.63it/s]Loading weights:  67%|██████▋   | 287/426 [00:02<00:00, 184.59it/s]Loading weights:  72%|███████▏  | 306/426 [00:02<00:00, 179.03it/s]Loading weights:  77%|███████▋  | 326/426 [00:02<00:00, 182.54it/s]Loading weights:  81%|████████  | 345/426 [00:02<00:00, 175.58it/s]Loading weights:  85%|████████▌ | 364/426 [00:02<00:00, 173.96it/s]Loading weights:  90%|█████████ | 385/426 [00:02<00:00, 181.00it/s]Loading weights:  96%|█████████▋| 411/426 [00:02<00:00, 195.25it/s]Loading weights: 100%|██████████| 426/426 [00:02<00:00, 151.45it/s]
+模型加载完成
+  进度 100/447
+  进度 200/447
+  进度 300/447
+  进度 400/447
+{
+ "n_points": 447,
+ "n_train": 223,
+ "n_test": 224,
+ "best_tau": 2.5,
+ "train_gate_hit": 0.426,
+ "test": {
+  "gate": {
+   "total": 0.3393,
+   "near_lt2km": 0.584,
+   "mid_2_8km": 0.055,
+   "far_gt8km": 0.125
+  },
+  "rule_near": {
+   "total": 0.3304,
+   "near_lt2km": 0.655,
+   "mid_2_8km": 0.0,
+   "far_gt8km": 0.0
+  },
+  "llm": {
+   "total": 0.25,
+   "near_lt2km": 0.292,
+   "mid_2_8km": 0.164,
+   "far_gt8km": 0.25
+  }
+ },
+ "routed_to_llm": {
+  "n": 74,
+  "share": 0.33
+ },
+ "mcnemar_gate_vs_rule": {
+  "win_only": 11,
+  "lose_only": 9,
+  "p": 0.823803
+ },
+ "mcnemar_gate_vs_llm": {
+  "win_only": 48,
+  "lose_only": 28,
+  "p": 0.028627
+ }
+}
+保存至: output/eval_gated_selector.json
