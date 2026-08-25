@@ -1,0 +1,23 @@
+{
+  "K": 8,
+  "alpha": 0.5,
+  "boot": 200,
+  "n_fit_transitions": 836,
+  "lrt": {
+    "t_obs": 339.7,
+    "h0_p95": 275.5,
+    "bootstrap_p": 0.005,
+    "nominal_df_ref": 5173
+  },
+  "heldout": {
+    "first_order_loss_per_trans": 0.7484,
+    "second_order_loss_per_trans": 0.6242,
+    "total_ll_diff": 77.1,
+    "route_bootstrap_ci95": [
+      1.49,
+      2.22
+    ],
+    "p": 0.0
+  },
+  "verdict": "second_order"
+}
