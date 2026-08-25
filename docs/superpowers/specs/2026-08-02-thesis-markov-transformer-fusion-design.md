@@ -130,3 +130,47 @@ state vs fixed：43.0% vs 43.3%，McNemar p=1.0；嵌套 CV log-loss 1.648 vs 1.
 - 质疑#3（一阶未检验）→ ✅ 二阶胜出且进入最终模型
 - 质疑#6（LLM 基线削弱）→ LLM 单独仍输规则（26.6%），融合后增益显著，OOD 质疑反而强化融合必要性
 - 质疑#7（创新点）→ 立在：重尾混合距离建模（exp 被否决）+ 二阶区域先验显著超越强规则基线 + 融合使 LLM 边际价值反转
+
+## 八、模型架构图（2026-08-25）
+
+论文级矢量图：`output/figures/model_architecture.pdf`（矢量，推荐 LaTeX 用）
++ `model_architecture.png`（300dpi 备份）；重绘：`scripts/draw_architecture.py`。
+绘图规范参照 scientific-schematics 出版标准（双栏 183mm、sans-serif、色盲安全配色、
+实线=测试份推理流 / 虚线=拟合·λ份估计流）。
+
+文本源（Mermaid，随文档版本控制，可在 GitHub/VSCode 直接渲染）：
+
+```mermaid
+flowchart TB
+  subgraph DATA[数据层]
+    R[168条真实路线 List-List-int] --> SP[三分: fit84/λ42/test42]
+    P[POI库10K 经纬度+6类] ; D[距离矩阵 10K×10K km] ; CL[90簇→10K映射 int-10000]
+  end
+  subgraph FIT[估计层·拟合份84条]
+    RM[(1)RegionMap Ward→K=8 int10000] --> MK[(2)二阶转移P2 8×8×8 α=0.1]
+    DC[(3)衰减f d =w·exp+wβpow 条件logit选型)]
+    MX[(4)混合EM w0.45·logN0.58km+logGamma25km)]
+  end
+  subgraph LLM[(5)Qwen3.5-4B+LoRA 冻结·4bit]
+  end
+  subgraph LAM[λ份42条]
+    LR[(6)λ s =σ w·x+b 嵌套CV]]
+  end
+  subgraph INF[推理层·测试份372点]
+    PT[(7)s=prefix+cands8+true RAG检索+干扰]
+    PR[(8)logP_prior=logP2 reg+logf d float8]
+    LP[(9)P_llm 首token概率 float8]]
+    LW[(10)λ s ∈0 1]]
+  end
+  F[(11)logP_final=λ·logP_prior+1-λ·logP_llm]
+  E[(12)top-1+Wilson CI+配对McNemar]
+  R -.->|拟合| RM & DC & MX
+  R -.->|λ份特征| LR
+  R -->|test| PT
+  CL --> RM ; MK --> PR ; DC --> PR ; MX -.-> LR
+  P --> PT ; D --> PR
+  LLM -->|冻结| LP
+  LR -->|w b| LW
+  PT --> PR & LP & LW
+  PR & LP & LW --> F --> E
+```
