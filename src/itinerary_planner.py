@@ -90,6 +90,82 @@ def _candidate_names(pois: pd.DataFrame, idxs: List[int]) -> str:
     return "、".join(names)
 
 
+def _llm_cand_logprobs(model, tok, picked_names, remaining_names, pois):
+    """LLM 对剩余候选的编号首 token log 概率（确定性，无采样）.
+
+    编号 1-9 单 token；10 为两 token（"1"+"0"），需第二段前向。
+    返回与 remaining_names 等长的 log 概率数组（未归一）。
+    """
+    sel_lines = "\n".join(f"{j+1}.{n}" for j, n in enumerate(remaining_names))
+    ctx = f"已游览路线：{' → '.join(picked_names)}。\n" if picked_names else ""
+    instr = (f"{ctx}候选地点：\n{sel_lines}\n"
+             f"选出下一个最应该去的地点，只输出其编号（1-{len(remaining_names)}）。")
+    text = ("<|im_start|>system\n你是一位哈尔滨旅游规划专家。根据已游览的路线和"
+            "候选列表，选出下一个最应该去的地点，只输出其编号。\n<|im_end|>\n"
+            f"<|im_start|>user\n{instr}\n<|im_end|>\n<|im_start|>assistant\n")
+    inp = tok(text, return_tensors="pt").to(model.device)
+    with torch.no_grad():
+        logits = model(**inp).logits[0, -1]
+    lp = torch.log_softmax(logits.float(), dim=-1)
+    out = []
+    for j in range(len(remaining_names)):
+        num = str(j + 1)
+        ids = tok(num, add_special_tokens=False)["input_ids"]
+        v = float(lp[ids[0]])
+        if len(ids) > 1:  # 两位编号：条件化第一段后再取
+            inp2 = tok(text + num[0], return_tensors="pt").to(model.device)
+            with torch.no_grad():
+                lg2 = model(**inp2).logits[0, -1]
+            lp2 = torch.log_softmax(lg2.float(), dim=-1)
+            v += float(lp2[ids[1]])
+        out.append(v)
+    return np.array(out)
+
+
+def _prior_greedy_select(bm, candidates, cand_names, d, n_target,
+                         center_idx, pois, model=None, tok=None,
+                         use_llm=False, lam=0.55):
+    """行为先验贪心选择（markov）/ log-linear 融合贪心选择（hybrid）.
+
+    每步对剩余候选打分：log f(d) + log P2(区域|两步状态) + log T(类型)；
+    hybrid 在此之上与 LLM 首 token 概率做池内 softmax 后的 log-linear 融合
+    （与 run_fusion_eval.fuse 同构）。逐步更新两步状态。
+    """
+    cur = center_idx if center_idx is not None else candidates[0]
+    prev = None
+    remaining = list(candidates)
+    picked = []
+    while remaining and len(picked) < n_target:
+        scores = []
+        for c in remaining:
+            dd = float(bm.dist[cur][c])
+            lp = float(bm.decay.log_score(np.array([dd]))[0])
+            if prev is not None:
+                lp += float(np.log(bm.mk.probs()[
+                    bm.region_of_poi[prev], bm.region_of_poi[cur],
+                    bm.region_of_poi[c]] + 1e-12))
+            ta, tb = int(bm.type_of[cur]), int(bm.type_of[c])
+            lp += float(np.log(bm.T_type[ta, tb] + 1e-12))
+            scores.append(lp)
+        scores = np.array(scores)
+        if use_llm:
+            picked_names = [str(pois.loc[i, "name"]) for i in picked]
+            rem_names = [str(pois.loc[i, "name"]) for i in remaining]
+            lpl = _llm_cand_logprobs(model, tok, picked_names, rem_names, pois)
+            # 池内归一（与 fuse() 同构：先 softmax 再对数池化）
+            p_prior = np.exp(scores - scores.max())
+            p_prior /= p_prior.sum()
+            p_llm = np.exp(lpl - lpl.max())
+            p_llm /= p_llm.sum()
+            fused = lam * np.log(p_prior + 1e-12) + (1 - lam) * np.log(p_llm + 1e-12)
+            best_i = int(np.argmax(fused))
+        else:
+            best_i = int(np.argmax(scores))
+        picked.append(remaining.pop(best_i))
+        prev, cur = cur, picked[-1]
+    return [str(pois.loc[i, "name"]) for i in picked if i in pois.index]
+
+
 def plan_itinerary(model, tokenizer, instruction: str, d: dict,
                    selector: str = "llm") -> dict:
     """逐日规划主入口.
@@ -103,9 +179,14 @@ def plan_itinerary(model, tokenizer, instruction: str, d: dict,
             - "llm"        模型候选编号输出（默认）
             - "rule_score" 规则基线：按检索分数直接取前 N（无 LLM）
             - "rule_near"  规则基线：从中心贪心选最近候选（无 LLM）
+            - "markov"     行为先验：逐步 logP2(区域|两步状态)+logf(d)+logT(类型)
+                           （需 d["behavior_model"]，拟合份估计，无 LLM）
+            - "hybrid"     log-linear 融合：0.55×先验 + 0.45×LLM 首 token 概率
+                           （需 d["behavior_model"] + model/tokenizer，确定性打分无采样）
 
     Returns:
-        {"ok": bool, "days": [{"day":1, "half":bool, "pois":[...], "score_detail":...}],
+        {"ok": bool, "days": [{"day":1, "half":bool, "pois":[...], "poi_idxs":[...],
+                               "candidates":[...], "score_detail":...}],
          "warnings": [...], "raw_per_day": {...}}
     """
     pois = d["pois"]
@@ -142,8 +223,15 @@ def plan_itinerary(model, tokenizer, instruction: str, d: dict,
         cand_names = [str(pois.loc[i, "name"]) for i in candidates if i in pois.index]
         used.update(candidates)
 
-        # === 候选选择（模型编号 or 规则基线） ===
-        if selector == "llm":
+        # === 候选选择（模型编号 or 规则基线 or 行为先验/融合） ===
+        if selector in ("markov", "hybrid"):
+            bm = d["behavior_model"]
+            day_names = _prior_greedy_select(
+                bm, candidates, cand_names, d, day_info["n_stops_target"],
+                center_idx, pois,
+                model=model, tok=tokenizer, use_llm=(selector == "hybrid"))
+            all_raw.append("")
+        elif selector == "llm":
             # 构造当天 prompt：候选编号 + 半天/全天提示
             half_note = "（半天，安排 2-3 个即可）" if is_half else ""
             cand_lines = "\n".join(f"{j+1}.{n}" for j, n in enumerate(cand_names))
@@ -226,8 +314,14 @@ def plan_itinerary(model, tokenizer, instruction: str, d: dict,
         day_names = organize_day_rhythm(day_names, atype_of, cand_names,
                                         is_half=is_half)
 
+        # 名字→索引（供行为评测层用；节奏整理只重排/替换候选，映射完整）
+        name2idx = {str(pois.loc[i, "name"]): i
+                    for i in candidates if i in pois.index}
+        day_idxs = [name2idx.get(n, -1) for n in day_names]
+
         days_result.append({"day": day_info["day"], "half": is_half,
-                            "pois": day_names, "candidates": cand_names})
+                            "pois": day_names, "poi_idxs": day_idxs,
+                            "candidates": cand_names})
 
     # === 汇总 + 逐日打分 ===
     return _assemble(d, constraints, days_result, warnings, all_raw)
@@ -371,6 +465,7 @@ def _assemble(d, constraints, days_result, warnings, all_raw) -> dict:
     return {
         "ok": True,
         "days": [{"day": x["day"], "half": x["half"], "pois": x["pois"],
+                  "poi_idxs": x.get("indices", []),
                   "score_detail": x.get("score_detail")} for x in days_result],
         "overall": overall,
         "total_pois": len(total_route),

@@ -1,0 +1,92 @@
+[1] 行为先验（拟合份 84 条）
+[1] 拟合行为先验（拟合份 84 条）
+  α 敏感性(λ份 log-loss/转移): {0.1: 0.6071, 0.5: 0.6242, 1.0: 0.6448, 2.0: 0.6794, 5.0: 0.7633} → α=0.1
+  距离混合: w_near=0.45 logN(median=0.58km) + logGamma(a=2.66, median=25.45km)
+[2] 构建候选池
+[3] 距离衰减选型
+  {"exp": {"params": [500.0], "fit_loglik": -1570.5, "aic": 3143.1, "lambda_logloss": 2.0902}, "power": {"params": [0.05], "fit_loglik": -1568.1, "aic": 3138.2, "lambda_logloss": 2.0833}, "mix": {"params": [0.95, 0.3, 0.05], "fit_loglik": -1412.3, "aic": 2830.6, "lambda_logloss": 1.8772}} → mix
+[4] LLM 候选概率
+[2] 加载 Qwen3.5-4B + SFT LoRA
+W0830 18:22:13.739000 21288 .venv\Lib\site-packages\torch\utils\flop_counter.py:29] triton not found; flop counting will not work for triton kernels
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[transformers] The fast path is not available because one of the required library is not installed. Falling back to torch implementation. To install follow https://github.com/fla-org/flash-linear-attention#installation and https://github.com/Dao-AILab/causal-conv1d
+Loading weights:   0%|          | 0/426 [00:00<?, ?it/s]Loading weights:   0%|          | 1/426 [00:00<05:22,  1.32it/s]Loading weights:   2%|▏         | 8/426 [00:00<00:35, 11.80it/s]Loading weights:   3%|▎         | 14/426 [00:00<00:20, 20.07it/s]Loading weights:   6%|▋         | 27/426 [00:01<00:09, 41.29it/s]Loading weights:   9%|▉         | 40/426 [00:01<00:06, 58.93it/s]Loading weights:  12%|█▏        | 49/426 [00:01<00:06, 60.05it/s]Loading weights:  15%|█▌        | 65/426 [00:01<00:04, 77.33it/s]Loading weights:  18%|█▊        | 78/426 [00:01<00:03, 87.47it/s]Loading weights:  21%|██        | 89/426 [00:01<00:03, 90.32it/s]Loading weights:  23%|██▎       | 99/426 [00:01<00:04, 78.50it/s]Loading weights:  27%|██▋       | 114/426 [00:01<00:03, 94.61it/s]Loading weights:  29%|██▉       | 125/426 [00:02<00:03, 95.34it/s]Loading weights:  32%|███▏      | 136/426 [00:02<00:03, 90.46it/s]Loading weights:  35%|███▍      | 147/426 [00:02<00:02, 93.22it/s]Loading weights:  37%|███▋      | 157/426 [00:02<00:03, 87.66it/s]Loading weights:  40%|████      | 171/426 [00:02<00:02, 98.21it/s]Loading weights:  43%|████▎     | 184/426 [00:02<00:02, 102.59it/s]Loading weights:  46%|████▌     | 195/426 [00:02<00:02, 99.87it/s] Loading weights:  48%|████▊     | 206/426 [00:03<00:02, 80.39it/s]Loading weights:  52%|█████▏    | 223/426 [00:03<00:02, 98.50it/s]Loading weights:  55%|█████▍    | 234/426 [00:03<00:01, 98.63it/s]Loading weights:  58%|█████▊    | 245/426 [00:03<00:01, 98.14it/s]Loading weights:  60%|██████    | 256/426 [00:03<00:01, 88.71it/s]Loading weights:  62%|██████▏   | 266/426 [00:03<00:01, 84.02it/s]Loading weights:  65%|██████▌   | 278/426 [00:03<00:01, 90.20it/s]Loading weights:  68%|██████▊   | 291/426 [00:03<00:01, 97.73it/s]Loading weights:  71%|███████▏  | 304/426 [00:03<00:01, 103.25it/s]Loading weights:  74%|███████▍  | 315/426 [00:04<00:01, 87.60it/s] Loading weights:  77%|███████▋  | 330/426 [00:04<00:00, 97.74it/s]Loading weights:  81%|████████  | 343/426 [00:04<00:00, 103.83it/s]Loading weights:  83%|████████▎ | 354/426 [00:04<00:00, 101.83it/s]Loading weights:  86%|████████▌ | 365/426 [00:04<00:00, 82.61it/s] Loading weights:  90%|████████▉ | 383/426 [00:04<00:00, 98.39it/s]Loading weights:  93%|█████████▎| 396/426 [00:04<00:00, 102.74it/s]Loading weights:  96%|█████████▌| 407/426 [00:05<00:00, 101.04it/s]Loading weights:  98%|█████████▊| 418/426 [00:05<00:00, 82.05it/s] Loading weights: 100%|██████████| 426/426 [00:05<00:00, 80.24it/s]
+[3] 生成：60 指令 × ['rule_score', 'rule_near', 'markov', 'llm', 'hybrid']
+  进度 10/60
+  进度 20/60
+  进度 30/60
+  进度 40/60
+  进度 50/60
+  进度 60/60
+[4] 层2 个体行为似然
+[5] 层3 群体分布距离
+{
+  "layer2": {
+    "rule_score": {
+      "ll_mean": -5.0447,
+      "ll_std": 0.983,
+      "n_routes": 136
+    },
+    "rule_near": {
+      "ll_mean": -4.5888,
+      "ll_std": 0.7961,
+      "n_routes": 136
+    },
+    "markov": {
+      "ll_mean": -4.0165,
+      "ll_std": 0.3669,
+      "n_routes": 136
+    },
+    "llm": {
+      "ll_mean": -4.7864,
+      "ll_std": 0.6416,
+      "n_routes": 408
+    },
+    "hybrid": {
+      "ll_mean": -4.144,
+      "ll_std": 0.4473,
+      "n_routes": 136
+    },
+    "real_test_reference": {
+      "ll_mean": -3.8435,
+      "ll_std": 0.4965,
+      "n_routes": 42
+    }
+  },
+  "layer2_tests": {
+    "markov_vs_rule_near": {
+      "mean_diff": 0.6342,
+      "p_value": 0.0
+    },
+    "hybrid_vs_rule_near": {
+      "mean_diff": 0.5003,
+      "p_value": 0.0
+    },
+    "llm_vs_rule_near": {
+      "mean_diff": -0.1527,
+      "p_value": 0.04604
+    }
+  },
+  "far_share": {
+    "rule_score": 0.7169179229480737,
+    "rule_near": 0.5008460236886633,
+    "markov": 0.5934718100890207,
+    "llm": 0.684149855907781,
+    "hybrid": 0.5974842767295597
+  },
+  "ks": {
+    "rule_score": 0.3002694632583206,
+    "rule_near": 0.25309595625199244,
+    "markov": 0.24827620808784528,
+    "llm": 0.2696069832518899,
+    "hybrid": 0.21862182116488926
+  },
+  "null": {
+    "ks": 0.0462,
+    "w": 1.9603
+  },
+  "sanity": {
+    "real_ll_higher_than_all_methods": true
+  }
+}
+保存至: output/eval_generation_behavioral.json

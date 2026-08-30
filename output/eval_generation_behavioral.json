@@ -1,0 +1,204 @@
+{
+  "protocol": {
+    "n_instr": 60,
+    "llm_seeds": 3,
+    "boot": 1000,
+    "prior_fit": "fit split (84 routes)"
+  },
+  "layer2_individual": {
+    "rule_score": {
+      "ll_mean": -5.0447,
+      "ll_std": 0.983,
+      "n_routes": 136
+    },
+    "rule_near": {
+      "ll_mean": -4.5888,
+      "ll_std": 0.7961,
+      "n_routes": 136
+    },
+    "markov": {
+      "ll_mean": -4.0165,
+      "ll_std": 0.3669,
+      "n_routes": 136
+    },
+    "llm": {
+      "ll_mean": -4.7864,
+      "ll_std": 0.6416,
+      "n_routes": 408
+    },
+    "hybrid": {
+      "ll_mean": -4.144,
+      "ll_std": 0.4473,
+      "n_routes": 136
+    },
+    "real_test_reference": {
+      "ll_mean": -3.8435,
+      "ll_std": 0.4965,
+      "n_routes": 42
+    }
+  },
+  "layer2_tests": {
+    "markov_vs_rule_near": {
+      "mean_diff": 0.6342,
+      "p_value": 0.0
+    },
+    "hybrid_vs_rule_near": {
+      "mean_diff": 0.5003,
+      "p_value": 0.0
+    },
+    "llm_vs_rule_near": {
+      "mean_diff": -0.1527,
+      "p_value": 0.04604
+    }
+  },
+  "layer3_population": {
+    "rule_score": {
+      "dist": {
+        "ks": 0.3002694632583206,
+        "w": 6.788665559082411,
+        "near_share": 0.283,
+        "p50": 2.71,
+        "p90": 5.37,
+        "ks_ci95": [
+          0.277,
+          0.3247
+        ],
+        "w_ci95": [
+          6.6608,
+          6.8944
+        ],
+        "n_transitions": 597
+      },
+      "rhythm": {
+        "meal_gap": 0.6106,
+        "first_meal_pos": 0.3487,
+        "hotel_pos": 0.7184
+      },
+      "far_share": 0.7169179229480737
+    },
+    "rule_near": {
+      "dist": {
+        "ks": 0.25309595625199244,
+        "w": 6.920263745883509,
+        "near_share": 0.499,
+        "p50": 2.0,
+        "p90": 4.39,
+        "ks_ci95": [
+          0.2317,
+          0.2787
+        ],
+        "w_ci95": [
+          6.8002,
+          7.0215
+        ],
+        "n_transitions": 591
+      },
+      "rhythm": {
+        "meal_gap": 0.5747,
+        "first_meal_pos": 0.3433,
+        "hotel_pos": 0.5437
+      },
+      "far_share": 0.5008460236886633
+    },
+    "markov": {
+      "dist": {
+        "ks": 0.24827620808784528,
+        "w": 6.752070425930914,
+        "near_share": 0.407,
+        "p50": 2.46,
+        "p90": 4.91,
+        "ks_ci95": [
+          0.2349,
+          0.2615
+        ],
+        "w_ci95": [
+          6.664,
+          6.8368
+        ],
+        "n_transitions": 674
+      },
+      "rhythm": {
+        "meal_gap": 0.2371,
+        "first_meal_pos": 0.3421,
+        "hotel_pos": 0.0194
+      },
+      "far_share": 0.5934718100890207
+    },
+    "llm": {
+      "dist": {
+        "ks": 0.2696069832518899,
+        "w": 6.780536730784495,
+        "near_share": 0.316,
+        "p50": 2.73,
+        "p90": 5.44,
+        "ks_ci95": [
+          0.2557,
+          0.2854
+        ],
+        "w_ci95": [
+          6.722,
+          6.8402
+        ],
+        "n_transitions": 1735
+      },
+      "rhythm": {
+        "meal_gap": 0.6458,
+        "first_meal_pos": 0.6155,
+        "hotel_pos": 0.2913
+      },
+      "far_share": 0.684149855907781
+    },
+    "hybrid": {
+      "dist": {
+        "ks": 0.21862182116488926,
+        "w": 6.574807396178434,
+        "near_share": 0.403,
+        "p50": 2.56,
+        "p90": 5.63,
+        "ks_ci95": [
+          0.2101,
+          0.2481
+        ],
+        "w_ci95": [
+          6.4655,
+          6.6933
+        ],
+        "n_transitions": 636
+      },
+      "rhythm": {
+        "meal_gap": 0.3565,
+        "first_meal_pos": 0.3348,
+        "hotel_pos": 0.1845
+      },
+      "far_share": 0.5974842767295597
+    },
+    "null_real_vs_real": {
+      "ks": 0.0462,
+      "w": 1.9603
+    },
+    "real_test_reference": {
+      "far_share": 0.4927536231884058,
+      "n_routes": 42
+    }
+  },
+  "appendix_v5_descriptive": {
+    "rule_score": {
+      "v5_day_mean": 0.4555
+    },
+    "rule_near": {
+      "v5_day_mean": 0.6453
+    },
+    "markov": {
+      "v5_day_mean": 0.7802
+    },
+    "llm": {
+      "v5_day_mean": 0.6539
+    },
+    "hybrid": {
+      "v5_day_mean": 0.7537
+    }
+  },
+  "sanity": {
+    "real_ll_higher_than_all_methods": true
+  }
+}
