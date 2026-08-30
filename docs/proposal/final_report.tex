@@ -1,0 +1,253 @@
+% !Mode:: "TeX:UTF-8"
+% 结题报告（hithesis 无结题专用类，采用 ctexart 按学校报告版式组织）
+\documentclass[UTF8,zihao=-4,a4paper]{ctexart}
+\usepackage[top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage[hidelinks]{hyperref}
+\usepackage{enumitem}
+\setlength{\parskip}{0.4em}
+
+\title{\heiti 哈尔滨工业大学硕士学位论文课题\\结题报告\\[0.5em]
+\large 行为先验与大语言模型融合的城市旅游行程规划方法研究}
+\author{【姓名】\quad 学号：【学号】\quad 学院：【学院】\quad 导师：【导师】}
+\date{2027 年 6 月}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section{研究目标与任务完成情况概述}
+
+本课题以 168 条真实游记路线（1{,}660 次相邻转移，全程隔离于训练
+之外）为行为学金标准，围绕"行为统计建模—先验与 LLM 融合—统计
+评测体系—系统验证"四项任务展开。开题设定的研究内容与预期目标
+全部完成，其中两项超额（架构必要性消融、概率校准实验），并按
+预注册的负结果预案如实报告了两项阴性结果。任务对照见表~\ref{tab:tasks}。
+
+\begin{table}[htbp]
+\centering\small
+\caption{研究任务完成情况对照}\label{tab:tasks}
+\begin{tabular}{p{0.46\textwidth}p{0.44\textwidth}}
+\toprule
+开题任务 & 完成情况 \\
+\midrule
+双峰转移行为的混合建模与检验 & 完成：dip test $p<10^{-4}$；lognormal+log-gamma 混合 EM 估计 \\
+距离衰减函数族选型 & 完成：条件 logit 选型，混合形式胜出，纯指数被否决 \\
+先验×LLM 融合方法与检验 & 完成：测试份 43.3\% vs 规则 32.3\%（$p\approx0$） \\
+三层统计评测体系 & 完成：两层无模型裁决 + 一层描述性似然，生成层验证 \\
+系统接入与演示 & 完成：规划器新增先验/融合选择器，60 指令端到端实验 \\
+（超额）架构必要性消融 & 完成：组件去除检验，部署架构精简为四组件 \\
+（超额）LLM 概率校准 & 完成：负结果，校准非本任务瓶颈 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{主要研究成果}
+
+\subsection{实证发现：目的地内旅游转移距离的双峰性}
+
+对全部 1{,}660 次真实转移的四层检验\cite{hartigan1985dip,
+efron1993bootstrap}：Hartigan dip test 在原始与对数尺度均拒绝
+单峰（$p<10^{-4}$）；路线级自助 100/100 次拒绝；参数自助似然比
+检验不支持两分量对数正态（$p=0.219$），表明跨区分量尾部重于对数
+正态；最终以 lognormal（中位 0.58km）与 log-gamma（中位约
+25km）混合刻画，就近分量权重 0.45。据文献调研，目的地内粒度的
+转移距离双峰性正式检验此前未见报道。该发现是融合架构的直接动机：
+就近与跨区两种决策模式对应统计先验与语义模型的天然分工。
+
+\subsection{方法成果：先验×LLM 融合及其架构必要性论证}
+
+行为先验 = 二阶区域转移（8 区域、Dirichlet 平滑）$\times$ 混合
+距离衰减 $\times$ 一阶类型转移。LLM 侧为 Qwen3.5-4B 微调适配器
+的候选编号首 token 概率（单次前向、确定性）。融合采用对数线性
+池化\cite{hinton2002poe}：$\log P_{\mathrm{final}} = \lambda
+\log P_{\mathrm{prior}} + (1-\lambda)\log P_{\mathrm{llm}}$。
+
+测试份 372 点 8 选 1（配对精确 McNemar\cite{mcnemar1947note}，
+Wilson 区间）：随机 13.2\%、就近规则 32.3\%、LLM 单独 26.6\%、
+先验单独 37.1\%（$p=10^{-4}$）、固定权重融合 43.3\%（$p\approx0$）。
+核心结论：\textbf{LLM 单独弱于规则、融合后显著反超全部基线}——
+其价值不在绝对精度而在与空间统计的误差互补。
+
+组件消融给出部署架构的最简形式：距离衰减不可去（18.8\%）；区域
+项 +4.8 个百分点；8 区域粒度 +4 个百分点；平滑常数不敏感；
+二阶与一阶命中率持平（二阶似然更优，零成本保留）。衰减形式在
+融合层差异显著（混合 43.3\% 对退化指数 34.4\%），纯指数形式的
+极大似然尺度参数趋于无穷，数据不支持。
+
+\subsection{两项如实报告的负结果}
+
+（1）状态依赖权重 $\lambda(s)$（8 维推理时特征、逻辑回归堆叠、
+嵌套交叉验证）不优于固定权重（$p=1.0$），学得权重塌缩为
+$[0.52,0.57]$ 窄带——融合增益来自误差互补结构，而非可学习的
+状态调度信号；（2）LLM 概率温度校准无测试集增益（原始期望校准
+误差仅 0.041，8 选 1 任务上并非文献所述严重过度自信）。两者共同
+界定了方法的能力边界，也构成"融合框架对超参稳健"的证据。
+
+\subsection{评测方法学：三层统计评测体系}
+
+以构念效度理论\cite{cronbach1955construct}区分"行为符合度"
+（本体系裁决对象）与"工程质量"（降为附录描述）。三层结构：
+点层（命中率 + 配对 McNemar + Holm 校正，无模型，主裁决）；
+个体层（路线行为似然 + 配对 Wilcoxon，模型依赖，描述性）；群体层
+（转移距离与类型节奏的 KS/Wasserstein + 路线级自助 CI，无模型，
+群体裁决）。分层思想借鉴生成模型评测中似然与样本分布判据不可
+互替的论证\cite{theis2016note}。该体系是对旧综合评分与就近基线
+同源（同源权重约占质量分 45\%）、聚合掩盖分层结构、训练测试
+过拟合三类已实证缺陷的方法学回应。
+
+生成层验证（60 指令 $\times$ 5 选择器）：个体层先验/融合显著
+高于就近规则（配对 Wilcoxon $p\approx0$）；群体层融合 KS 最优
+（0.219，bootstrap CI $[0.210,0.248]$；真实对真实基线 0.046）；
+合理性自检通过（真实路线似然高于全部生成方法）。
+
+\section{实验数据的客观分析}
+
+\subsection{支撑结论的证据强度}
+
+主结论（融合显著优于规则）在四类独立证据下方向一致：点层 9.3
+个百分点差距（$p\approx0$，功效足够）；个体层似然差 0.50 nat/
+转移（$p\approx0$）；群体层分布距离最优；已知有偏的旧工程指标
+下仍胜出。多重证据交叉使结论不依赖任何单一指标的构念。
+
+\subsection{局限与不确定因素（辩证）}
+
+\begin{enumerate}
+  \item \textbf{干扰项构造依赖}：8 选 1 的干扰项由检索池构造，
+        命中率绝对值不可跨研究比较；本课题所有方法共用同一协议，
+        方法间比较不受影响，但外推需谨慎。
+  \item \textbf{循环论证边界}：个体层与融合方法共用行为统计，
+        已通过三层互证（裁决仅依赖无模型层）控制，但个体层数值
+        不进入结论句。
+  \item \textbf{重尾压缩}：全部生成方法的转移距离 90 分位约
+        5km，真实约 8km 且含 195km 极值——候选池以当前中心检索
+        限制了空间覆盖。就近规则的跨区占比虽形式上接近真实
+        （0.50 对 0.49），但其分布形态差异（KS 0.253）说明比例
+        匹配不等于分布匹配，这本身是聚合指标局限的例证。
+  \item \textbf{粒度不对齐}：群体层参照为整条游记路线而生成单位
+        为日路线，绝对 KS 因此偏大；方法间排序在同协议下有效。
+  \item \textbf{样本上限}：168 条路线约束了细分检验的功效，
+        次级结论（如节奏分项差异）未做多重比较校正的全量声明。
+  \item \textbf{构念边界}：本体系裁决"行为符合度"而非"游客
+        满意度"；生成更接近真实人群统计的路线是否更令具体用户
+        满意，属另一构念，需独立效标（如在线实验）检验，本课题
+        未声称。
+\end{enumerate}
+
+\subsection{方法合理性的辩证阐述}
+
+\textbf{有利面}：行为先验可解释、小样本可估、参数有明确语义；
+LLM 分量贡献语义与跨区意图；对数池化保持归一性与权重语义；
+架构经消融精简为四组件，无冗余结构。文献对话上，本框架回答的
+是"如何可信组合"而非"LLM 能否单独胜任"，与 next-POI 推荐
+三代方法\cite{rendle2010fpmc,cheng2013fpmclr,feng2015prme,
+liu2016strnn,liu2019arnn,li2022lstpm}及 LLM 推荐研究
+\cite{li2024llmpoi,wu2023llm4rec}形成互补而非重复。
+
+\textbf{约束面}：先验的表达上限受区域化粒度约束（更细粒度受
+稀疏性限制）；LLM 分量的边界依赖基座能力与候选呈现方式；固定
+权重的全局性是"塌缩实证"支持下的妥协而非理论最优；双峰混合
+的分量解释（就近/跨区）是统计语义而非行为决策机制的直接观测。
+
+\section{成果清单}
+
+\begin{enumerate}
+  \item 统计模型与代码：行为先验模型、融合管线、三层评测体系、
+        架构消融、校准实验（全部版本化可复现，含 11 个实验
+        结果数据文件）；
+  \item 系统成果：行程规划器新增先验/融合选择器并完成 60 指令
+        端到端验证；
+  \item 数据资产：168 条真实路线的行为学金标准协议（三分索引、
+        功效分析）；
+  \item 学术成果：学位论文一篇（另呈）；拟投稿论文一篇
+        （融合价值反转 + 评测方法学主线）。
+\end{enumerate}
+
+\section{后续工作展望}
+
+（1）候选检索的全城覆盖实验以缓解重尾压缩；（2）在线 A/B 或
+专家评分为"满意度"构念建立独立效标；（3）扩展城市验证框架的
+可迁移性；（4）将三层评测体系整理为开源评测工具。
+
+\section{主要参考文献}
+
+\begin{thebibliography}{9}\small
+\bibitem{rendle2010fpmc} Rendle S, Freudenthaler C, Schmidt-Thieme L.
+Factorizing personalized Markov chains for next-basket recommendation.
+\emph{WWW}, 2010: 811--820.
+\bibitem{cheng2013fpmclr} Cheng C, Yang H, Lyu M R, King I.
+Where you like to go next: successive point-of-interest recommendation.
+\emph{IJCAI}, 2013: 2605--2611.
+\bibitem{feng2015prme} Feng S, Li X, Zeng Y, et al.
+Personalized ranking metric embedding for next new POI recommendation.
+\emph{IJCAI}, 2015: 2069--2075.
+\bibitem{liu2016strnn} Liu Q, Wu S, Wang L, Tan T.
+Predicting the next location: a recurrent model with spatial and temporal contexts.
+\emph{AAAI}, 2016: 194--200.
+\bibitem{liu2019arnn} Liu Q, Wu S, Wang L, Tan T.
+An attentional recurrent neural network for personalized next POI recommendation.
+\emph{AAAI}, 2019: 83--90.
+\bibitem{li2022lstpm} Li X, et al.
+Personalized long- and short-term preference learning for next POI recommendation.
+\emph{IEEE TKDE}, 2022, 34(4): 1809--1822.
+\bibitem{li2024llmpoi} Li P, de Rijke M, Xue H, et al.
+Large language models for next point-of-interest recommendation.
+\emph{SIGIR}, 2024: 1393--1403.
+\bibitem{wu2023llm4rec} Wu L, Zheng Z, Qiu Z, et al.
+A survey on large language models for recommendation.
+\emph{World Wide Web}, 2024, 27(5): 60.
+\bibitem{hinton2002poe} Hinton G E.
+Training products of experts by minimizing contrastive divergence.
+\emph{Neural Computation}, 2002, 14(8): 1771--1800.
+\bibitem{hartigan1985dip} Hartigan J A, Hartigan P M.
+The dip test of unimodality.
+\emph{The Annals of Statistics}, 1985, 13(1): 70--84.
+\bibitem{mcnemar1947note} McNemar Q.
+Note on the sampling error of the difference between correlated proportions or percentages.
+\emph{Psychometrika}, 1947, 12(2): 153--157.
+\bibitem{efron1993bootstrap} Efron B, Tibshirani R J.
+\emph{An Introduction to the Bootstrap}. Chapman \& Hall/CRC, 1993.
+\bibitem{dempster1977em} Dempster A P, Laird N M, Rubin D B.
+Maximum likelihood from incomplete data via the EM algorithm.
+\emph{JRSS-B}, 1977, 39(1): 1--22.
+\bibitem{guo2017calibration} Guo C, Pleiss G, Sun Y, Weinberger K Q.
+On calibration of modern neural networks.
+\emph{ICML}, 2017: 1321--1330.
+\bibitem{cronbach1955construct} Cronbach L J, Meehl P E.
+Construct validity in psychological tests.
+\emph{Psychological Bulletin}, 1955, 52(4): 281--302.
+\bibitem{theis2016note} Theis L, van den Oord A, Bethge M.
+A note on the evaluation of generative models.
+\emph{ICLR}, 2016.
+\bibitem{chen2015decay} Chen Y.
+The distance-decay function of geographical gravity model: power law or exponential law?
+\emph{Chaos, Solitons \& Fractals}, 2015, 77: 174--189.
+\bibitem{gonzalez2008understanding} Gonz\'alez M C, Hidalgo C A, Barab\'asi A-L.
+Understanding individual human mobility patterns.
+\emph{Nature}, 2008, 453: 779--782.
+\bibitem{simini2012universal} Simini F, Gonz\'alez M C, Maritan A, Barab\'asi A-L.
+A universal model for mobility and migration patterns.
+\emph{Nature}, 2012, 484: 96--100.
+\bibitem{mckercher2003distance} McKercher B, Lew A A.
+Distance decay and the impact of effective tourism exclusion zones on international travel flows.
+\emph{Journal of Travel Research}, 2003, 42(2): 119--130.
+\bibitem{verma2023defer} Mao A, Mohri M, Zhong Y.
+Learning to defer to multiple experts: consistent surrogate losses.
+\emph{AISTATS}, 2023.
+\bibitem{wan2024fusellm} Wan F, Wan X.
+FuseLLM: Knowledge fusion of large language models.
+\emph{ICLR}, 2024.
+\bibitem{ong2024routellm} Ong I, Almahairi A, Wu V, et al.
+RouteLLM: Learning to route LLMs with preference data.
+\emph{arXiv:2406.18665}, 2024.
+\bibitem{deng2025retail} Deng B, Feng Y, Liu Z, et al.
+RETAIL: Towards real-world travel planning for large language models.
+\emph{arXiv:2508.15335}, 2025.
+\bibitem{google2025trip} Google Research.
+Optimizing LLM-based trip planning.
+Google Research Blog, 2025.
+\end{thebibliography}
+
+\end{document}

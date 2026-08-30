@@ -1,0 +1,183 @@
+\begin{thebibliography}{10}
+\providecommand{\bibauthor}[1]{#1}
+\providecommand{\bibeditor}[1]{\bibauthor{#1}}
+\providecommand{\bibtranslator}[1]{#1}
+\providecommand{\bibtitle}[1]{#1}
+\providecommand{\bibbooktitle}[1]{#1}
+\providecommand{\bibjournal}[1]{#1}
+\providecommand{\bibmark}[1]{\mbox{#1}}
+\providecommand{\bibcountry}[1]{#1}
+\providecommand{\bibpatentid}[1]{#1}
+\providecommand{\bibedition}[1]{#1}
+\providecommand{\biborganization}[1]{#1}
+\providecommand{\bibaddress}[1]{#1}
+\providecommand{\bibpublisher}[1]{#1}
+\providecommand{\bibinstitution}[1]{#1}
+\providecommand{\bibschool}[1]{#1}
+\providecommand{\bibvolume}[1]{#1}
+\providecommand{\bibnumber}[1]{#1}
+\providecommand{\bibversion}[1]{#1}
+\providecommand{\bibpages}[1]{#1}
+\providecommand{\bibmodifydate}[1]{#1}
+\providecommand{\bibcitedate}[1]{#1}
+\providecommand{\bibyear}[1]{#1}
+\providecommand{\bibdate}[1]{#1}
+\providecommand{\biburl}[1]{\newline\url{#1}}
+
+\bibitem{rendle2010fpmc}
+\bibauthor{{, et~al}{Rendle S}{, Freudenthaler C}{, Schmidt-Thieme
+  L}}\nolinebreak\@. \bibtitle{Factorizing Personalized {M}arkov Chains for
+  Next-Basket Recommendation}\bibmark{[C]}
+  //\thinspace{}\bibbooktitle{Proceedings of the 19th International Conference
+  on World Wide Web (WWW)}\nolinebreak\@. \bibyear{2010}\textnormal{:
+  }\bibpages{811\textnormal{-}820}\nolinebreak\@.
+
+\bibitem{cheng2013fpmclr}
+\bibauthor{{, et~al}{Cheng C}{, Yang H}{, Lyu M~R}{, King I}}\nolinebreak\@.
+  \bibtitle{Where You Like to Go Next: Successive Point-of-Interest
+  Recommendation}\bibmark{[C]} //\thinspace{}\bibbooktitle{Proceedings of the
+  23rd International Joint Conference on Artificial Intelligence
+  (IJCAI)}\nolinebreak\@. \bibyear{2013}\textnormal{:
+  }\bibpages{2605\textnormal{-}2611}\nolinebreak\@.
+
+\bibitem{feng2015prme}
+\bibauthor{{, et~al}{Feng S}{, Li X}{, Zeng Y}{, Cong G}{, Chee Y~M}{, Ye
+  Q~Y}}\nolinebreak\@. \bibtitle{Personalized Ranking Metric Embedding for Next
+  New {POI} Recommendation}\bibmark{[C]}
+  //\thinspace{}\bibbooktitle{Proceedings of the 24th International Joint
+  Conference on Artificial Intelligence (IJCAI)}\nolinebreak\@.
+  \bibyear{2015}\textnormal{: }\bibpages{2069\textnormal{-}2075}\nolinebreak\@.
+
+\bibitem{liu2016strnn}
+\bibauthor{{, et~al}{Liu Q}{, Wu S}{, Wang L}{, Tan T}}\nolinebreak\@.
+  \bibtitle{Predicting the Next Location: A Recurrent Model with Spatial and
+  Temporal Contexts}\bibmark{[C]} //\thinspace{}\bibbooktitle{Proceedings of
+  the 30th AAAI Conference on Artificial Intelligence (AAAI)}\nolinebreak\@.
+  \bibyear{2016}\textnormal{: }\bibpages{194\textnormal{-}200}\nolinebreak\@.
+
+\bibitem{liu2019arnn}
+\bibauthor{{, et~al}{Liu Q}{, Wu S}{, Wang L}{, Tan T}}\nolinebreak\@.
+  \bibtitle{An Attentional Recurrent Neural Network for Personalized Next {POI}
+  Recommendation}\bibmark{[C]} //\thinspace{}\bibbooktitle{Proceedings of the
+  33rd AAAI Conference on Artificial Intelligence (AAAI)}\nolinebreak\@.
+  \bibyear{2019}\textnormal{: }\bibpages{83\textnormal{-}90}\nolinebreak\@.
+
+\bibitem{li2022lstpm}
+\bibauthor{{, et~al}{Li X}{, others}}\nolinebreak\@. \bibtitle{Personalized
+  Long- and Short-term Preference Learning for Next {POI}
+  Recommendation}\bibmark{[J]}\nolinebreak\@. \bibjournal{IEEE Transactions on
+  Knowledge and Data Engineering}, \bibyear{2022},
+  \bibvolume{34}\bibnumber{(4)}\textnormal{:
+  }\bibpages{1809\textnormal{-}1822}\nolinebreak\@.
+
+\bibitem{li2024llmpoi}
+\bibauthor{{, et~al}{Li P}{, de Rijke M}{, Xue H}{, Ao S}{, Song Y}{, Salim
+  F~D}}\nolinebreak\@. \bibtitle{Large Language Models for Next
+  Point-of-Interest Recommendation}\bibmark{[C]}
+  //\thinspace{}\bibbooktitle{Proceedings of the 47th International ACM SIGIR
+  Conference on Research and Development in Information
+  Retrieval}\nolinebreak\@. \bibyear{2024}\textnormal{:
+  }\bibpages{1393\textnormal{-}1403}\nolinebreak\@.
+
+\bibitem{wu2023llm4rec}
+\bibauthor{{, et~al}{Wu L}{, Zheng Z}{, Qiu Z}{, Wang H}{, Gu H}{, Shen T}{,
+  Qin C}{, Zhu C}{, Zhu H}{, Liu Q}{, Xiong H}{, Chen E}}\nolinebreak\@.
+  \bibtitle{A Survey on Large Language Models for
+  Recommendation}\bibmark{[J]}\nolinebreak\@. \bibjournal{World Wide Web},
+  \bibyear{2024}, \bibvolume{27}\bibnumber{(5)}\textnormal{:
+  }\bibpages{60}\nolinebreak\@.
+
+\bibitem{hinton2002poe}
+\bibauthor{{, et~al}{Hinton G~E}}\nolinebreak\@. \bibtitle{Training Products of
+  Experts by Minimizing Contrastive Divergence}\bibmark{[C]}
+  //\thinspace{}\bibbooktitle{Neural Computation\textnormal{:
+  }Vol~14}\nolinebreak\@. \bibyear{2002}\textnormal{:
+  }\bibpages{1771\textnormal{-}1800}\nolinebreak\@.
+
+\bibitem{wan2024fusellm}
+\bibauthor{{, et~al}{Wan F}{, Wan X}}\nolinebreak\@. \bibtitle{{FuseLLM}:
+  Knowledge Fusion of Large Language Models}\bibmark{[C]}
+  //\thinspace{}\bibbooktitle{Proceedings of the 12th International Conference
+  on Learning Representations (ICLR)}\nolinebreak\@.
+  \bibyear{2024}\nolinebreak\@.
+
+\bibitem{verma2023defer}
+\bibauthor{{, et~al}{Mao A}{, Mohri M}{, Zhong Y}}\nolinebreak\@.
+  \bibtitle{Learning to Defer to Multiple Experts: Consistent Surrogate
+  Losses}\bibmark{[C]} //\thinspace{}\bibbooktitle{Proceedings of the 26th
+  International Conference on Artificial Intelligence and Statistics
+  (AISTATS)}\nolinebreak\@. \bibyear{2023}\textnormal{:
+  }\bibpages{\textnormal{-}}\nolinebreak\@.
+
+\bibitem{ong2024routellm}
+\bibauthor{{, et~al}{Ong I}{, Almahairi A}{, Wu V}{, Chiang W-L}{, Wu T}{,
+  Gonzalez J~E}{, Kadous M~W}{, Stoica I}}\nolinebreak\@. \bibtitle{{RouteLLM}:
+  Learning to Route {LLMs} with Preference Data}\bibmark{[J]}\nolinebreak\@.
+  \bibjournal{arXiv preprint arXiv:2406.18665}, \bibyear{2024}\nolinebreak\@.
+
+\bibitem{guo2017calibration}
+\bibauthor{{, et~al}{Guo C}{, Pleiss G}{, Sun Y}{, Weinberger
+  K~Q}}\nolinebreak\@. \bibtitle{On Calibration of Modern Neural
+  Networks}\bibmark{[C]} //\thinspace{}\bibbooktitle{Proceedings of the 34th
+  International Conference on Machine Learning (ICML)}\nolinebreak\@.
+  \bibyear{2017}\textnormal{: }\bibpages{1321\textnormal{-}1330}\nolinebreak\@.
+
+\bibitem{chen2015decay}
+\bibauthor{{, et~al}{Chen Y}}\nolinebreak\@. \bibtitle{The Distance-Decay
+  Function of Geographical Gravity Model: Power Law or Exponential
+  Law?}\bibmark{[J]}\nolinebreak\@. \bibjournal{Chaos, Solitons \& Fractals},
+  \bibyear{2015}, \bibvolume{77}\textnormal{:
+  }\bibpages{174\textnormal{-}189}\nolinebreak\@.
+
+\bibitem{gonzalez2008understanding}
+\bibauthor{{, et~al}{Gonz{\'a}lez M~C}{, Hidalgo C~A}{, Barab{\'a}si
+  A-L}}\nolinebreak\@. \bibtitle{Understanding Individual Human Mobility
+  Patterns}\bibmark{[J]}\nolinebreak\@. \bibjournal{Nature}, \bibyear{2008},
+  \bibvolume{453}\textnormal{: }\bibpages{779\textnormal{-}782}\nolinebreak\@.
+
+\bibitem{simini2012universal}
+\bibauthor{{, et~al}{Simini F}{, Gonz{\'a}lez M~C}{, Maritan A}{, Barab{\'a}si
+  A-L}}\nolinebreak\@. \bibtitle{A Universal Model for Mobility and Migration
+  Patterns}\bibmark{[J]}\nolinebreak\@. \bibjournal{Nature}, \bibyear{2012},
+  \bibvolume{484}\textnormal{: }\bibpages{96\textnormal{-}100}\nolinebreak\@.
+
+\bibitem{mckercher2003distance}
+\bibauthor{{, et~al}{McKercher B}{, Lew A~A}}\nolinebreak\@. \bibtitle{Distance
+  Decay and the Impact of Effective Tourism Exclusion Zones on International
+  Travel Flows}\bibmark{[J]}\nolinebreak\@. \bibjournal{Journal of Travel
+  Research}, \bibyear{2003}, \bibvolume{42}\bibnumber{(2)}\textnormal{:
+  }\bibpages{119\textnormal{-}130}\nolinebreak\@.
+
+\bibitem{deng2025retail}
+\bibauthor{{, et~al}{Deng B}{, Feng Y}{, Liu Z}{, Wei Q}{, Zhu X}{, Chen S}{,
+  Guo Y}{, Wang Y}}\nolinebreak\@. \bibtitle{{RETAIL}: Towards Real-world
+  Travel Planning for Large Language Models}\bibmark{[J]}\nolinebreak\@.
+  \bibjournal{arXiv preprint arXiv:2508.15335}, \bibyear{2025}\nolinebreak\@.
+
+\bibitem{google2025trip}
+\bibauthor{{, et~al}{{Google Research}}}\nolinebreak\@. \bibtitle{Optimizing
+  {LLM}-based Trip Planning}\bibmark{[J]}\nolinebreak\@. \bibjournal{Google
+  Research Blog}, \bibyear{2025}\nolinebreak\@.
+
+\bibitem{hartigan1985dip}
+\bibauthor{{, et~al}{Hartigan J~A}{, Hartigan P~M}}\nolinebreak\@.
+  \bibtitle{The Dip Test of Unimodality}\bibmark{[J]}\nolinebreak\@.
+  \bibjournal{The Annals of Statistics}, \bibyear{1985},
+  \bibvolume{13}\bibnumber{(1)}\textnormal{:
+  }\bibpages{70\textnormal{-}84}\nolinebreak\@.
+
+\bibitem{cronbach1955construct}
+\bibauthor{{, et~al}{Cronbach L~J}{, Meehl P~E}}\nolinebreak\@.
+  \bibtitle{Construct Validity in Psychological
+  Tests}\bibmark{[J]}\nolinebreak\@. \bibjournal{Psychological Bulletin},
+  \bibyear{1955}, \bibvolume{52}\bibnumber{(4)}\textnormal{:
+  }\bibpages{281\textnormal{-}302}\nolinebreak\@.
+
+\bibitem{theis2016note}
+\bibauthor{{, et~al}{Theis L}{, van~den Oord A}{, Bethge M}}\nolinebreak\@.
+  \bibtitle{A Note on the Evaluation of Generative Models}\bibmark{[C]}
+  //\thinspace{}\bibbooktitle{Proceedings of the 4th International Conference
+  on Learning Representations (ICLR)}\nolinebreak\@.
+  \bibyear{2016}\nolinebreak\@.
+
+\end{thebibliography}

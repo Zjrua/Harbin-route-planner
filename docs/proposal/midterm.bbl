@@ -1,0 +1,69 @@
+\begin{thebibliography}{1}
+\providecommand{\bibauthor}[1]{#1}
+\providecommand{\bibeditor}[1]{\bibauthor{#1}}
+\providecommand{\bibtranslator}[1]{#1}
+\providecommand{\bibtitle}[1]{#1}
+\providecommand{\bibbooktitle}[1]{#1}
+\providecommand{\bibjournal}[1]{#1}
+\providecommand{\bibmark}[1]{\mbox{#1}}
+\providecommand{\bibcountry}[1]{#1}
+\providecommand{\bibpatentid}[1]{#1}
+\providecommand{\bibedition}[1]{#1}
+\providecommand{\biborganization}[1]{#1}
+\providecommand{\bibaddress}[1]{#1}
+\providecommand{\bibpublisher}[1]{#1}
+\providecommand{\bibinstitution}[1]{#1}
+\providecommand{\bibschool}[1]{#1}
+\providecommand{\bibvolume}[1]{#1}
+\providecommand{\bibnumber}[1]{#1}
+\providecommand{\bibversion}[1]{#1}
+\providecommand{\bibpages}[1]{#1}
+\providecommand{\bibmodifydate}[1]{#1}
+\providecommand{\bibcitedate}[1]{#1}
+\providecommand{\bibyear}[1]{#1}
+\providecommand{\bibdate}[1]{#1}
+\providecommand{\biburl}[1]{\newline\url{#1}}
+
+\bibitem{hartigan1985dip}
+\bibauthor{{, et~al}{Hartigan J~A}{, Hartigan P~M}}\nolinebreak\@.
+  \bibtitle{The Dip Test of Unimodality}\bibmark{[J]}\nolinebreak\@.
+  \bibjournal{The Annals of Statistics}, \bibyear{1985},
+  \bibvolume{13}\bibnumber{(1)}\textnormal{:
+  }\bibpages{70\textnormal{-}84}\nolinebreak\@.
+
+\bibitem{efron1993bootstrap}
+\bibauthor{{, et~al}{Efron B}{, Tibshirani R~J}}\nolinebreak\@.
+  \bibbooktitle{An Introduction to the Bootstrap}\bibmark{[M]}\nolinebreak\@.
+  \bibaddress{[S.l.]}\textnormal{: }\bibpublisher{Chapman \& Hall/CRC},
+  \bibyear{1993}\nolinebreak\@.
+
+\bibitem{dempster1977em}
+\bibauthor{{, et~al}{Dempster A~P}{, Laird N~M}{, Rubin D~B}}\nolinebreak\@.
+  \bibtitle{Maximum Likelihood from Incomplete Data via the {EM}
+  Algorithm}\bibmark{[J]}\nolinebreak\@. \bibjournal{Journal of the Royal
+  Statistical Society: Series B}, \bibyear{1977},
+  \bibvolume{39}\bibnumber{(1)}\textnormal{:
+  }\bibpages{1\textnormal{-}22}\nolinebreak\@.
+
+\bibitem{mcnemar1947note}
+\bibauthor{{, et~al}{McNemar Q}}\nolinebreak\@. \bibtitle{Note on the Sampling
+  Error of the Difference Between Correlated Proportions or
+  Percentages}\bibmark{[J]}\nolinebreak\@. \bibjournal{Psychometrika},
+  \bibyear{1947}, \bibvolume{12}\bibnumber{(2)}\textnormal{:
+  }\bibpages{153\textnormal{-}157}\nolinebreak\@.
+
+\bibitem{cronbach1955construct}
+\bibauthor{{, et~al}{Cronbach L~J}{, Meehl P~E}}\nolinebreak\@.
+  \bibtitle{Construct Validity in Psychological
+  Tests}\bibmark{[J]}\nolinebreak\@. \bibjournal{Psychological Bulletin},
+  \bibyear{1955}, \bibvolume{52}\bibnumber{(4)}\textnormal{:
+  }\bibpages{281\textnormal{-}302}\nolinebreak\@.
+
+\bibitem{theis2016note}
+\bibauthor{{, et~al}{Theis L}{, van~den Oord A}{, Bethge M}}\nolinebreak\@.
+  \bibtitle{A Note on the Evaluation of Generative Models}\bibmark{[C]}
+  //\thinspace{}\bibbooktitle{Proceedings of the 4th International Conference
+  on Learning Representations (ICLR)}\nolinebreak\@.
+  \bibyear{2016}\nolinebreak\@.
+
+\end{thebibliography}
