@@ -44,6 +44,6 @@ latexmk -xelatex report.tex    # 需要 MiKTeX/TeX Live + xelatex
 
 ## 待办（开题前）
 
-- [ ] 封面信息按实际填写（学院/学科/姓名/学号/班级/导师）
+- [ ] 
 - [ ] 国内研究现状补充 2–3 篇知网中文核心文献
-- [ ] 确认答辩校区（campus=harbin/shenzhen/weihai）
+- [ ] 确认答辩校区（campus=harbin，如需深圳/威海改 report.tex 与 midterm.tex 的 campus 选项）
