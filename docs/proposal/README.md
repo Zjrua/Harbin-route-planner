@@ -38,12 +38,12 @@ latexmk -xelatex report.tex    # 需要 MiKTeX/TeX Live + xelatex
 - `report.tex` — 主文档（type=master, stage=opening, campus=harbin）
 - `front/coverart.tex` — 封面 `\hitsetup` 配置
 - `body/report_harbin_master_opening.tex` — 开题报告正文（§1–§9）
-- `reference.bib` — 参考文献库（18 条，含 FPMC/PRME/ST-RNN/ARNN/LLM4Rec/FuseLLM/L2D/RouteLLM/距离衰减/重力模型/dip test/温度缩放/RETAIL 等）
+- `reference.bib` — 参考文献库（42 条：next-POI 三代/概率融合与路由/距离衰减/RAG 与 LLM 行程规划/LoRA·QLoRA·DPO 后训练/检验方法学/中文核心 2 篇等）
 - `hithesisart.cls` / `hithesisart.cfg` / `hithesis.bst` — 模板类与样式（由 dtx 生成）
 - `hithesis.dtx` / `hithesis.ins` — 模板源，可重新生成 cls
 
 ## 待办（开题前）
 
-- [ ] 
-- [ ] 国内研究现状补充 2–3 篇知网中文核心文献
+- [x] 国内研究现状补充 2–3 篇知网中文核心文献（智能系统学报 2 篇，2026-08-31 已录）
 - [ ] 确认答辩校区（campus=harbin，如需深圳/威海改 report.tex 与 midterm.tex 的 campus 选项）
+- [ ] 中期/结题报告按"检索增强+后训练"新主角重写（coverart_midterm.tex L5 与 final_report.tex L11-12 标题待同步）

@@ -79,7 +79,7 @@
   Retrieval}\nolinebreak\@. \bibyear{2024}\textnormal{:
   }\bibpages{1393\textnormal{-}1403}\nolinebreak\@.
 
-\bibitem{wu2023llm4rec}
+\bibitem{wu2024llm4rec}
 \bibauthor{{, et~al}{Wu L}{, Zheng Z}{, Qiu Z}{, Wang H}{, Gu H}{, Shen T}{,
   Qin C}{, Zhu C}{, Zhu H}{, Liu Q}{, Xiong H}{, Chen E}}\nolinebreak\@.
   \bibtitle{A Survey on Large Language Models for
@@ -87,11 +87,119 @@
   \bibyear{2024}, \bibvolume{27}\bibnumber{(5)}\textnormal{:
   }\bibpages{60}\nolinebreak\@.
 
+\bibitem{song2026mfc4poi}
+\bibauthor{{, et~al}{Song Y}{, Xu W}{, Liu L}{, Peng M}{, Chen J}{, Zhao X}{,
+  Peng S}}\nolinebreak\@. \bibtitle{{MFC4POI}: Multi-Factor Collaboration for
+  Next Point-of-Interest Recommendation Using Large Language
+  Models}\bibmark{[J]}\nolinebreak\@. \bibjournal{Information Processing \&
+  Management}, \bibyear{2026}, \bibvolume{63}\bibnumber{(2)}\textnormal{:
+  }\bibpages{104824}\nolinebreak\@.
+
+\bibitem{guo2017calibration}
+\bibauthor{{, et~al}{Guo C}{, Pleiss G}{, Sun Y}{, Weinberger
+  K~Q}}\nolinebreak\@. \bibtitle{On Calibration of Modern Neural
+  Networks}\bibmark{[C]} //\thinspace{}\bibbooktitle{Proceedings of the 34th
+  International Conference on Machine Learning (ICML)}\nolinebreak\@.
+  \bibyear{2017}\textnormal{: }\bibpages{1321\textnormal{-}1330}\nolinebreak\@.
+
+\bibitem{lewis2020rag}
+\bibauthor{{, et~al}{Lewis P}{, Perez E}{, Piktus A}{, Petroni F}{, Karpukhin
+  V}{, Goyal N}{, K{\"u}ttler H}{, Lewis M}{, Yih W-t}{, Rockt{\"a}schel T}{,
+  Riedel S}{, Kiela D}}\nolinebreak\@. \bibtitle{Retrieval-Augmented Generation
+  for Knowledge-Intensive {NLP} Tasks}\bibmark{[C]}
+  //\thinspace{}\bibbooktitle{Advances in Neural Information Processing Systems
+  33 (NeurIPS)}\nolinebreak\@. \bibyear{2020}\textnormal{:
+  }\bibpages{9459\textnormal{-}9474}\nolinebreak\@.
+
+\bibitem{song2024travelrag}
+\bibauthor{{, et~al}{Song S}{, Yang C}{, Xu L}{, Guan Z}{, Zhang X}{, Xu W}{,
+  Wang Z}{, Chang Y}}\nolinebreak\@. \bibtitle{{TravelRAG}: A Tourist
+  Attraction Retrieval Framework Based on Multi-Layer Knowledge
+  Graph}\bibmark{[J]}\nolinebreak\@. \bibjournal{ISPRS International Journal of
+  Geo-Information}, \bibyear{2024}, \bibvolume{13}\bibnumber{(11)}\textnormal{:
+  }\bibpages{414}\nolinebreak\@.
+
+\bibitem{lin2025strajrag}
+\bibauthor{{, et~al}{Lin Z}{, Zhang X}{, Zhao K}{, Lu X}{, Zhang
+  Y}}\nolinebreak\@. \bibtitle{{STrajRAG}: Supervised Trajectory Retrieval
+  Augmented Generation for Next {POI} Recommendation with Travel
+  Semantics}\bibmark{[J]}\nolinebreak\@. \bibjournal{Information Processing \&
+  Management}, \bibyear{2025}, \bibvolume{62}\bibnumber{(6)}\textnormal{:
+  }\bibpages{104235}\nolinebreak\@.
+
+\bibitem{yamanishi2025tourmlm}
+\bibauthor{{, et~al}{Yamanishi H}{, Xiao L}{, Yamasaki T}}\nolinebreak\@.
+  \bibtitle{{TourMLM}: A Retrieval-Augmented Multimodal Large Language Model
+  for Multitask Learning in the Tourism Domain}\bibmark{[C]}
+  //\thinspace{}\bibbooktitle{Proceedings of the 2025 International Conference
+  on Multimedia Retrieval (ICMR)}\nolinebreak\@. \bibyear{2025}\textnormal{:
+  }\bibpages{449\textnormal{-}458}\nolinebreak\@.
+
+\bibitem{chaudhuri2025tripcraft}
+\bibauthor{{, et~al}{Chaudhuri S}{, Purkar P}{, Raghav R}{, Chaurasia V}{,
+  Banerjee S}{, Ghosh S}{, Setua S}{, Kalyan J}{, Rane N}{, Patil G}{, Du S}{,
+  Mydeen A}{, Motlani R}{, Ratnoo M}{, Ghosh S}}\nolinebreak\@.
+  \bibtitle{{TripCraft}: A Benchmark for Spatio-Temporally Fine Grained Travel
+  Planning}\bibmark{[C]} //\thinspace{}\bibbooktitle{Proceedings of the 63rd
+  Annual Meeting of the Association for Computational Linguistics
+  (ACL)}\nolinebreak\@. \bibyear{2025}\textnormal{:
+  }\bibpages{15355\textnormal{-}15378}\nolinebreak\@.
+
+\bibitem{wang2025triptailor}
+\bibauthor{{, et~al}{Wang K}{, Shen Y}{, Lv C}{, Jiang S}{, Feng Z}{, Zhang
+  X}{, Huang X}}\nolinebreak\@. \bibtitle{{TripTailor}: A Real-World Benchmark
+  for Personalized Travel Planning}\bibmark{[C]}
+  //\thinspace{}\bibbooktitle{Findings of the Association for Computational
+  Linguistics: ACL 2025}\nolinebreak\@. \bibyear{2025}\textnormal{:
+  }\bibpages{5992\textnormal{-}6010}\nolinebreak\@.
+
+\bibitem{gadbail2025validator}
+\bibauthor{{, et~al}{Gadbail S}{, Desai M}{, Karlapalem K}}\nolinebreak\@.
+  \bibtitle{{Iti-Validator}: A Guardrail Framework for Validating and
+  Correcting {LLM}-Generated Itineraries}\bibmark{[C]}
+  //\thinspace{}\bibbooktitle{Proceedings of the 33rd ACM SIGSPATIAL
+  International Conference on Advances in Geographic Information
+  Systems}\nolinebreak\@. \bibyear{2025}\textnormal{:
+  }\bibpages{\textnormal{-}}\nolinebreak\@.
+
+\bibitem{deng2025retail}
+\bibauthor{{, et~al}{Deng B}{, Feng Y}{, Liu Z}{, Wei Q}{, Zhu X}{, Chen S}{,
+  Guo Y}{, Wang Y}}\nolinebreak\@. \bibtitle{{RETAIL}: Towards Real-world
+  Travel Planning for Large Language Models}\bibmark{[J]}\nolinebreak\@.
+  \bibjournal{arXiv preprint arXiv:2508.15335}, \bibyear{2025}\nolinebreak\@.
+
+\bibitem{google2025trip}
+\bibauthor{{, et~al}{{Google Research}}}\nolinebreak\@. \bibtitle{Optimizing
+  {LLM}-based Trip Planning}\bibmark{[J]}\nolinebreak\@. \bibjournal{Google
+  Research Blog}, \bibyear{2025}\nolinebreak\@.
+
+\bibitem{hu2022lora}
+\bibauthor{{, et~al}{Hu E~J}{, Shen Y}{, Wallis P}{, Allen-Zhu Z}{, Li Y}{,
+  Wang S}{, Wang L}{, Chen W}}\nolinebreak\@. \bibtitle{{LoRA}: Low-Rank
+  Adaptation of Large Language Models}\bibmark{[C]}
+  //\thinspace{}\bibbooktitle{Proceedings of the 10th International Conference
+  on Learning Representations (ICLR)}\nolinebreak\@.
+  \bibyear{2022}\nolinebreak\@.
+
+\bibitem{dettmers2023qlora}
+\bibauthor{{, et~al}{Dettmers T}{, Pagnoni A}{, Holtzman A}{, Zettlemoyer
+  L}}\nolinebreak\@. \bibtitle{{QLoRA}: Efficient Finetuning of Quantized
+  {LLMs}}\bibmark{[C]} //\thinspace{}\bibbooktitle{Advances in Neural
+  Information Processing Systems 36 (NeurIPS)}\nolinebreak\@.
+  \bibyear{2023}\nolinebreak\@.
+
+\bibitem{rafailov2023dpo}
+\bibauthor{{, et~al}{Rafailov R}{, Sharma A}{, Mitchell E}{, Manning C~D}{,
+  Ermon S}{, Finn C}}\nolinebreak\@. \bibtitle{Direct Preference Optimization:
+  Your Language Model is Secretly a Reward Model}\bibmark{[C]}
+  //\thinspace{}\bibbooktitle{Advances in Neural Information Processing Systems
+  36 (NeurIPS)}\nolinebreak\@. \bibyear{2023}\nolinebreak\@.
+
 \bibitem{hinton2002poe}
 \bibauthor{{, et~al}{Hinton G~E}}\nolinebreak\@. \bibtitle{Training Products of
-  Experts by Minimizing Contrastive Divergence}\bibmark{[C]}
-  //\thinspace{}\bibbooktitle{Neural Computation\textnormal{:
-  }Vol~14}\nolinebreak\@. \bibyear{2002}\textnormal{:
+  Experts by Minimizing Contrastive Divergence}\bibmark{[J]}\nolinebreak\@.
+  \bibjournal{Neural Computation}, \bibyear{2002},
+  \bibvolume{14}\bibnumber{(8)}\textnormal{:
   }\bibpages{1771\textnormal{-}1800}\nolinebreak\@.
 
 \bibitem{wan2024fusellm}
@@ -101,7 +209,7 @@
   on Learning Representations (ICLR)}\nolinebreak\@.
   \bibyear{2024}\nolinebreak\@.
 
-\bibitem{verma2023defer}
+\bibitem{mao2023defer}
 \bibauthor{{, et~al}{Mao A}{, Mohri M}{, Zhong Y}}\nolinebreak\@.
   \bibtitle{Learning to Defer to Multiple Experts: Consistent Surrogate
   Losses}\bibmark{[C]} //\thinspace{}\bibbooktitle{Proceedings of the 26th
@@ -114,13 +222,6 @@
   Gonzalez J~E}{, Kadous M~W}{, Stoica I}}\nolinebreak\@. \bibtitle{{RouteLLM}:
   Learning to Route {LLMs} with Preference Data}\bibmark{[J]}\nolinebreak\@.
   \bibjournal{arXiv preprint arXiv:2406.18665}, \bibyear{2024}\nolinebreak\@.
-
-\bibitem{guo2017calibration}
-\bibauthor{{, et~al}{Guo C}{, Pleiss G}{, Sun Y}{, Weinberger
-  K~Q}}\nolinebreak\@. \bibtitle{On Calibration of Modern Neural
-  Networks}\bibmark{[C]} //\thinspace{}\bibbooktitle{Proceedings of the 34th
-  International Conference on Machine Learning (ICML)}\nolinebreak\@.
-  \bibyear{2017}\textnormal{: }\bibpages{1321\textnormal{-}1330}\nolinebreak\@.
 
 \bibitem{chen2015decay}
 \bibauthor{{, et~al}{Chen Y}}\nolinebreak\@. \bibtitle{The Distance-Decay
@@ -148,16 +249,21 @@
   Research}, \bibyear{2003}, \bibvolume{42}\bibnumber{(2)}\textnormal{:
   }\bibpages{119\textnormal{-}130}\nolinebreak\@.
 
-\bibitem{deng2025retail}
-\bibauthor{{, et~al}{Deng B}{, Feng Y}{, Liu Z}{, Wei Q}{, Zhu X}{, Chen S}{,
-  Guo Y}{, Wang Y}}\nolinebreak\@. \bibtitle{{RETAIL}: Towards Real-world
-  Travel Planning for Large Language Models}\bibmark{[J]}\nolinebreak\@.
-  \bibjournal{arXiv preprint arXiv:2508.15335}, \bibyear{2025}\nolinebreak\@.
+\bibitem{xie2025llmrec}
+\bibauthor{{, et~al}{谢广明}{, 白彦冰}{, 吴子昂}{,
+  张艳玲}}\nolinebreak\@.
+  \bibtitle{基于大语言模型的推荐系统综述}\bibmark{[J]}\nolinebreak\@.
+  \bibjournal{智能系统学报}, \bibyear{2025},
+  \bibvolume{20}\bibnumber{(6)}\textnormal{:
+  }\bibpages{1520\textnormal{-}1533}\nolinebreak\@.
 
-\bibitem{google2025trip}
-\bibauthor{{, et~al}{{Google Research}}}\nolinebreak\@. \bibtitle{Optimizing
-  {LLM}-based Trip Planning}\bibmark{[J]}\nolinebreak\@. \bibjournal{Google
-  Research Blog}, \bibyear{2025}\nolinebreak\@.
+\bibitem{wu2024llmpersorec}
+\bibauthor{{, et~al}{吴国栋}{, 秦慧}{, 胡全星}{, 王雪妮}{,
+  吴振畅}}\nolinebreak\@.
+  \bibtitle{大语言模型及其个性化推荐研究}\bibmark{[J]}\nolinebreak\@.
+  \bibjournal{智能系统学报}, \bibyear{2024},
+  \bibvolume{19}\bibnumber{(6)}\textnormal{:
+  }\bibpages{1351\textnormal{-}1365}\nolinebreak\@.
 
 \bibitem{hartigan1985dip}
 \bibauthor{{, et~al}{Hartigan J~A}{, Hartigan P~M}}\nolinebreak\@.
@@ -165,6 +271,34 @@
   \bibjournal{The Annals of Statistics}, \bibyear{1985},
   \bibvolume{13}\bibnumber{(1)}\textnormal{:
   }\bibpages{70\textnormal{-}84}\nolinebreak\@.
+
+\bibitem{wilson1927probable}
+\bibauthor{{, et~al}{Wilson E~B}}\nolinebreak\@. \bibtitle{Probable Inference,
+  the Law of Succession, and Statistical Inference}\bibmark{[J]}\nolinebreak\@.
+  \bibjournal{Journal of the American Statistical Association}, \bibyear{1927},
+  \bibvolume{22}\bibnumber{(154)}\textnormal{:
+  }\bibpages{209\textnormal{-}212}\nolinebreak\@.
+
+\bibitem{mcnemar1947note}
+\bibauthor{{, et~al}{McNemar Q}}\nolinebreak\@. \bibtitle{Note on the Sampling
+  Error of the Difference Between Correlated Proportions or
+  Percentages}\bibmark{[J]}\nolinebreak\@. \bibjournal{Psychometrika},
+  \bibyear{1947}, \bibvolume{12}\bibnumber{(2)}\textnormal{:
+  }\bibpages{153\textnormal{-}157}\nolinebreak\@.
+
+\bibitem{holm1979simple}
+\bibauthor{{, et~al}{Holm S}}\nolinebreak\@. \bibtitle{A Simple Sequentially
+  Rejective Multiple Test Procedure}\bibmark{[J]}\nolinebreak\@.
+  \bibjournal{Scandinavian Journal of Statistics}, \bibyear{1979},
+  \bibvolume{6}\bibnumber{(2)}\textnormal{:
+  }\bibpages{65\textnormal{-}70}\nolinebreak\@.
+
+\bibitem{massey1951ks}
+\bibauthor{{, et~al}{Massey F~J}}\nolinebreak\@. \bibtitle{The
+  Kolmogorov-Smirnov Test for Goodness of Fit}\bibmark{[J]}\nolinebreak\@.
+  \bibjournal{Journal of the American Statistical Association}, \bibyear{1951},
+  \bibvolume{46}\bibnumber{(253)}\textnormal{:
+  }\bibpages{68\textnormal{-}78}\nolinebreak\@.
 
 \bibitem{cronbach1955construct}
 \bibauthor{{, et~al}{Cronbach L~J}{, Meehl P~E}}\nolinebreak\@.
