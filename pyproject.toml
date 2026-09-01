@@ -27,24 +27,35 @@ dependencies = [
 # ============================================================
 # 跨平台 PyTorch 安装（uv）
 #
-# 为什么不需要多个 uv.lock.* 文件：
-#   uv.lock 是 universal lockfile，跨平台共享时自动按 marker 选 wheel。
-#   真正的难点只有 torch 的 CUDA wheel 不在 PyPI 上。
+# uv.lock 是 universal lockfile，跨平台共享时自动按 marker 选 wheel。
+# torch 的 CUDA wheel 不在 PyPI 上，因此用 tool.uv.sources 显式路由：
+#   - Windows / Linux（NVIDIA）  torch 走 download.pytorch.org 的 cu128 索引
+#   - macOS（Apple Silicon）     torch 走 PyPI 官方包，自带 MPS 后端
+#     （上面 win32/linux 的 sources 映射带 marker，darwin 不命中，回落 PyPI）
 #
-# 平台矩阵：
-#   - macOS (Apple Silicon)   torch 走 PyPI 官方包，自带 MPS 后端 → 无需特殊配置
-#   - Windows + Intel Arc     torch 走 PyPI CPU 包（≥2.5 内置 XPU 运行时）→ 无需特殊配置
-#   - Windows + NVIDIA CUDA   需额外 index → uv sync --index pytorch-cu128
+# 使用（三平台统一，无需任何额外 flag）：
+#   uv sync
 #
-# 使用：
-#   - 通用（Mac / Windows CPU+XPU）：uv sync
-#   - NVIDIA CUDA（Windows）：uv sync --index pytorch-cu128
-#   - 自动探测硬件：scripts/install_env.ps1（Windows）/ scripts/install_env.sh（Mac）
+# Mac MPS 训练注意事项（Apple Silicon, macOS >= 14）：
+#   1. PyPI 的 torch arm64 wheel 已内置 MPS 后端，`uv sync` 即得；
+#   2. bitsandbytes >= 0.45 提供 Metal 后端（0.50.1 有 macosx_14_0_arm64
+#      wheel），NF4 4-bit 推理/QLoRA 在 Metal 上为实验性支持，若遇
+#      未实现算子报错，可改用 bf16/fp16 非量化加载（4B 模型 ≈ 8GB 显存，
+#      16GB 统一内存的 Mac 可承受）；
+#   3. 建议在 shell 里 export PYTORCH_ENABLE_MPS_FALLBACK=1，
+#      缺失算子自动回退 CPU 而非直接报错；
+#   4. bf16 训练需 torch>=2.3 且 macOS>=14，本项目 torch>=2.5 已满足。
 # ============================================================
 [[tool.uv.index]]
 name = "pytorch-cu128"
 url = "https://download.pytorch.org/whl/cu128"
 explicit = true
+
+[tool.uv.sources]
+# CUDA wheel 只在 Windows/Linux 生效；macOS 走 PyPI（含 MPS），不命中此映射
+torch = [
+    { index = "pytorch-cu128", marker = "sys_platform == 'win32' or sys_platform == 'linux'" },
+]
 
 [dependency-groups]
 dev = [
