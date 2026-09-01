@@ -25,16 +25,24 @@ dependencies = [
 ]
 
 # ============================================================
-# 跨平台 PyTorch 安装（uv）
+# 跨平台 PyTorch 安装（uv）+ 国内镜像
 #
 # uv.lock 是 universal lockfile，跨平台共享时自动按 marker 选 wheel。
 # torch 的 CUDA wheel 不在 PyPI 上，因此用 tool.uv.sources 显式路由：
-#   - Windows / Linux（NVIDIA）  torch 走 download.pytorch.org 的 cu128 索引
-#   - macOS（Apple Silicon）     torch 走 PyPI 官方包，自带 MPS 后端
-#     （上面 win32/linux 的 sources 映射带 marker，darwin 不命中，回落 PyPI）
+#   - Windows / Linux（NVIDIA）  torch 走交大镜像的 cu128 索引
+#   - macOS（Apple Silicon）     torch 走清华 TUNA 镜像的 PyPI 包，自带 MPS 后端
+#     （上面 win32/linux 的 sources 映射带 marker，darwin 不命中，回落默认源）
 #
 # 使用（三平台统一，无需任何额外 flag）：
 #   uv sync
+#
+# 镜像说明：
+#   - PyPI 默认源 = 清华 TUNA（全平台默认，含 macOS arm64 wheel）
+#   - PyTorch cu128 = 上海交大镜像（覆盖 torch 2.7.0+cu128 ~ 2.11.0+cu128，
+#     win_amd64 + linux；macOS 无需也无人由此源安装）
+#   - 换回官方源：把两个 url 改回 https://pypi.org/simple 与
+#     https://download.pytorch.org/whl/cu128 并重新 uv lock
+#     （uv.lock 内记录的是 wheel 完整 URL，换源必须重锁）
 #
 # Mac MPS 训练注意事项（Apple Silicon, macOS >= 14）：
 #   1. PyPI 的 torch arm64 wheel 已内置 MPS 后端，`uv sync` 即得；
@@ -47,12 +55,17 @@ dependencies = [
 #   4. bf16 训练需 torch>=2.3 且 macOS>=14，本项目 torch>=2.5 已满足。
 # ============================================================
 [[tool.uv.index]]
+name = "pypi-tuna"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
+
+[[tool.uv.index]]
 name = "pytorch-cu128"
-url = "https://download.pytorch.org/whl/cu128"
+url = "https://mirror.sjtu.edu.cn/pytorch-wheels/cu128"
 explicit = true
 
 [tool.uv.sources]
-# CUDA wheel 只在 Windows/Linux 生效；macOS 走 PyPI（含 MPS），不命中此映射
+# CUDA wheel 只在 Windows/Linux 生效；macOS 走默认源（含 MPS），不命中此映射
 torch = [
     { index = "pytorch-cu128", marker = "sys_platform == 'win32' or sys_platform == 'linux'" },
 ]
