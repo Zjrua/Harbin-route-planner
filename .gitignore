@@ -1,5 +1,4 @@
-# Data — 原始数据不提交，处理后数据提交
-data/raw/
+# Data — 原始数据与处理后数据均提交(共约39MB); 外部数据集只留 README 和下载脚本
 !data/README.md
 # 高德回查断点(原始查询缓存, 可由 verify_poi_amap.py 重放, 质检产物见 report)
 data/processed/amap_verify_checkpoint.jsonl
