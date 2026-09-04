@@ -62,16 +62,8 @@ output/demo_server.log
 wandb/
 .claude/
 # LaTeX
-paper/*.aux
-paper/*.out
-paper/*.toc
-paper/*.log
-paper/*.synctex.gz
-paper/*.synctex*
-paper/*.fls
-paper/*.fdb_latexmk
-paper/*.bbl
-paper/*.blg
+# Paper — 论文目录不入库(含提交版二进制), 本地保留
+paper/
 .zcode/
 __pycache__/
 
