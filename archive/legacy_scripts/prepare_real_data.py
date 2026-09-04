@@ -352,7 +352,7 @@ def main():
 
     # 1. 加载核心节点
     print("=== 加载核心节点 ===")
-    pois = pd.read_csv(raw_dir / "哈尔滨POI_核心节点.csv", encoding="utf-8-sig")
+    pois = pd.read_csv(raw_dir / "legacy" / "哈尔滨POI_核心节点.csv", encoding="utf-8-sig")
     pois.columns = [c.strip() for c in pois.columns]
     col_map = {"名称": "name", "经度": "lng", "纬度": "lat", "类别": "category",
                "地址": "address", "POI类型": "poi_type", "评分": "rating", "人均消费": "avg_cost"}
@@ -390,7 +390,7 @@ def main():
 
     # 2. 加载并去重路线
     print("\n=== 加载路线数据 ===")
-    routes_df = pd.read_csv(raw_dir / "哈尔滨旅游路线数据.csv", encoding="utf-8-sig")
+    routes_df = pd.read_csv(raw_dir / "legacy" / "哈尔滨旅游路线数据.csv", encoding="utf-8-sig")
     routes_df.columns = [c.strip() for c in routes_df.columns]
     print(f"  原始路线: {len(routes_df)} 条")
     routes_df = deduplicate_routes(routes_df)
@@ -431,8 +431,8 @@ def main():
 
     # 4. 加载并修复矩阵
     print("\n=== 修复距离/时间矩阵 ===")
-    dist_df = pd.read_csv(raw_dir / "距离矩阵_公里.csv", encoding="utf-8-sig", index_col=0)
-    time_df = pd.read_csv(raw_dir / "耗时矩阵_分钟.csv", encoding="utf-8-sig", index_col=0)
+    dist_df = pd.read_csv(raw_dir / "legacy" / "距离矩阵_公里.csv", encoding="utf-8-sig", index_col=0)
+    time_df = pd.read_csv(raw_dir / "legacy" / "耗时矩阵_分钟.csv", encoding="utf-8-sig", index_col=0)
 
     # 原始矩阵（135x135）
     orig_dist = dist_df.values.astype(np.float32)

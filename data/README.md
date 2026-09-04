@@ -1,17 +1,26 @@
 # 数据目录说明
 
-## raw/
-存放原始爬取数据，已入 git（2026-09-04 起全量提交，约 39MB）。
+## raw/ — 原始数据（已入 git，2026-09-04，约 39MB）
 
-预期文件：
-- `pois_harbin.csv` — 哈尔滨市 POI 数据（高德地图爬取）
-- `reviews_*.csv` — 各平台游客评论数据
-- `baidu_poi_tourism.xlsx` — 百度 POI 旅游相关数据
+当前管线数据（处理链: 原始 → merged → labeled → processed/）:
 
-## processed/
-存放经预处理后的模型输入数据（实际已入 git，与 raw/ 策略不同）。
+| 文件 | 内容 | 谱系 |
+|---|---|---|
+| `哈尔滨POI数据_完整版.csv`(在 legacy/) | 高德导出 5,740 POI | → merged_pois.csv 的高德源 |
+| `百度poi(旅游相关) - 全集.xlsx` | 百度旅游 POI(12MB) | → merged_pois.csv 的百度源 |
+| `merged_pois.csv` | 两源合并 48,961 POI | `archive/legacy_scripts/merge_data.py` |
+| `merged_pois_labeled.csv` | +语义标签(is_tourism/suitable_*) | `scripts/label_poi_semantics.py`；`src/itinerary_planner.py` 运行时依赖 |
+| `search_contents_2026-05-0{4,5}.jsonl` | 小红书笔记 1,832 条 | → routes.npy / 168 条 holdout / 人气分 |
+| `search_comments_2026-05-04.jsonl` | 小红书评论 10,127 条 | 笔记+评论=11,959，对上 xhs_processing_report 口径 |
 
-预期文件：
+## raw/legacy/ — 早期原型(2025 上半年)数据
+
+`哈尔滨POI_核心节点.csv`(136 节点)、`哈尔滨旅游路线数据.csv`(404 路线, 早期爬取)、
+`距离矩阵_公里.csv`/`耗时矩阵_分钟.csv`(136×136, 原型期矩阵)、`哈尔滨POI数据_完整版.csv`。
+仅 `archive/` 遗留脚本引用（路径已同步改为 legacy/），当前管线不再读取。
+
+## processed/ — 模型输入数据（已入 git）
+
 - `poi_features.npy` — POI 特征矩阵 [n_pois, feature_dim]
 - `adjacency.npy` — 路网邻接矩阵 [n_pois, n_pois]
 - `distance_matrix.npy` — 距离矩阵 [n_pois, n_pois]

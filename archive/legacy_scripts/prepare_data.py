@@ -200,7 +200,7 @@ def extract_days(title: str) -> int:
 
 
 def load_xhs_routes(pois: pd.DataFrame, raw_dir: Path):
-    routes_path = raw_dir / "哈尔滨旅游路线数据.csv"
+    routes_path = raw_dir / "legacy" / "哈尔滨旅游路线数据.csv"
     if not routes_path.exists():
         print("  未找到XHS路线数据，跳过")
         return []

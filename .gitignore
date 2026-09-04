@@ -3,6 +3,9 @@
 # 高德回查断点(原始查询缓存, 可由 verify_poi_amap.py 重放, 质检产物见 report)
 data/processed/amap_verify_checkpoint.jsonl
 
+# Node(docx 生成工具依赖, 见 package.json)
+node_modules/
+
 # Model artifacts — 最终 LoRA adapter 提交（单文件 <24MB）；
 # 只忽略训练中间 checkpoint / 冒烟 / 临时产物
 output/*/checkpoint-*/

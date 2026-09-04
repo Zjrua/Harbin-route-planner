@@ -132,7 +132,7 @@ def main():
     raw_dir = Path("data/raw")
 
     print("加载高德数据...")
-    amap = load_amap_data(str(raw_dir / "哈尔滨POI数据_完整版.csv"))
+    amap = load_amap_data(str(raw_dir / "legacy" / "哈尔滨POI数据_完整版.csv"))
     print(f"  高德: {len(amap)} 条, 类别: {amap['category'].value_counts().to_dict()}")
 
     print("加载百度数据...")
